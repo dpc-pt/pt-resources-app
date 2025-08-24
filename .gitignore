@@ -1,0 +1,77 @@
+# Xcode
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcworkspace/xcsettings/
+*.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+*.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist.sha256
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcsettings/
+*.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+*.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist.sha256
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/
+
+# SwiftLint
+.swiftlint.yml
+
+# Fastlane
+fastlane/
+
+# Derived Data
+DerivedData/
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Swift Package Manager
+Package.resolved
+
+# Testing
+*.xcresult/
+
+# Archives
+*.xcarchive
+
+# Swift Playgrounds
+*.playground/
+
+# SwiftUI Previews
+Preview Content/
