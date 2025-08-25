@@ -72,18 +72,18 @@ struct PTFilterSortBar: View {
                     if activeFiltersCount > 0 {
                         Text("(\(activeFiltersCount))")
                             .font(PTFont.ptCaptionText)  // Using PT caption typography
-                            .foregroundColor(.ptTang)  // Using PT Tang instead of coral
+                            .foregroundColor(PTDesignTokens.Colors.tang)  // Using PT Tang instead of coral
                     }
                 }
-                .foregroundColor(.ptInk)  // Using PT Ink for primary text color
+                .foregroundColor(PTDesignTokens.Colors.ink)  // Using PT Ink for primary text color
                 .padding(.horizontal, PTDesignTokens.Spacing.md)
                 .padding(.vertical, PTDesignTokens.Spacing.sm)
                 .background(
                     RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
-                        .fill(activeFiltersCount > 0 ? Color.ptTang.opacity(0.1) : Color.ptSurface)  // Tang accent background
+                        .fill(activeFiltersCount > 0 ? PTDesignTokens.Colors.tang.opacity(0.1) : PTDesignTokens.Colors.surface)  // Tang accent background
                         .overlay(
                             RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
-                                .stroke(activeFiltersCount > 0 ? Color.ptTang : Color.ptMediumGray.opacity(0.3), lineWidth: 1)
+                                .stroke(activeFiltersCount > 0 ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.medium.opacity(0.3), lineWidth: 1)
                         )
                 )
             }
@@ -98,15 +98,15 @@ struct PTFilterSortBar: View {
                     Text(currentSortOption.displayName)
                         .font(PTFont.ptButtonText)  // Using PT button typography
                 }
-                .foregroundColor(.ptInk)  // Using PT Ink for primary text color
+                .foregroundColor(PTDesignTokens.Colors.ink)  // Using PT Ink for primary text color
                 .padding(.horizontal, PTDesignTokens.Spacing.md)
                 .padding(.vertical, PTDesignTokens.Spacing.sm)
                 .background(
                     RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
-                        .fill(Color.ptSurface)
+                        .fill(PTDesignTokens.Colors.surface)
                         .overlay(
                             RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
-                                .stroke(Color.ptMediumGray.opacity(0.3), lineWidth: 1)
+                                .stroke(PTDesignTokens.Colors.medium.opacity(0.3), lineWidth: 1)
                         )
                 )
             }
@@ -130,11 +130,11 @@ struct PTLoadingView: View {
             
             Text("Loading resources...")
                 .font(PTFont.ptSectionTitle)  // Using PT section title typography
-                .foregroundColor(.ptInk)      // Using PT Ink for primary text
+                .foregroundColor(PTDesignTokens.Colors.ink)      // Using PT Ink for primary text
             
             Text("Fetching the latest sermons and talks")
                 .font(PTFont.ptBodyText)      // Using PT body typography
-                .foregroundColor(.ptDarkGray)
+                .foregroundColor(PTDesignTokens.Colors.medium)
                 .multilineTextAlignment(.center)
         }
         .padding(PTDesignTokens.Spacing.xl)
@@ -150,11 +150,11 @@ struct PTEmptyStateView: View {
             
             Text("No Resources Found")
                 .font(PTFont.ptSectionTitle)  // Using PT section title typography
-                .foregroundColor(.ptInk)      // Using PT Ink for primary text
+                .foregroundColor(PTDesignTokens.Colors.ink)      // Using PT Ink for primary text
             
             Text("Try adjusting your search terms or filters to find more content")
                 .font(PTFont.ptBodyText)      // Using PT body typography
-                .foregroundColor(.ptDarkGray)
+                .foregroundColor(PTDesignTokens.Colors.medium)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, PTDesignTokens.Spacing.lg)
         }

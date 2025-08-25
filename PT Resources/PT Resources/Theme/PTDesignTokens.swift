@@ -111,6 +111,7 @@ enum PTDesignTokens {
         static let cardSpacing = md              // 16px between cards
         static let sectionSpacing = xl           // 32px between sections
         static let screenEdges = md              // 16px screen edge padding
+        static let screenPadding = screenEdges   // Legacy alias for screenEdges
         static let buttonPaddingVertical: CGFloat = 12    // Button vertical padding (0.75rem)
         static let buttonPaddingHorizontal: CGFloat = 24  // Button horizontal padding (1.5rem)
         

@@ -120,14 +120,14 @@ struct ResourceDetailView: View {
                     HStack {
                         Text(resource.conference)
                             .font(PTFont.ptCaptionText)
-                            .foregroundColor(.ptMediumGray)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
                         
                         Text("•")
-                            .foregroundColor(.ptMediumGray)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
                         
                         Text(resource.date)
                             .font(PTFont.ptCaptionText)
-                            .foregroundColor(.ptMediumGray)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
                     }
                     
                     if !resource.scriptureReference.isEmpty {
@@ -193,7 +193,7 @@ struct ResourceDetailView: View {
                             .fill(Color.ptSurface)
                             .overlay(
                                 Circle()
-                                    .stroke(Color.ptMediumGray.opacity(0.3), lineWidth: 1)
+                                    .stroke(PTDesignTokens.Colors.medium.opacity(0.3), lineWidth: 1)
                             )
                     )
             }
@@ -211,7 +211,7 @@ struct ResourceDetailView: View {
                             .fill(Color.ptSurface)
                             .overlay(
                                 Circle()
-                                    .stroke(Color.ptMediumGray.opacity(0.3), lineWidth: 1)
+                                    .stroke(PTDesignTokens.Colors.medium.opacity(0.3), lineWidth: 1)
                             )
                     )
             }
@@ -313,7 +313,7 @@ struct PTInfoRow: View {
         HStack {
             Text(title)
                 .font(PTFont.ptBodyText)
-                .foregroundColor(.ptMediumGray)
+                .foregroundColor(PTDesignTokens.Colors.medium)
                 .frame(width: 80, alignment: .leading)
             
             Text(value)
@@ -366,18 +366,18 @@ struct PTRelatedResourceRow: View {
                     
                     Text(resource.speaker)
                         .font(PTFont.ptCaptionText)
-                        .foregroundColor(.ptMediumGray)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
                     
                     Text(resource.conference)
                         .font(.caption2)
-                        .foregroundColor(.ptMediumGray.opacity(0.8))
+                        .foregroundColor(PTDesignTokens.Colors.medium.opacity(0.8))
                 }
                 
                 Spacer()
                 
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundColor(.ptMediumGray)
+                    .foregroundColor(PTDesignTokens.Colors.medium)
             }
         }
         .buttonStyle(PlainButtonStyle())

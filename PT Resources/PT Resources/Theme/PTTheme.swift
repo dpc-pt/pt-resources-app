@@ -175,7 +175,7 @@ struct PTCardStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(Color.ptSurface)
-            .cornerRadius(PTCornerRadius.card)
+            .cornerRadius(PTDesignTokens.BorderRadius.card)
             .shadow(color: Color.black.opacity(isPressed ? 0.05 : 0.1), 
                    radius: isPressed ? 4 : 8, 
                    x: 0, 
@@ -198,13 +198,13 @@ struct PTPrimaryButton: ViewModifier {
         content
             .font(PTFont.buttonText)
             .foregroundColor(isDisabled ? .white.opacity(0.7) : .white)
-            .padding(.horizontal, PTSpacing.buttonPaddingHorizontal)
-            .padding(.vertical, PTSpacing.buttonPadding)
+            .padding(.horizontal, PTDesignTokens.Spacing.buttonPaddingHorizontal)
+            .padding(.vertical, PTDesignTokens.Spacing.buttonPaddingVertical)
             .background(
-                RoundedRectangle(cornerRadius: PTCornerRadius.button)
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
                     .fill(buttonBackgroundColor)
                     .overlay(
-                        RoundedRectangle(cornerRadius: PTCornerRadius.button)
+                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
                             .stroke(buttonBorderColor, lineWidth: 2)
                     )
             )
@@ -238,13 +238,13 @@ struct PTSecondaryButton: ViewModifier {
         content
             .font(PTFont.buttonText)
             .foregroundColor(buttonTextColor)
-            .padding(.horizontal, PTSpacing.buttonPaddingHorizontal)
-            .padding(.vertical, PTSpacing.buttonPadding)
+            .padding(.horizontal, PTDesignTokens.Spacing.buttonPaddingHorizontal)
+            .padding(.vertical, PTDesignTokens.Spacing.buttonPaddingVertical)
             .background(
-                RoundedRectangle(cornerRadius: PTCornerRadius.button)
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
                     .fill(buttonBackgroundColor)
                     .overlay(
-                        RoundedRectangle(cornerRadius: PTCornerRadius.button)
+                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
                             .stroke(buttonBorderColor, lineWidth: 2)
                     )
             )
@@ -287,13 +287,13 @@ struct PTOutlineButton: ViewModifier {
         content
             .font(PTFont.buttonText)
             .foregroundColor(buttonTextColor)
-            .padding(.horizontal, PTSpacing.buttonPaddingHorizontal)
-            .padding(.vertical, PTSpacing.buttonPadding)
+            .padding(.horizontal, PTDesignTokens.Spacing.buttonPaddingHorizontal)
+            .padding(.vertical, PTDesignTokens.Spacing.buttonPaddingVertical)
             .background(
-                RoundedRectangle(cornerRadius: PTCornerRadius.button)
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
                     .fill(buttonBackgroundColor)
                     .overlay(
-                        RoundedRectangle(cornerRadius: PTCornerRadius.button)
+                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
                             .stroke(buttonBorderColor, lineWidth: 2)
                     )
             )

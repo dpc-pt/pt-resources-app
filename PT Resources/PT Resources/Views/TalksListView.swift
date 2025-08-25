@@ -204,7 +204,7 @@ struct SearchBar: View {
                 Button("Clear") {
                     text = ""
                 }
-                .foregroundColor(.blue)
+                .foregroundColor(PTDesignTokens.Colors.kleinBlue)
             }
         }
         .padding()
@@ -225,7 +225,7 @@ struct FilterSortBar: View {
                     Text("Filter")
                     if activeFiltersCount > 0 {
                         Text("(\(activeFiltersCount))")
-                            .foregroundColor(.blue)
+                            .foregroundColor(PTDesignTokens.Colors.kleinBlue)
                     }
                 }
             }

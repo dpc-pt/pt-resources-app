@@ -133,7 +133,7 @@ struct SortOptionsSheetView: View {
                             
                             if option == selectedOption {
                                 Image(systemName: "checkmark")
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(PTDesignTokens.Colors.kleinBlue)
                             }
                         }
                     }
