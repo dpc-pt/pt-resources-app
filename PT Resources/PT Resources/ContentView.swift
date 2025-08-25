@@ -16,31 +16,6 @@ struct ContentView: View {
 
 // MARK: - Placeholder Views
 
-struct DownloadsView: View {
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: PTDesignTokens.Spacing.lg) {
-                PTLogo(size: 64, showText: false)
-                    .padding(.top, PTDesignTokens.Spacing.xl)
-                
-                Text("Downloads")
-                    .font(PTFont.ptSectionTitle)  // Using PT typography
-                    .foregroundColor(PTDesignTokens.Colors.ink)  // Using PT Ink
-
-                Text("Downloaded talks will appear here")
-                    .font(PTFont.ptBodyText)  // Using PT typography
-                    .foregroundColor(PTDesignTokens.Colors.medium)  // Using consistent gray
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, PTDesignTokens.Spacing.lg)
-
-                Spacer()
-            }
-            .navigationTitle("Downloads")
-            .background(PTDesignTokens.Colors.background)
-        }
-    }
-}
-
 struct SettingsView: View {
     @State private var showingPrivacySettings = false
 

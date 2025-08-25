@@ -17,7 +17,7 @@ struct PTLogo: View {
     }
 
     var body: some View {
-        if !showText {
+        if showText {
             // Use the full logo with text from SVG
             Image("pt-logo-primary-dark")
                 .resizable()

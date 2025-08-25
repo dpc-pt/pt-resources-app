@@ -227,8 +227,23 @@ final class DownloadService: NSObject, ObservableObject {
     }
     
     func isDownloaded(_ talkID: String) async -> Bool {
+        // First check if file exists locally
         let localURL = getLocalAudioURL(for: talkID)
-        return fileManager.fileExists(atPath: localURL.path)
+        let fileExists = fileManager.fileExists(atPath: localURL.path)
+        
+        // Also check Core Data to ensure consistency
+        let isMarkedDownloaded = try? await persistenceController.performBackgroundTask { context in
+            let request: NSFetchRequest<TalkEntity> = TalkEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "id == %@", talkID)
+            
+            if let entity = try context.fetch(request).first {
+                return entity.isDownloaded
+            }
+            return false
+        }
+        
+        // Return true only if both file exists and is marked as downloaded
+        return fileExists && (isMarkedDownloaded ?? false)
     }
     
     func getDownloadedTalks() async throws -> [String] {
@@ -238,6 +253,34 @@ final class DownloadService: NSObject, ObservableObject {
             
             let entities = try context.fetch(request)
             return entities.compactMap { $0.id }
+        }
+    }
+    
+    func getDownloadedTalksWithMetadata() async throws -> [DownloadedTalk] {
+        return try await persistenceController.performBackgroundTask { context in
+            let request: NSFetchRequest<TalkEntity> = TalkEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "isDownloaded == YES")
+            
+            let entities = try context.fetch(request)
+            return entities.compactMap { entity in
+                guard let id = entity.id,
+                      let localPath = entity.localAudioURL,
+                      FileManager.default.fileExists(atPath: localPath) else {
+                    return nil
+                }
+                
+                return DownloadedTalk(
+                    id: id,
+                    title: entity.title ?? "",
+                    speaker: entity.speaker ?? "",
+                    series: entity.series,
+                    duration: Int(entity.duration),
+                    fileSize: entity.fileSize,
+                    localAudioURL: localPath,
+                    lastAccessedAt: entity.lastAccessedAt ?? Date(),
+                    createdAt: entity.createdAt ?? Date()
+                )
+            }
         }
     }
     
@@ -549,5 +592,38 @@ enum DownloadError: LocalizedError {
         case .fileSystemError: return "File system error"
         case .networkError: return "Network error"
         }
+    }
+}
+
+// MARK: - Downloaded Talk Model
+
+struct DownloadedTalk: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let speaker: String
+    let series: String?
+    let duration: Int
+    let fileSize: Int64
+    let localAudioURL: String
+    let lastAccessedAt: Date
+    let createdAt: Date
+    
+    var formattedDuration: String {
+        let minutes = duration / 60
+        let seconds = duration % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+    
+    var formattedFileSize: String {
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useMB, .useGB]
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: fileSize)
+    }
+    
+    var formattedLastAccessed: String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: lastAccessedAt, relativeTo: Date())
     }
 }

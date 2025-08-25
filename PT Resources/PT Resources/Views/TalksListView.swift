@@ -19,11 +19,14 @@ struct TalksListView: View {
     @StateObject private var viewModel: TalksViewModel
     @StateObject private var playerService: PlayerService
     @StateObject private var downloadService: DownloadService
+    @StateObject private var networkMonitor = NetworkMonitor()
     
     @State private var showingFilters = false
     @State private var showingSortOptions = false
     @State private var selectedTalk: Talk?
     @State private var selectedResourceId: String?
+    @State private var downloadedTalks: [DownloadedTalk] = []
+    @State private var isLoadingDownloadedTalks = false
     
     init(apiService: TalksAPIServiceProtocol = TalksAPIService()) {
         self._viewModel = StateObject(wrappedValue: TalksViewModel(apiService: apiService))
@@ -58,7 +61,10 @@ struct TalksListView: View {
                     .padding(.bottom, PTDesignTokens.Spacing.sm)
                 
                     // Talks List with PT styling
-                    if viewModel.isLoading && viewModel.talks.isEmpty {
+                    if networkMonitor.shouldShowOfflineContent {
+                        // Show downloaded talks in offline mode
+                        offlineTalksList
+                    } else if viewModel.isLoading && viewModel.talks.isEmpty {
                         PTLoadingView()
                             .frame(maxHeight: .infinity)
                     } else if viewModel.talks.isEmpty {
@@ -70,7 +76,7 @@ struct TalksListView: View {
                                 ForEach(viewModel.filteredTalks) { talk in
                                     TalkRowView(
                                         talk: talk,
-                                        isDownloaded: downloadService.downloadProgress[talk.id] != nil || false, // TODO: Check actual download status
+                                        isDownloaded: isTalkDownloaded(talk.id),
                                         downloadProgress: downloadService.downloadProgress[talk.id],
                                         onTalkTap: { selectedTalk = talk },
                                         onPlayTap: { playTalk(talk) },
@@ -180,6 +186,158 @@ struct TalksListView: View {
                 print("Download failed: \(error)")
             }
         }
+    }
+    
+    private func isTalkDownloaded(_ talkID: String) -> Bool {
+        return downloadedTalks.contains { $0.id == talkID }
+    }
+    
+    private func loadDownloadedTalks() {
+        Task {
+            isLoadingDownloadedTalks = true
+            do {
+                let talks = try await downloadService.getDownloadedTalksWithMetadata()
+                await MainActor.run {
+                    self.downloadedTalks = talks
+                    self.isLoadingDownloadedTalks = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.isLoadingDownloadedTalks = false
+                }
+                print("Failed to load downloaded talks: \(error)")
+            }
+        }
+    }
+    
+    private func playDownloadedTalk(_ downloadedTalk: DownloadedTalk) {
+        // Create a Talk object from DownloadedTalk for playback
+        let talk = Talk(
+            id: downloadedTalk.id,
+            title: downloadedTalk.title,
+            description: nil,
+            speaker: downloadedTalk.speaker,
+            series: downloadedTalk.series,
+            biblePassage: nil,
+            dateRecorded: downloadedTalk.createdAt,
+            duration: downloadedTalk.duration,
+            audioURL: downloadedTalk.localAudioURL,
+            imageURL: nil
+        )
+        
+        playerService.loadTalk(talk)
+        playerService.play()
+    }
+    
+    private func deleteDownloadedTalk(_ downloadedTalk: DownloadedTalk) {
+        Task {
+            do {
+                try await downloadService.deleteDownload(for: downloadedTalk.id)
+                await MainActor.run {
+                    downloadedTalks.removeAll { $0.id == downloadedTalk.id }
+                }
+            } catch {
+                print("Failed to delete downloaded talk: \(error)")
+            }
+        }
+    }
+}
+
+// MARK: - Offline Talks List
+
+private extension TalksListView {
+    
+    var offlineTalksList: some View {
+        VStack(spacing: PTDesignTokens.Spacing.md) {
+            // Offline mode header
+            offlineModeHeader
+            
+            // Downloaded talks list
+            if isLoadingDownloadedTalks {
+                PTLoadingView()
+                    .frame(maxHeight: .infinity)
+            } else if downloadedTalks.isEmpty {
+                offlineEmptyState
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: PTDesignTokens.Spacing.md) {
+                        ForEach(downloadedTalks) { downloadedTalk in
+                            DownloadedTalkRowView(
+                                downloadedTalk: downloadedTalk,
+                                onPlayTap: { playDownloadedTalk(downloadedTalk) },
+                                onDeleteTap: { deleteDownloadedTalk(downloadedTalk) }
+                            )
+                            .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+                        }
+                    }
+                    .padding(.top, PTDesignTokens.Spacing.sm)
+                    .padding(.bottom, PTDesignTokens.Spacing.xl)
+                }
+                .refreshable {
+                    loadDownloadedTalks()
+                }
+            }
+        }
+        .onAppear {
+            loadDownloadedTalks()
+        }
+    }
+    
+    var offlineModeHeader: some View {
+        HStack {
+            Image(systemName: networkMonitor.isOfflineMode ? "wifi.slash" : "wifi")
+                .foregroundColor(PTDesignTokens.Colors.tang)
+            
+            Text(networkMonitor.connectionStatusDescription)
+                .font(PTFont.ptCardTitle)
+                .foregroundColor(PTDesignTokens.Colors.ink)
+            
+            Spacer()
+            
+            if networkMonitor.isOfflineMode {
+                Button("Exit Offline") {
+                    networkMonitor.disableOfflineMode()
+                }
+                .font(PTFont.ptCaptionText)
+                .foregroundColor(PTDesignTokens.Colors.kleinBlue)
+            }
+        }
+        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+        .padding(.vertical, PTDesignTokens.Spacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                .fill(PTDesignTokens.Colors.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                        .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
+                )
+        )
+        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+    }
+    
+    var offlineEmptyState: some View {
+        VStack(spacing: PTDesignTokens.Spacing.lg) {
+            Image(systemName: "arrow.down.circle")
+                .font(.system(size: 60))
+                .foregroundColor(PTDesignTokens.Colors.medium)
+            
+            Text("No Downloaded Talks")
+                .font(PTFont.ptSectionTitle)
+                .foregroundColor(PTDesignTokens.Colors.ink)
+            
+            Text("Download talks when you're online to listen offline")
+                .font(PTFont.ptBodyText)
+                .foregroundColor(PTDesignTokens.Colors.medium)
+                .multilineTextAlignment(.center)
+            
+            if !networkMonitor.isConnected {
+                Text("You're currently offline")
+                    .font(PTFont.ptCaptionText)
+                    .foregroundColor(PTDesignTokens.Colors.turmeric)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(PTDesignTokens.Spacing.xl)
     }
 }
 

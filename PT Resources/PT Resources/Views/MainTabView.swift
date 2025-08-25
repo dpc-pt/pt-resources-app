@@ -28,8 +28,8 @@ struct MainTabView: View {
                 .tag(1)
                 .accessibilityIdentifier(PTAccessibility.talksTab)
 
-            // Downloads Tab (Future)
-            PTComingSoonView(feature: "Downloads", description: "Access your downloaded talks offline")
+            // Downloads Tab
+            DownloadsView()
                 .tabItem {
                     Image(systemName: "arrow.down.circle.fill")
                     Text("Downloads")

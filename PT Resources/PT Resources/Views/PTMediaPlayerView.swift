@@ -80,7 +80,7 @@ struct PTMediaPlayerView: View {
                     colors: [
                         PTDesignTokens.Colors.ink,
                         PTDesignTokens.Colors.kleinBlue.opacity(0.8),
-                        Color.ptBackground
+                        PTDesignTokens.Colors.background
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -101,7 +101,7 @@ struct PTMediaPlayerView: View {
     // MARK: - Artwork Section
     
     private var artworkSection: some View {
-        VStack(spacing: PTSpacing.lg) {
+        VStack(spacing: PTDesignTokens.Spacing.lg) {
             // Close button
             HStack {
                 Button(action: { dismiss() }) {
@@ -138,11 +138,11 @@ struct PTMediaPlayerView: View {
                         .opacity(0.8)
                 )
                 .frame(width: 280, height: 280)
-                .cornerRadius(PTCornerRadius.large)
+                .cornerRadius(PTDesignTokens.BorderRadius.huge)
                 .shadow(color: Color.black.opacity(0.3), radius: 20, x: 0, y: 10)
             
             // Track info
-            VStack(spacing: PTSpacing.xs) {
+            VStack(spacing: PTDesignTokens.Spacing.xs) {
                 Text(resource.title)
                     .font(PTFont.ptSectionTitle)
                     .foregroundColor(.white)
@@ -156,21 +156,21 @@ struct PTMediaPlayerView: View {
                 Text(resource.conference)
                     .font(PTFont.ptCaptionText)
                     .foregroundColor(.white.opacity(0.6))
-                    .padding(.horizontal, PTSpacing.md)
-                    .padding(.vertical, PTSpacing.xs)
+                    .padding(.horizontal, PTDesignTokens.Spacing.md)
+                    .padding(.vertical, PTDesignTokens.Spacing.xs)
                     .background(
                         Capsule()
                             .fill(Color.white.opacity(0.15))
                     )
             }
         }
-        .padding(.horizontal, PTSpacing.screenPadding)
+        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
     }
     
     // MARK: - Controls Section
     
     private var controlsSection: some View {
-        HStack(spacing: PTSpacing.xxl) {
+        HStack(spacing: PTDesignTokens.Spacing.xxl) {
             // Previous (Skip back 30s)
             Button(action: { playerService.skipBackward() }) {
                 Image(systemName: "gobackward.30")
@@ -201,13 +201,13 @@ struct PTMediaPlayerView: View {
             }
             .scaleEffect(isPressed ? 0.95 : 1.0)
         }
-        .padding(.vertical, PTSpacing.lg)
+        .padding(.vertical, PTDesignTokens.Spacing.lg)
     }
     
     // MARK: - Progress Section
     
     private var progressSection: some View {
-        VStack(spacing: PTSpacing.sm) {
+        VStack(spacing: PTDesignTokens.Spacing.sm) {
             // Progress bar
             ProgressView(value: playerService.currentTime, total: playerService.duration)
                 .progressViewStyle(PTMediaProgressStyle())
@@ -226,14 +226,14 @@ struct PTMediaPlayerView: View {
                     .foregroundColor(.white.opacity(0.7))
             }
         }
-        .padding(.horizontal, PTSpacing.screenPadding)
-        .padding(.vertical, PTSpacing.md)
+        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+        .padding(.vertical, PTDesignTokens.Spacing.md)
     }
     
     // MARK: - Action Buttons
     
     private var actionButtons: some View {
-        HStack(spacing: PTSpacing.xl) {
+        HStack(spacing: PTDesignTokens.Spacing.xl) {
             // Speed control
             Button(action: { 
                 playerService.adjustPlaybackSpeed()
@@ -298,33 +298,33 @@ struct PTMediaPlayerView: View {
                 }
             }
         }
-        .padding(.horizontal, PTSpacing.screenPadding)
-        .padding(.vertical, PTSpacing.lg)
+        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+        .padding(.vertical, PTDesignTokens.Spacing.lg)
     }
     
     // MARK: - Related Resources
     
     private var relatedResourcesSection: some View {
-        VStack(alignment: .leading, spacing: PTSpacing.md) {
+        VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.md) {
             HStack {
                 Text("Related Resources")
                     .font(PTFont.ptCardTitle)
                     .foregroundColor(.white)
-                    .padding(.horizontal, PTSpacing.screenPadding)
+                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
                 
                 Spacer()
             }
             
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: PTSpacing.md) {
+                HStack(spacing: PTDesignTokens.Spacing.md) {
                     ForEach(resource.relatedResources.prefix(5)) { related in
                         PTRelatedResourceCard(resource: related)
                     }
                 }
-                .padding(.horizontal, PTSpacing.screenPadding)
+                .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
             }
         }
-        .padding(.vertical, PTSpacing.md)
+        .padding(.vertical, PTDesignTokens.Spacing.md)
     }
     
     // MARK: - Helper Methods
@@ -338,24 +338,7 @@ struct PTMediaPlayerView: View {
 
 // MARK: - Progress View Style
 
-struct PTMediaProgressStyle: ProgressViewStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        ZStack(alignment: .leading) {
-            // Background
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color.white.opacity(0.3))
-                .frame(height: 4)
-            
-            // Progress
-            RoundedRectangle(cornerRadius: 2)
-                .fill(PTDesignTokens.Colors.tang)
-                .frame(
-                    width: CGFloat(configuration.fractionCompleted ?? 0) * UIScreen.main.bounds.width * 0.8,
-                    height: 4
-                )
-        }
-    }
-}
+// Note: PTMediaProgressStyle is defined in TalkDetailView.swift to avoid duplication
 
 // MARK: - Related Resource Card
 
@@ -367,7 +350,7 @@ struct PTRelatedResourceCard: View {
         Button(action: {
             // TODO: Navigate to related resource
         }) {
-            VStack(alignment: .leading, spacing: PTSpacing.sm) {
+            VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.sm) {
                 // Artwork
                 Rectangle()
                     .fill(
@@ -385,7 +368,7 @@ struct PTRelatedResourceCard: View {
                             .opacity(0.6)
                     )
                     .frame(width: 140, height: 140)
-                    .cornerRadius(PTCornerRadius.medium)
+                    .cornerRadius(PTDesignTokens.BorderRadius.md)
                 
                 // Info
                 VStack(alignment: .leading, spacing: 2) {

@@ -73,6 +73,23 @@ extension View {
             .accessibilityHint(hint)
             .accessibilityAddTraits(.isButton)
     }
+    
+    /// Add accessibility properties for a delete button
+    func accessibilityDeleteButton() -> some View {
+        self.accessibilityElement(children: .ignore)
+            .accessibilityLabel("Delete downloaded talk")
+            .accessibilityHint("Double tap to delete this talk and free up storage space")
+            .accessibilityAddTraits(.isButton)
+    }
+    
+    /// Add accessibility properties for a downloaded talk row
+    func accessibilityDownloadedTalkRow(_ downloadedTalk: DownloadedTalk) -> some View {
+        self.accessibilityElement(children: .combine)
+            .accessibilityLabel(accessibilityLabel(for: downloadedTalk))
+            .accessibilityValue(accessibilityValue(for: downloadedTalk))
+            .accessibilityHint("Double tap to open talk details, swipe right for playback controls")
+            .accessibilityAddTraits(.isButton)
+    }
 
     /// Add accessibility properties for mini player
     func accessibilityMiniPlayer(talkTitle: String?, speaker: String?, isPlaying: Bool) -> some View {
@@ -128,6 +145,31 @@ extension View {
         } else {
             return "Swipe right for download and playback controls, double tap to open talk details"
         }
+    }
+    
+    private func accessibilityLabel(for downloadedTalk: DownloadedTalk) -> String {
+        var components = [downloadedTalk.title]
+
+        if !downloadedTalk.speaker.isEmpty {
+            components.append("by \(downloadedTalk.speaker)")
+        }
+
+        if let series = downloadedTalk.series {
+            components.append("from \(series)")
+        }
+
+        return components.joined(separator: ", ")
+    }
+
+    private func accessibilityValue(for downloadedTalk: DownloadedTalk) -> String {
+        var components: [String] = []
+
+        components.append("Duration: \(downloadedTalk.formattedDuration)")
+        components.append("File size: \(downloadedTalk.formattedFileSize)")
+        components.append("Downloaded")
+        components.append("Last played: \(downloadedTalk.formattedLastAccessed)")
+
+        return components.joined(separator: ", ")
     }
 }
 
