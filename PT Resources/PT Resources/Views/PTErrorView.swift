@@ -15,22 +15,22 @@ struct PTErrorView: View {
     @State private var isExpanded = false
 
     var body: some View {
-        VStack(spacing: PTSpacing.lg) {
+        VStack(spacing: PTDesignTokens.Spacing.lg) {
             // Error icon
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 60))
-                .foregroundColor(.ptSecondary)
+                .foregroundColor(PTDesignTokens.Colors.tang)
                 .symbolEffect(.pulse, isActive: true)
 
             // Error message
-            VStack(spacing: PTSpacing.sm) {
+            VStack(spacing: PTDesignTokens.Spacing.sm) {
                 Text("Something went wrong")
                     .font(PTFont.ptSectionTitle)
-                    .foregroundColor(.ptPrimary)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
 
                 Text(error.localizedDescription)
                     .font(PTFont.ptBodyText)
-                    .foregroundColor(.ptDarkGray)
+                    .foregroundColor(PTDesignTokens.Colors.medium)
                     .multilineTextAlignment(.center)
                     .lineLimit(isExpanded ? nil : 3)
                     .onTapGesture {
@@ -39,15 +39,19 @@ struct PTErrorView: View {
                         }
                     }
             }
-            .padding(.horizontal, PTSpacing.lg)
+            .padding(.horizontal, PTDesignTokens.Spacing.lg)
 
             // Action buttons
-            HStack(spacing: PTSpacing.md) {
+            HStack(spacing: PTDesignTokens.Spacing.md) {
                 if let dismissAction = dismissAction {
-                    Button(action: dismissAction) {
-                        Text("Dismiss")
-                            .ptSecondaryButton()
-                    }
+                    Button("Dismiss", action: dismissAction)
+                        .foregroundColor(PTDesignTokens.Colors.kleinBlue)
+                        .padding()
+                        .background(Color.clear)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                                .stroke(PTDesignTokens.Colors.kleinBlue, lineWidth: 1)
+                        )
                 }
 
                 if let retryAction = retryAction {
@@ -56,16 +60,19 @@ struct PTErrorView: View {
                             Image(systemName: "arrow.clockwise")
                             Text("Try Again")
                         }
-                        .ptPrimaryButton()
                     }
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(PTDesignTokens.Colors.tang)
+                    .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button))
                 }
             }
         }
-        .padding(PTSpacing.xl)
-        .background(Color.ptSurface)
-        .cornerRadius(PTCornerRadius.large)
-        .ptCardStyle()
-        .padding(PTSpacing.lg)
+        .padding(PTDesignTokens.Spacing.xl)
+        .background(PTDesignTokens.Colors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.lg))
+        // Card styling
+        .padding(PTDesignTokens.Spacing.lg)
     }
 }
 

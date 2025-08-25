@@ -78,8 +78,8 @@ struct PTMediaPlayerView: View {
             .fill(
                 LinearGradient(
                     colors: [
-                        Color.ptNavy,
-                        Color.ptRoyalBlue.opacity(0.8),
+                        PTDesignTokens.Colors.ink,
+                        PTDesignTokens.Colors.kleinBlue.opacity(0.8),
                         Color.ptBackground
                     ],
                     startPoint: .topLeading,
@@ -125,7 +125,7 @@ struct PTMediaPlayerView: View {
             Rectangle()
                 .fill(
                     LinearGradient(
-                        colors: [Color.ptCoral.opacity(0.3), Color.ptTurquoise.opacity(0.3)],
+                        colors: [PTDesignTokens.Colors.tang.opacity(0.3), PTDesignTokens.Colors.kleinBlue.opacity(0.3)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -348,7 +348,7 @@ struct PTMediaProgressStyle: ProgressViewStyle {
             
             // Progress
             RoundedRectangle(cornerRadius: 2)
-                .fill(Color.ptCoral)
+                .fill(PTDesignTokens.Colors.tang)
                 .frame(
                     width: CGFloat(configuration.fractionCompleted ?? 0) * UIScreen.main.bounds.width * 0.8,
                     height: 4
@@ -372,7 +372,7 @@ struct PTRelatedResourceCard: View {
                 Rectangle()
                     .fill(
                         LinearGradient(
-                            colors: [Color.ptGreen.opacity(0.3), Color.ptTurquoise.opacity(0.3)],
+                            colors: [PTDesignTokens.Colors.lawn.opacity(0.3), PTDesignTokens.Colors.kleinBlue.opacity(0.3)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )

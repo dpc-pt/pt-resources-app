@@ -16,12 +16,12 @@ struct MiniPlayerView: View {
             // Progress bar
             GeometryReader { geometry in
                 Rectangle()
-                    .fill(Color.ptMediumGray.opacity(0.3))
+                    .fill(PTDesignTokens.Colors.light.opacity(0.3))
                     .frame(height: 2)
                     .overlay(
                         HStack {
                             Rectangle()
-                                .fill(Color.ptCoral)
+                                .fill(PTDesignTokens.Colors.tang)
                                 .frame(width: geometry.size.width * CGFloat(playerService.duration > 0 ? playerService.currentTime / playerService.duration : 0))
                             Spacer(minLength: 0)
                         }
@@ -30,13 +30,13 @@ struct MiniPlayerView: View {
             .frame(height: 2)
             
             Button(action: { showingFullPlayer = true }) {
-                HStack(spacing: PTSpacing.md) {
+                HStack(spacing: PTDesignTokens.Spacing.md) {
                     // Artwork with PT styling and caching
                     PTAsyncImage(url: URL(string: playerService.currentTalk?.imageURL ?? ""),
                                targetSize: CGSize(width: 44, height: 44)) {
-                        RoundedRectangle(cornerRadius: PTCornerRadius.small)
+                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.sm)
                             .fill(LinearGradient(
-                                colors: [Color.ptCoral.opacity(0.2), Color.ptTurquoise.opacity(0.2)],
+                                colors: [PTDesignTokens.Colors.tang.opacity(0.2), PTDesignTokens.Colors.kleinBlue.opacity(0.2)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ))
@@ -47,25 +47,25 @@ struct MiniPlayerView: View {
                     }
                 }
                     .frame(width: 44, height: 44)
-                    .clipShape(RoundedRectangle(cornerRadius: PTCornerRadius.small))
+                    .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.sm))
                     
                     // Track Info with PT styling
                     VStack(alignment: .leading, spacing: 2) {
                         Text(playerService.currentTalk?.title ?? "")
-                            .font(PTFont.cardSubtitle)
-                            .foregroundColor(.ptPrimary)
+                            .font(PTFont.ptCardSubtitle)
+                            .foregroundColor(PTDesignTokens.Colors.ink)
                             .lineLimit(1)
                         
                         Text(playerService.currentTalk?.speaker ?? "")
-                            .font(PTFont.captionText)
-                            .foregroundColor(.ptDarkGray)
+                            .font(PTFont.ptCaptionText)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
                             .lineLimit(1)
                     }
                     
                     Spacer()
                     
                     // Controls with PT styling
-                    HStack(spacing: PTSpacing.sm) {
+                    HStack(spacing: PTDesignTokens.Spacing.sm) {
                         // Play/Pause Button
                         Button(action: {
                             if playerService.playbackState.isPlaying {
@@ -76,7 +76,7 @@ struct MiniPlayerView: View {
                         }) {
                             Image(systemName: playerService.playbackState.isPlaying ? "pause.fill" : "play.fill")
                                 .font(.title2)
-                                .foregroundColor(.ptCoral)
+                                .foregroundColor(PTDesignTokens.Colors.tang)
                         }
                         
                         // Close Button
@@ -85,7 +85,7 @@ struct MiniPlayerView: View {
                         }) {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.title3)
-                                .foregroundColor(.ptMediumGray)
+                                .foregroundColor(PTDesignTokens.Colors.medium)
                         }
                 }
             }
@@ -95,9 +95,9 @@ struct MiniPlayerView: View {
                 speaker: playerService.currentTalk?.speaker,
                 isPlaying: playerService.playbackState.isPlaying
             )
-            .padding(.horizontal, PTSpacing.screenPadding)
-            .padding(.vertical, PTSpacing.md)
-            .background(Color.ptSurface)
+            .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+            .padding(.vertical, PTDesignTokens.Spacing.md)
+            .background(PTDesignTokens.Colors.surface)
         }
         .sheet(isPresented: $showingFullPlayer) {
             FullPlayerView(playerService: playerService)

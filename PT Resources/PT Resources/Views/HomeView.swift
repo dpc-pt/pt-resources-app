@@ -24,17 +24,17 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.ptBackground.ignoresSafeArea()
+                PTDesignTokens.Colors.background.ignoresSafeArea()
                 
                 if isLoading && latestContent == nil {
                     PTLoadingView()
                 } else if let latestContent = latestContent {
                     ScrollView {
-                        LazyVStack(spacing: PTSpacing.lg) {
+                        LazyVStack(spacing: PTDesignTokens.Spacing.lg) {
                             // Blog Post Card (Main Featured)
                             if let blogPost = latestContent.blogPost {
                                 PTFeaturedBlogCard(blogPost: blogPost)
-                                    .padding(.horizontal, PTSpacing.screenPadding)
+                                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
                             }
                             
                             // Latest Conference
@@ -57,8 +57,8 @@ struct HomeView: View {
                                 .padding(.horizontal, PTSpacing.screenPadding)
                             }
                         }
-                        .padding(.top, PTSpacing.md)
-                        .padding(.bottom, PTSpacing.xxl)
+                        .padding(.top, PTDesignTokens.Spacing.md)
+                        .padding(.bottom, PTDesignTokens.Spacing.xxl)
                     }
                     .refreshable {
                         await loadLatestContent()
@@ -119,7 +119,7 @@ struct PTFeaturedBlogCard: View {
                 Rectangle()
                     .fill(
                         LinearGradient(
-                            colors: [Color.ptCoral.opacity(0.1), Color.ptTurquoise.opacity(0.1)],
+                            colors: [PTDesignTokens.Colors.tang.opacity(0.1), PTDesignTokens.Colors.kleinBlue.opacity(0.1)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -135,24 +135,24 @@ struct PTFeaturedBlogCard: View {
                 .clipped()
                 
                 // Content
-                VStack(alignment: .leading, spacing: PTSpacing.md) {
+                VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.md) {
                     // Category Badge
                     Text(blogPost.category.uppercased())
                         .font(PTFont.ptCaptionText)
-                        .foregroundColor(.ptCoral)
+                        .foregroundColor(PTDesignTokens.Colors.tang)
                         .tracking(0.5)
                     
                     // Title
                     Text(blogPost.title)
                         .font(PTFont.ptSectionTitle)
-                        .foregroundColor(.ptPrimary)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     
                     // Excerpt
                     Text(blogPost.excerpt)
                         .font(PTFont.ptBodyText)
-                        .foregroundColor(.ptDarkGray)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
                         .lineLimit(3)
                         .multilineTextAlignment(.leading)
                     
@@ -160,20 +160,28 @@ struct PTFeaturedBlogCard: View {
                     HStack {
                         Text(blogPost.author)
                             .font(PTFont.ptCaptionText)
-                            .foregroundColor(.ptDarkGray)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
                         
                         Spacer()
                         
                         Text(blogPost.date)
                             .font(PTFont.ptCaptionText)
-                            .foregroundColor(.ptDarkGray)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
                     }
                 }
-                .padding(PTSpacing.lg)
+                .padding(PTDesignTokens.Spacing.lg)
             }
         }
         .buttonStyle(PlainButtonStyle())
-        .ptCardStyle(isPressed: isPressed)
+        .background(
+            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                .fill(PTDesignTokens.Colors.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                        .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
+                )
+        )
+        .scaleEffect(isPressed ? 0.98 : 1.0)
         .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
             withAnimation(.easeInOut(duration: 0.1)) {
                 isPressed = pressing
@@ -198,8 +206,8 @@ struct PTConferenceCard: View {
                     .fill(
                         LinearGradient(
                             colors: [
-                                isLatest ? Color.ptRoyalBlue.opacity(0.1) : Color.ptGreen.opacity(0.1),
-                                isLatest ? Color.ptTurquoise.opacity(0.1) : Color.ptCoral.opacity(0.1)
+                                isLatest ? PTDesignTokens.Colors.kleinBlue.opacity(0.1) : PTDesignTokens.Colors.lawn.opacity(0.1),
+                                isLatest ? PTDesignTokens.Colors.kleinBlue.opacity(0.1) : PTDesignTokens.Colors.tang.opacity(0.1)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -216,12 +224,12 @@ struct PTConferenceCard: View {
                 .clipped()
                 
                 // Content
-                VStack(alignment: .leading, spacing: PTSpacing.sm) {
+                VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.sm) {
                     // Category Badge
                     HStack {
                         Text(conference.category.uppercased())
                             .font(PTFont.ptCaptionText)
-                            .foregroundColor(isLatest ? .ptRoyalBlue : .ptGreen)
+                            .foregroundColor(isLatest ? PTDesignTokens.Colors.kleinBlue : PTDesignTokens.Colors.lawn)
                             .tracking(0.5)
                         
                         Spacer()
@@ -229,11 +237,11 @@ struct PTConferenceCard: View {
                         if isLatest {
                             HStack(spacing: 4) {
                                 Circle()
-                                    .fill(Color.ptCoral)
+                                    .fill(PTDesignTokens.Colors.tang)
                                     .frame(width: 6, height: 6)
                                 Text("NEW")
                                     .font(PTFont.ptCaptionText)
-                                    .foregroundColor(.ptCoral)
+                                    .foregroundColor(PTDesignTokens.Colors.tang)
                                     .fontWeight(.bold)
                             }
                         }
@@ -242,22 +250,30 @@ struct PTConferenceCard: View {
                     // Title
                     Text(conference.title)
                         .font(PTFont.ptCardTitle)
-                        .foregroundColor(.ptPrimary)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     
                     // Excerpt
                     Text(conference.excerpt)
                         .font(PTFont.ptBodyText)
-                        .foregroundColor(.ptDarkGray)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
                         .lineLimit(4)
                         .multilineTextAlignment(.leading)
                 }
-                .padding(PTSpacing.md)
+                .padding(PTDesignTokens.Spacing.md)
             }
         }
         .buttonStyle(PlainButtonStyle())
-        .ptCardStyle(isPressed: isPressed)
+        .background(
+            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                .fill(PTDesignTokens.Colors.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                        .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
+                )
+        )
+        .scaleEffect(isPressed ? 0.98 : 1.0)
         .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
             withAnimation(.easeInOut(duration: 0.1)) {
                 isPressed = pressing

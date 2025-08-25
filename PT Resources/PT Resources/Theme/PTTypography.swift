@@ -7,21 +7,24 @@
 
 import SwiftUI
 
-// MARK: - PT Font Manager
+// MARK: - PT Font Manager (Matching Website Font System)
 
 struct PTFonts {
-    // PT Font Names (these will need to be registered in Info.plist)
-    static let agenda = "Agenda-One"
-    static let agendaBold = "Agenda-One-Bold"
-    static let agendaMedium = "Agenda-One-Medium"
+    // PT Font Names (matching website font-face declarations)
+    // Fields Display (for headings) - pt-heading font family
+    static let fieldsDisplayMedium = "fields-display-medium"     // Medium weight
+    static let fieldsDisplayBlack = "Fields-Display-Black"       // Black weight
     
-    static let fieldsDisplayMedium = "fields-display-medium"
-    static let fieldsDisplayBlack = "Fields-Display-Black"
+    // Optima (for body text) - pt-body font family 
+    static let optimaRoman = "OptimaLTPro-Roman"                 // Regular weight
+    static let optimaBold = "OptimaLTPro-Bold"                   // Bold weight
+    static let optimaMedium = "OptimaLTPro-Medium"               // Medium weight
+    static let optimaItalic = "OptimaLTPro-Italic"               // Italic style
+    static let optimaBoldItalic = "OptimaLTPro-BoldItalic"       // Bold italic
     
-    static let optimaRoman = "OptimaLTPro-Roman"
-    static let optimaBold = "OptimaLTPro-Bold"
-    static let optimaMedium = "OptimaLTPro-Medium"
-    static let optimaItalic = "OptimaLTPro-Italic"
+    // Agenda One (for special typography) - matching website
+    static let agendaMedium = "Agenda-One-Medium"                // Medium weight
+    static let agendaBold = "Agenda-One-Bold"                    // Bold weight
     
     // Font fallback system
     static func font(name: String, size: CGFloat, fallback: Font.Weight = .regular) -> Font {
@@ -44,31 +47,44 @@ struct PTFonts {
     }
 }
 
-// MARK: - Updated PT Typography
+// MARK: - PT Typography System (Matching Website)
 
 extension PTFont {
-    // Brand Typography using PT Fonts
-    static let ptBrandTitle = PTFonts.font(name: PTFonts.fieldsDisplayBlack, size: 28, fallback: .bold)
-    static let ptSectionTitle = PTFonts.font(name: PTFonts.agendaBold, size: 22, fallback: .semibold)
-    static let ptCardTitle = PTFonts.font(name: PTFonts.agendaMedium, size: 17, fallback: .semibold)
-    static let ptCardSubtitle = PTFonts.font(name: PTFonts.optimaMedium, size: 15, fallback: .medium)
-    static let ptBodyText = PTFonts.font(name: PTFonts.optimaRoman, size: 17, fallback: .regular)
-    static let ptCaptionText = PTFonts.font(name: PTFonts.optimaMedium, size: 12, fallback: .medium)
+    // Primary Brand Typography (Fields Display for headings)
+    static let ptBrandTitle = PTFonts.font(name: PTFonts.fieldsDisplayBlack, size: text28, fallback: .bold)         // Large titles
+    static let ptDisplayLarge = PTFonts.font(name: PTFonts.fieldsDisplayBlack, size: text40, fallback: .bold)       // Hero titles
+    static let ptDisplayMedium = PTFonts.font(name: PTFonts.fieldsDisplayMedium, size: text32, fallback: .semibold) // Section heroes
+    static let ptDisplaySmall = PTFonts.font(name: PTFonts.fieldsDisplayMedium, size: text28, fallback: .semibold)  // Page titles
     
-    // Logo Typography
-    static let ptLogoText = PTFonts.font(name: PTFonts.optimaRoman, size: 16, fallback: .regular)
+    // Agenda One Typography (for special headings, matching website h2, h3 styles)
+    static let ptSectionTitle = PTFonts.font(name: PTFonts.agendaBold, size: text22, fallback: .bold)              // H2 - website style
+    static let ptCardTitle = PTFonts.font(name: PTFonts.agendaBold, size: text17, fallback: .bold)                 // H3 - website style
+    static let ptSubheading = PTFonts.font(name: PTFonts.agendaMedium, size: text19, fallback: .semibold)          // H4 equivalent
     
-    // Specialized Typography
-    static let ptDisplayLarge = PTFonts.font(name: PTFonts.fieldsDisplayBlack, size: 34, fallback: .bold)
-    static let ptDisplayMedium = PTFonts.font(name: PTFonts.fieldsDisplayMedium, size: 24, fallback: .semibold)
-
-    // Dynamic Type versions for accessibility
-    static let ptBrandTitleDynamic = PTFonts.dynamicFont(name: PTFonts.fieldsDisplayBlack, size: 28, fallback: .bold)
-    static let ptSectionTitleDynamic = PTFonts.dynamicFont(name: PTFonts.agendaBold, size: 22, fallback: .semibold)
-    static let ptCardTitleDynamic = PTFonts.dynamicFont(name: PTFonts.agendaMedium, size: 17, fallback: .semibold)
-    static let ptCardSubtitleDynamic = PTFonts.dynamicFont(name: PTFonts.optimaMedium, size: 15, fallback: .medium)
-    static let ptBodyTextDynamic = PTFonts.dynamicFont(name: PTFonts.optimaRoman, size: 17, fallback: .regular)
-    static let ptCaptionTextDynamic = PTFonts.dynamicFont(name: PTFonts.optimaMedium, size: 12, fallback: .medium)
+    // Optima Typography (body text, matching website pt-body font family)
+    static let ptBodyText = PTFonts.font(name: PTFonts.optimaRoman, size: text17, fallback: .regular)              // Body text
+    static let ptBodyMedium = PTFonts.font(name: PTFonts.optimaMedium, size: text17, fallback: .medium)            // Emphasized body
+    static let ptBodyBold = PTFonts.font(name: PTFonts.optimaBold, size: text17, fallback: .bold)                  // Strong text
+    static let ptCardSubtitle = PTFonts.font(name: PTFonts.optimaMedium, size: text15, fallback: .medium)          // Subtitle text
+    static let ptCaptionText = PTFonts.font(name: PTFonts.optimaMedium, size: text13, fallback: .medium)           // Caption text
+    static let ptSmallText = PTFonts.font(name: PTFonts.optimaRoman, size: text13, fallback: .regular)             // Small body text
+    
+    // Button and UI Typography
+    static let ptButtonText = PTFonts.font(name: PTFonts.optimaMedium, size: text15, fallback: .medium)            // Button text
+    static let ptTabBarText = PTFonts.font(name: PTFonts.optimaRoman, size: text13, fallback: .regular)            // Tab bar labels
+    static let ptNavigationTitle = PTFonts.font(name: PTFonts.agendaBold, size: text19, fallback: .bold)           // Navigation titles
+    
+    // Logo Typography (matching website pt-logo font family)
+    static let ptLogoText = PTFonts.font(name: PTFonts.optimaRoman, size: text17, fallback: .regular)              // Logo text
+    static let ptLogoTextLarge = PTFonts.font(name: PTFonts.optimaMedium, size: text19, fallback: .medium)         // Large logo
+    
+    // Dynamic Type versions for accessibility (iOS system scaling)
+    static let ptBrandTitleDynamic = PTFonts.dynamicFont(name: PTFonts.fieldsDisplayBlack, size: text28, fallback: .bold)
+    static let ptSectionTitleDynamic = PTFonts.dynamicFont(name: PTFonts.agendaBold, size: text22, fallback: .bold)
+    static let ptCardTitleDynamic = PTFonts.dynamicFont(name: PTFonts.agendaBold, size: text17, fallback: .bold)
+    static let ptBodyTextDynamic = PTFonts.dynamicFont(name: PTFonts.optimaRoman, size: text17, fallback: .regular)
+    static let ptCardSubtitleDynamic = PTFonts.dynamicFont(name: PTFonts.optimaMedium, size: text15, fallback: .medium)
+    static let ptCaptionTextDynamic = PTFonts.dynamicFont(name: PTFonts.optimaMedium, size: text13, fallback: .medium)
 }
 
 // MARK: - Font Registration Helper

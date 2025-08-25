@@ -15,14 +15,14 @@ struct PTSearchBar: View {
     @FocusState private var isFocused: Bool
     
     var body: some View {
-        HStack(spacing: PTSpacing.sm) {
-            HStack(spacing: PTSpacing.sm) {
+        HStack(spacing: PTDesignTokens.Spacing.sm) {
+            HStack(spacing: PTDesignTokens.Spacing.sm) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(.ptDarkGray)
+                    .foregroundColor(PTDesignTokens.Colors.medium)
                     .font(.system(size: 16, weight: .medium))
                 
                 TextField("Search talks, speakers, series...", text: $text)
-                    .font(PTFont.bodyText)
+                    .font(PTFont.ptBodyText)  // Using PT brand typography
                     .focused($isFocused)
                     .onSubmit {
                         onSearchButtonClicked()
@@ -34,18 +34,18 @@ struct PTSearchBar: View {
                         isFocused = false
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.ptMediumGray)
+                            .foregroundColor(PTDesignTokens.Colors.light)
                             .font(.system(size: 16))
                     }
                 }
             }
-            .padding(.horizontal, PTSpacing.md)
-            .padding(.vertical, PTSpacing.sm + 2)
-            .background(Color.ptSurface)
-            .cornerRadius(PTCornerRadius.medium)
+            .padding(.horizontal, PTDesignTokens.Spacing.md)
+            .padding(.vertical, PTDesignTokens.Spacing.sm + 2)
+            .background(PTDesignTokens.Colors.surface)
+            .cornerRadius(PTDesignTokens.BorderRadius.input)  // Using input-specific corner radius
             .overlay(
-                RoundedRectangle(cornerRadius: PTCornerRadius.medium)
-                    .stroke(isFocused ? Color.ptCoral : Color.ptMediumGray.opacity(0.3), lineWidth: isFocused ? 2 : 1)
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.input)
+                    .stroke(isFocused ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.light.opacity(0.3), lineWidth: isFocused ? 2 : 1)  // Using PT Tang for focus
             )
             .animation(.easeInOut(duration: 0.2), value: isFocused)
         }
@@ -61,29 +61,29 @@ struct PTFilterSortBar: View {
     let currentSortOption: TalkSortOption
     
     var body: some View {
-        HStack(spacing: PTSpacing.md) {
+        HStack(spacing: PTDesignTokens.Spacing.md) {
             // Filter Button
             Button(action: { showingFilters = true }) {
-                HStack(spacing: PTSpacing.xs) {
+                HStack(spacing: PTDesignTokens.Spacing.xs) {
                     Image(systemName: "line.3.horizontal.decrease.circle")
                         .font(.system(size: 16, weight: .medium))
                     Text("Filter")
-                        .font(PTFont.cardSubtitle)
+                        .font(PTFont.ptButtonText)  // Using PT button typography
                     if activeFiltersCount > 0 {
                         Text("(\(activeFiltersCount))")
-                            .font(PTFont.captionText)
-                            .foregroundColor(.ptCoral)
+                            .font(PTFont.ptCaptionText)  // Using PT caption typography
+                            .foregroundColor(.ptTang)  // Using PT Tang instead of coral
                     }
                 }
-                .foregroundColor(.ptPrimary)
-                .padding(.horizontal, PTSpacing.md)
-                .padding(.vertical, PTSpacing.sm)
+                .foregroundColor(.ptInk)  // Using PT Ink for primary text color
+                .padding(.horizontal, PTDesignTokens.Spacing.md)
+                .padding(.vertical, PTDesignTokens.Spacing.sm)
                 .background(
-                    RoundedRectangle(cornerRadius: PTCornerRadius.button)
-                        .fill(activeFiltersCount > 0 ? Color.ptCoral.opacity(0.1) : Color.ptSurface)
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                        .fill(activeFiltersCount > 0 ? Color.ptTang.opacity(0.1) : Color.ptSurface)  // Tang accent background
                         .overlay(
-                            RoundedRectangle(cornerRadius: PTCornerRadius.button)
-                                .stroke(activeFiltersCount > 0 ? Color.ptCoral : Color.ptMediumGray.opacity(0.3), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                                .stroke(activeFiltersCount > 0 ? Color.ptTang : Color.ptMediumGray.opacity(0.3), lineWidth: 1)
                         )
                 )
             }
@@ -92,20 +92,20 @@ struct PTFilterSortBar: View {
             
             // Sort Button
             Button(action: { showingSortOptions = true }) {
-                HStack(spacing: PTSpacing.xs) {
+                HStack(spacing: PTDesignTokens.Spacing.xs) {
                     Image(systemName: "arrow.up.arrow.down")
                         .font(.system(size: 16, weight: .medium))
                     Text(currentSortOption.displayName)
-                        .font(PTFont.cardSubtitle)
+                        .font(PTFont.ptButtonText)  // Using PT button typography
                 }
-                .foregroundColor(.ptPrimary)
-                .padding(.horizontal, PTSpacing.md)
-                .padding(.vertical, PTSpacing.sm)
+                .foregroundColor(.ptInk)  // Using PT Ink for primary text color
+                .padding(.horizontal, PTDesignTokens.Spacing.md)
+                .padding(.vertical, PTDesignTokens.Spacing.sm)
                 .background(
-                    RoundedRectangle(cornerRadius: PTCornerRadius.button)
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
                         .fill(Color.ptSurface)
                         .overlay(
-                            RoundedRectangle(cornerRadius: PTCornerRadius.button)
+                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
                                 .stroke(Color.ptMediumGray.opacity(0.3), lineWidth: 1)
                         )
                 )
@@ -120,7 +120,7 @@ struct PTLoadingView: View {
     @State private var isAnimating = false
     
     var body: some View {
-        VStack(spacing: PTSpacing.lg) {
+        VStack(spacing: PTDesignTokens.Spacing.lg) {
             PTLogo(size: 48, showText: false)
                 .rotationEffect(.degrees(isAnimating ? 360 : 0))
                 .animation(.linear(duration: 2).repeatForever(autoreverses: false), value: isAnimating)
@@ -129,15 +129,15 @@ struct PTLoadingView: View {
                 }
             
             Text("Loading resources...")
-                .font(PTFont.sectionTitle)
-                .foregroundColor(.ptPrimary)
+                .font(PTFont.ptSectionTitle)  // Using PT section title typography
+                .foregroundColor(.ptInk)      // Using PT Ink for primary text
             
             Text("Fetching the latest sermons and talks")
-                .font(PTFont.bodyText)
+                .font(PTFont.ptBodyText)      // Using PT body typography
                 .foregroundColor(.ptDarkGray)
                 .multilineTextAlignment(.center)
         }
-        .padding(PTSpacing.xl)
+        .padding(PTDesignTokens.Spacing.xl)
     }
 }
 
@@ -145,20 +145,20 @@ struct PTLoadingView: View {
 
 struct PTEmptyStateView: View {
     var body: some View {
-        VStack(spacing: PTSpacing.lg) {
+        VStack(spacing: PTDesignTokens.Spacing.lg) {
             PTLogo(size: 64, showText: false)
             
             Text("No Resources Found")
-                .font(PTFont.sectionTitle)
-                .foregroundColor(.ptPrimary)
+                .font(PTFont.ptSectionTitle)  // Using PT section title typography
+                .foregroundColor(.ptInk)      // Using PT Ink for primary text
             
             Text("Try adjusting your search terms or filters to find more content")
-                .font(PTFont.bodyText)
+                .font(PTFont.ptBodyText)      // Using PT body typography
                 .foregroundColor(.ptDarkGray)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, PTSpacing.lg)
+                .padding(.horizontal, PTDesignTokens.Spacing.lg)
         }
-        .padding(PTSpacing.xl)
+        .padding(PTDesignTokens.Spacing.xl)
     }
 }
 

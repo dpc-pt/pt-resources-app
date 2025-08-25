@@ -19,13 +19,13 @@ struct TalkRowView: View {
     
     var body: some View {
         Button(action: onTalkTap) {
-            HStack(spacing: PTSpacing.md) {
+            HStack(spacing: PTDesignTokens.Spacing.md) {
                 // Artwork/Thumbnail with PT styling and caching
                 PTAsyncImage(url: URL(string: talk.imageURL ?? ""),
                            targetSize: CGSize(width: 72, height: 72)) {
-                    RoundedRectangle(cornerRadius: PTCornerRadius.small)
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image)
                         .fill(LinearGradient(
-                            colors: [Color.ptCoral.opacity(0.1), Color.ptTurquoise.opacity(0.1)],
+                            colors: [PTDesignTokens.Colors.tang.opacity(0.1), PTDesignTokens.Colors.kleinBlue.opacity(0.1)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ))
@@ -34,58 +34,58 @@ struct TalkRowView: View {
                         )
                 }
                 .frame(width: 72, height: 72)
-                .clipShape(RoundedRectangle(cornerRadius: PTCornerRadius.small))
+                .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image))
                 .overlay(
-                    RoundedRectangle(cornerRadius: PTCornerRadius.small)
-                        .stroke(Color.ptMediumGray.opacity(0.3), lineWidth: 0.5)
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image)
+                        .stroke(PTDesignTokens.Colors.border, lineWidth: 0.5)
                 )
                 
                 // Talk Information
-                VStack(alignment: .leading, spacing: PTSpacing.xs) {
+                VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
                     Text(talk.title)
-                        .font(PTFont.cardTitle)
-                        .foregroundColor(.ptPrimary)
+                        .font(PTFont.ptCardTitle)  // Using PT typography
+                        .foregroundColor(PTDesignTokens.Colors.ink)  // Using PT Ink for primary text
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     
                     Text(talk.speaker)
-                        .font(PTFont.cardSubtitle)
-                        .foregroundColor(.ptCoral)
+                        .font(PTFont.ptCardSubtitle)  // Using PT typography
+                        .foregroundColor(PTDesignTokens.Colors.tang)  // Using PT Tang for speaker names
                     
                     // Series and Scripture Reference
                     VStack(alignment: .leading, spacing: 2) {
                         if let series = talk.series, !series.isEmpty {
                             Text(series)
-                                .font(PTFont.captionText)
-                                .foregroundColor(.ptDarkGray)
+                                .font(PTFont.ptCaptionText)  // Using PT typography
+                                .foregroundColor(PTDesignTokens.Colors.medium)  // Using consistent gray
                         }
                         
                         if let scripture = talk.scriptureReference, !scripture.isEmpty {
                             Text(scripture)
-                                .font(PTFont.captionText)
-                                .foregroundColor(.ptTurquoise)
+                                .font(PTFont.ptCaptionText)  // Using PT typography
+                                .foregroundColor(PTDesignTokens.Colors.kleinBlue)  // Using Klein Blue for scripture
                         } else if let biblePassage = talk.biblePassage, !biblePassage.isEmpty {
                             Text(biblePassage)
-                                .font(PTFont.captionText)
-                                .foregroundColor(.ptTurquoise)
+                                .font(PTFont.ptCaptionText)  // Using PT typography
+                                .foregroundColor(PTDesignTokens.Colors.kleinBlue)  // Using Klein Blue for scripture
                         }
                     }
                     
                     // Date and metadata
-                    HStack(spacing: PTSpacing.xs) {
+                    HStack(spacing: PTDesignTokens.Spacing.xs) {
                         if talk.duration > 0 {
                             Text(talk.formattedDuration)
-                                .font(PTFont.captionText)
-                                .foregroundColor(.ptDarkGray)
+                                .font(PTFont.ptSmallText)  // Using PT typography
+                                .foregroundColor(PTDesignTokens.Colors.medium)
                             
                             Text("•")
-                                .font(PTFont.captionText)
-                                .foregroundColor(.ptMediumGray)
+                                .font(PTFont.ptSmallText)
+                                .foregroundColor(PTDesignTokens.Colors.light)
                         }
                         
                         Text(talk.formattedDate)
-                            .font(PTFont.captionText)
-                            .foregroundColor(.ptDarkGray)
+                            .font(PTFont.ptSmallText)  // Using PT typography
+                            .foregroundColor(PTDesignTokens.Colors.medium)
                         
                         Spacer()
                         
@@ -93,7 +93,7 @@ struct TalkRowView: View {
                         if isDownloaded {
                             Image(systemName: "arrow.down.circle.fill")
                                 .font(.caption)
-                                .foregroundColor(.ptSuccess)
+                                .foregroundColor(PTDesignTokens.Colors.success)  // Using PT success color
                         }
                     }
                 }
@@ -101,12 +101,12 @@ struct TalkRowView: View {
                 Spacer()
                 
                 // Action Buttons with PT styling
-                HStack(spacing: PTSpacing.sm) {
+                HStack(spacing: PTDesignTokens.Spacing.sm) {
                     // Play Button
                     Button(action: onPlayTap) {
                         Image(systemName: "play.circle.fill")
                             .font(.title2)
-                            .foregroundColor(.ptCoral)
+                            .foregroundColor(PTDesignTokens.Colors.tang)  // Using PT Tang
                     }
                     .accessibilityPlayButton(isPlaying: false) // TODO: Pass actual playing state
                     
@@ -115,27 +115,27 @@ struct TalkRowView: View {
                         if let progress = downloadProgress {
                             ZStack {
                                 Circle()
-                                    .stroke(Color.ptCoral.opacity(0.3), lineWidth: 2)
+                                    .stroke(PTDesignTokens.Colors.tang.opacity(0.3), lineWidth: 2)
                                 
                                 Circle()
                                     .trim(from: 0, to: CGFloat(progress))
-                                    .stroke(Color.ptCoral, lineWidth: 2)
+                                    .stroke(PTDesignTokens.Colors.tang, lineWidth: 2)
                                     .rotationEffect(.degrees(-90))
                                 
                                 Text("\(Int(progress * 100))%")
                                     .font(.caption2)
                                     .fontWeight(.medium)
-                                    .foregroundColor(.ptCoral)
+                                    .foregroundColor(PTDesignTokens.Colors.tang)
                             }
                             .frame(width: 28, height: 28)
                         } else if isDownloaded {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.title3)
-                                .foregroundColor(.ptSuccess)
+                                .foregroundColor(PTDesignTokens.Colors.success)  // Using PT success color
                         } else {
                             Image(systemName: "arrow.down.circle")
                                 .font(.title3)
-                                .foregroundColor(.ptDarkGray)
+                                .foregroundColor(PTDesignTokens.Colors.medium)  // Using consistent gray
                         }
                     }
                     .accessibilityDownloadButton(isDownloaded: isDownloaded, downloadProgress: downloadProgress)
@@ -143,7 +143,17 @@ struct TalkRowView: View {
             }
         }
         .buttonStyle(PlainButtonStyle())
-        .ptCardStyle(isPressed: isPressed)
+        .padding(.horizontal, PTDesignTokens.Spacing.md)
+        .padding(.vertical, PTDesignTokens.Spacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                .fill(PTDesignTokens.Colors.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                        .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
+                )
+        )
+        .scaleEffect(isPressed ? 0.98 : 1.0)
         .accessibilityTalkRow(talk, isDownloaded: isDownloaded, downloadProgress: downloadProgress)
         .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
             withAnimation(.easeInOut(duration: 0.1)) {

@@ -19,17 +19,24 @@ struct ContentView: View {
 struct DownloadsView: View {
     var body: some View {
         NavigationStack {
-            VStack {
+            VStack(spacing: PTDesignTokens.Spacing.lg) {
+                PTLogo(size: 64, showText: false)
+                    .padding(.top, PTDesignTokens.Spacing.xl)
+                
                 Text("Downloads")
-                    .font(.largeTitle)
-                    .padding()
+                    .font(PTFont.ptSectionTitle)  // Using PT typography
+                    .foregroundColor(PTDesignTokens.Colors.ink)  // Using PT Ink
 
                 Text("Downloaded talks will appear here")
-                    .foregroundColor(.secondary)
+                    .font(PTFont.ptBodyText)  // Using PT typography
+                    .foregroundColor(PTDesignTokens.Colors.medium)  // Using consistent gray
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, PTDesignTokens.Spacing.lg)
 
                 Spacer()
             }
             .navigationTitle("Downloads")
+            .background(PTDesignTokens.Colors.background)
         }
     }
 }
@@ -69,9 +76,11 @@ struct SettingsView: View {
                     Button(action: { showingPrivacySettings = true }) {
                         HStack {
                             Text("Privacy Settings")
+                                .font(PTFont.ptBodyText)  // Using PT typography
+                                .foregroundColor(PTDesignTokens.Colors.ink)  // Using PT Ink
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .foregroundColor(.ptMediumGray)
+                                .foregroundColor(PTDesignTokens.Colors.light)  // Using consistent color
                         }
                     }
                     .accessibilityHint("Manage your privacy, export or delete data")

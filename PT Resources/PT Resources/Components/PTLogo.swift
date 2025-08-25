@@ -23,14 +23,14 @@ struct PTLogo: View {
                 .resizable()
                 .scaledToFit()
                 .frame(height: size)
-                .foregroundColor(.ptPrimary)
+                .foregroundColor(PTDesignTokens.Colors.ink)
         } else {
             // Use just the icon
             Image("pt-logo-icon")
                 .resizable()
                 .scaledToFit()
                 .frame(width: size, height: size)
-                .foregroundColor(.ptCoral)
+                .foregroundColor(PTDesignTokens.Colors.tang)
         }
     }
 }
@@ -47,7 +47,7 @@ struct PTStarSymbol: View {
             .resizable()
             .scaledToFit()
             .frame(width: size, height: size)
-            .foregroundColor(.ptCoral)
+            .foregroundColor(PTDesignTokens.Colors.tang)
     }
 }
 
@@ -61,25 +61,25 @@ struct PTBrandHeader: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: PTSpacing.sm) {
+        VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.sm) {
             HStack {
                 PTLogo(size: 28)
                 Spacer()
             }
             
             Text(title)
-                .font(PTFont.brandTitle)
-                .foregroundColor(.ptPrimary)
+                .font(PTFont.ptBrandTitle)
+                .foregroundColor(PTDesignTokens.Colors.ink)
             
             if let subtitle = subtitle {
                 Text(subtitle)
-                    .font(PTFont.bodyText)
-                    .foregroundColor(.ptDarkGray)
+                    .font(PTFont.ptBodyText)
+                    .foregroundColor(PTDesignTokens.Colors.medium)
             }
         }
-        .padding(.horizontal, PTSpacing.screenPadding)
-        .padding(.top, PTSpacing.lg)
-        .background(Color.ptBackground)
+        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+        .padding(.top, PTDesignTokens.Spacing.lg)
+        .background(PTDesignTokens.Colors.background)
     }
 }
 
@@ -96,7 +96,7 @@ struct PTLogo_Previews: PreviewProvider {
             PTBrandHeader("Resources", subtitle: "Sermons and talks from Proclamation Trust")
         }
         .padding()
-        .background(Color.ptBackground)
+        .background(PTDesignTokens.Colors.background)
         .previewLayout(.sizeThatFits)
     }
 }

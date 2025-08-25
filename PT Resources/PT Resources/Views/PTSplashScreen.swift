@@ -19,9 +19,9 @@ struct PTSplashScreen: View {
             // Background gradient
             LinearGradient(
                 colors: [
-                    Color.ptNavy,
-                    Color.ptNavy.opacity(0.9),
-                    Color.ptPrimary.opacity(0.8)
+                    PTDesignTokens.Colors.ink,
+                    PTDesignTokens.Colors.ink.opacity(0.9),
+                    PTDesignTokens.Colors.kleinBlue.opacity(0.8)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -49,7 +49,7 @@ struct PTSplashScreen: View {
                         HStack(spacing: 8) {
                             Text("pt")
                                 .font(PTFont.ptDisplayLarge)
-                                .foregroundColor(.ptCoral)
+                                .foregroundColor(PTDesignTokens.Colors.tang)
                             Text("resources")
                                 .font(PTFont.ptDisplayMedium)
                                 .foregroundColor(.white)
@@ -87,7 +87,6 @@ struct PTSplashScreen: View {
         .onAppear {
             startAnimationSequence()
         }
-        .registerPTFonts()
     }
     
     private func startAnimationSequence() {
@@ -130,7 +129,7 @@ struct PTAuthenticStarSymbol: View {
             // Main star burst - more authentic to PT branding
             ForEach(0..<12, id: \.self) { index in
                 RoundedRectangle(cornerRadius: size * 0.02)
-                    .fill(Color.ptCoral)
+                    .fill(PTDesignTokens.Colors.tang)
                     .frame(
                         width: size * (index % 2 == 0 ? 0.08 : 0.06),
                         height: size * (index % 2 == 0 ? 0.5 : 0.3)
@@ -141,11 +140,11 @@ struct PTAuthenticStarSymbol: View {
             
             // Center circle with inner detail
             Circle()
-                .fill(Color.ptCoral)
+                .fill(PTDesignTokens.Colors.tang)
                 .frame(width: size * 0.15, height: size * 0.15)
                 .overlay(
                     Circle()
-                        .fill(Color.ptCoral.opacity(0.8))
+                        .fill(PTDesignTokens.Colors.tang.opacity(0.8))
                         .frame(width: size * 0.08, height: size * 0.08)
                 )
         }

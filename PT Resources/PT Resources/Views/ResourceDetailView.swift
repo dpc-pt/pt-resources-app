@@ -67,7 +67,7 @@ struct ResourceDetailView: View {
                 Button(action: { dismiss() }) {
                     Image(systemName: "chevron.left")
                         .font(.title3)
-                        .foregroundColor(.ptPrimary)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
                         .padding()
                 }
                 
@@ -78,7 +78,7 @@ struct ResourceDetailView: View {
                 }) {
                     Image(systemName: "square.and.arrow.up")
                         .font(.title3)
-                        .foregroundColor(.ptPrimary)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
                         .padding()
                 }
             }
@@ -89,7 +89,7 @@ struct ResourceDetailView: View {
                 Rectangle()
                     .fill(
                         LinearGradient(
-                            colors: [Color.ptCoral.opacity(0.1), Color.ptTurquoise.opacity(0.1)],
+                            colors: [PTDesignTokens.Colors.tang.opacity(0.1), PTDesignTokens.Colors.kleinBlue.opacity(0.1)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -103,19 +103,19 @@ struct ResourceDetailView: View {
                     )
                     .frame(width: 240, height: 240)
                     .cornerRadius(PTCornerRadius.large)
-                    .shadow(color: Color.ptNavy.opacity(0.1), radius: 10, x: 0, y: 5)
+                    .shadow(color: PTDesignTokens.Colors.ink.opacity(0.1), radius: 10, x: 0, y: 5)
                 
                 // Title and info
                 VStack(spacing: PTSpacing.sm) {
                     Text(resource.title)
                         .font(PTFont.ptSectionTitle)
-                        .foregroundColor(.ptPrimary)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, PTSpacing.lg)
                     
                     Text(resource.speaker)
                         .font(PTFont.ptCardTitle)
-                        .foregroundColor(.ptDarkGray)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
                     
                     HStack {
                         Text(resource.conference)
@@ -133,12 +133,12 @@ struct ResourceDetailView: View {
                     if !resource.scriptureReference.isEmpty {
                         Text(resource.scriptureReference)
                             .font(PTFont.ptBodyText)
-                            .foregroundColor(.ptRoyalBlue)
+                            .foregroundColor(PTDesignTokens.Colors.kleinBlue)
                             .padding(.horizontal, PTSpacing.md)
                             .padding(.vertical, PTSpacing.xs)
                             .background(
-                                RoundedRectangle(cornerRadius: PTCornerRadius.button)
-                                    .fill(Color.ptRoyalBlue.opacity(0.1))
+                                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                                    .fill(PTDesignTokens.Colors.kleinBlue.opacity(0.1))
                             )
                     }
                 }
@@ -175,7 +175,7 @@ struct ResourceDetailView: View {
                 .padding(.vertical, PTSpacing.md)
                 .background(
                     RoundedRectangle(cornerRadius: PTCornerRadius.button)
-                        .fill(Color.ptCoral)
+                        .fill(PTDesignTokens.Colors.tang)
                 )
             }
             .disabled(resource.audioURL == nil && resource.videoURL == nil)
@@ -186,7 +186,7 @@ struct ResourceDetailView: View {
             }) {
                 Image(systemName: "arrow.down.circle")
                     .font(.title2)
-                    .foregroundColor(.ptPrimary)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
                     .padding()
                     .background(
                         Circle()
@@ -204,7 +204,7 @@ struct ResourceDetailView: View {
             }) {
                 Image(systemName: "square.and.arrow.up")
                     .font(.title2)
-                    .foregroundColor(.ptPrimary)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
                     .padding()
                     .background(
                         Circle()
@@ -228,11 +228,11 @@ struct ResourceDetailView: View {
                 VStack(alignment: .leading, spacing: PTSpacing.sm) {
                     Text("Description")
                         .font(PTFont.ptCardTitle)
-                        .foregroundColor(.ptPrimary)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
                     
                     Text(resource.description)
                         .font(PTFont.ptBodyText)
-                        .foregroundColor(.ptDarkGray)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
                         .lineSpacing(4)
                 }
             }
@@ -241,7 +241,7 @@ struct ResourceDetailView: View {
             VStack(alignment: .leading, spacing: PTSpacing.sm) {
                 Text("Conference Details")
                     .font(PTFont.ptCardTitle)
-                    .foregroundColor(.ptPrimary)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
                 
                 PTInfoRow(title: "Conference", value: resource.conference)
                 PTInfoRow(title: "Speaker", value: resource.speaker)
@@ -263,7 +263,7 @@ struct ResourceDetailView: View {
             HStack {
                 Text("Related Resources")
                     .font(PTFont.ptCardTitle)
-                    .foregroundColor(.ptPrimary)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
                     .padding(.horizontal, PTSpacing.screenPadding)
                 
                 Spacer()
@@ -318,7 +318,7 @@ struct PTInfoRow: View {
             
             Text(value)
                 .font(PTFont.ptBodyText)
-                .foregroundColor(.ptDarkGray)
+                .foregroundColor(PTDesignTokens.Colors.medium)
             
             Spacer()
         }
@@ -341,7 +341,7 @@ struct PTRelatedResourceRow: View {
                 Rectangle()
                     .fill(
                         LinearGradient(
-                            colors: [Color.ptGreen.opacity(0.1), Color.ptTurquoise.opacity(0.1)],
+                            colors: [PTDesignTokens.Colors.lawn.opacity(0.1), PTDesignTokens.Colors.kleinBlue.opacity(0.1)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -360,7 +360,7 @@ struct PTRelatedResourceRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(resource.title)
                         .font(PTFont.ptBodyText)
-                        .foregroundColor(.ptPrimary)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     
@@ -381,8 +381,17 @@ struct PTRelatedResourceRow: View {
             }
         }
         .buttonStyle(PlainButtonStyle())
-        .padding(.vertical, PTSpacing.xs)
-        .ptCardStyle(isPressed: isPressed)
+        .padding(.vertical, PTDesignTokens.Spacing.xs)
+        .padding(.horizontal, PTDesignTokens.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                .fill(PTDesignTokens.Colors.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                        .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
+                )
+        )
+        .scaleEffect(isPressed ? 0.98 : 1.0)
         .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
             withAnimation(.easeInOut(duration: 0.1)) {
                 isPressed = pressing

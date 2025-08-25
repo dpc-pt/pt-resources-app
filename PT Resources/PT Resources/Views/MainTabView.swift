@@ -46,25 +46,25 @@ struct MainTabView: View {
                 .tag(3)
                 .accessibilityIdentifier(PTAccessibility.moreTab)
         }
-        .tint(.ptCoral)
+        .tint(PTDesignTokens.Colors.tang)  // Using PT Tang for selected state
         .onAppear {
-            // Configure tab bar appearance
+            // Configure tab bar appearance with PT design tokens
             let appearance = UITabBarAppearance()
             appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = UIColor(Color.ptSurface)
+            appearance.backgroundColor = UIColor(PTDesignTokens.Colors.surface)
             
-            // Selected tab color
-            appearance.selectionIndicatorTintColor = UIColor(Color.ptCoral)
+            // Selected tab color (PT Tang)
+            appearance.selectionIndicatorTintColor = UIColor(PTDesignTokens.Colors.tang)
             
-            // Tab item colors
-            appearance.stackedLayoutAppearance.normal.iconColor = UIColor(Color.ptDarkGray)
+            // Tab item colors using PT design tokens
+            appearance.stackedLayoutAppearance.normal.iconColor = UIColor(PTDesignTokens.Colors.medium)
             appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
-                .foregroundColor: UIColor(Color.ptDarkGray)
+                .foregroundColor: UIColor(PTDesignTokens.Colors.medium)
             ]
             
-            appearance.stackedLayoutAppearance.selected.iconColor = UIColor(Color.ptCoral)
+            appearance.stackedLayoutAppearance.selected.iconColor = UIColor(PTDesignTokens.Colors.tang)
             appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-                .foregroundColor: UIColor(Color.ptCoral)
+                .foregroundColor: UIColor(PTDesignTokens.Colors.tang)
             ]
             
             UITabBar.appearance().standardAppearance = appearance
@@ -82,21 +82,21 @@ struct PTComingSoonView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.ptBackground.ignoresSafeArea()
+                PTDesignTokens.Colors.background.ignoresSafeArea()  // Using PT background color
                 
-                VStack(spacing: PTSpacing.xl) {
+                VStack(spacing: PTDesignTokens.Spacing.xl) {
                     PTLogo(size: 80, showText: false)
                     
-                    VStack(spacing: PTSpacing.md) {
+                    VStack(spacing: PTDesignTokens.Spacing.md) {
                         Text("\(feature) Coming Soon")
-                            .font(PTFont.ptSectionTitle)
-                            .foregroundColor(.ptPrimary)
+                            .font(PTFont.ptSectionTitle)  // Using PT section title typography
+                            .foregroundColor(PTDesignTokens.Colors.ink)  // Using PT Ink for primary text
                         
                         Text(description)
-                            .font(PTFont.ptBodyText)
-                            .foregroundColor(.ptDarkGray)
+                            .font(PTFont.ptBodyText)  // Using PT body typography
+                            .foregroundColor(PTDesignTokens.Colors.medium)  // Using consistent medium gray
                             .multilineTextAlignment(.center)
-                            .padding(.horizontal, PTSpacing.xl)
+                            .padding(.horizontal, PTDesignTokens.Spacing.xl)
                     }
                     
                     Button("Stay Tuned") {
@@ -104,7 +104,10 @@ struct PTComingSoonView: View {
                         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
                         impactFeedback.impactOccurred()
                     }
-                    .ptPrimaryButton()
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(PTDesignTokens.Colors.tang)
+                    .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button))
                 }
             }
             .navigationTitle(feature)

@@ -1,0 +1,495 @@
+//
+//  PTLayout.swift
+//  PT Resources
+//
+//  Responsive layout components matching the Proclamation Trust website design system
+//  Implements container, grid, and responsive patterns from tailwind.config.js
+//
+
+import SwiftUI
+
+// MARK: - Device Size Detection
+
+extension UIDevice {
+    var ptDeviceClass: PTDeviceClass {
+        switch UIDevice.current.userInterfaceIdiom {
+        case .phone:
+            let bounds = UIScreen.main.bounds
+            let width = min(bounds.width, bounds.height) // Portrait width
+            
+            if width <= 375 {
+                return .compact  // iPhone 6/7/8, iPhone 12 mini
+            } else {
+                return .regular  // iPhone Plus/Pro models
+            }
+        case .pad:
+            return .large
+        default:
+            return .regular
+        }
+    }
+}
+
+enum PTDeviceClass {
+    case compact    // Small phones (≤375pt)
+    case regular    // Large phones (>375pt)
+    case large      // iPad
+    
+    var maxContentWidth: CGFloat {
+        switch self {
+        case .compact: return PTDesignTokens.Breakpoints.compact
+        case .regular: return PTDesignTokens.Breakpoints.regular
+        case .large: return PTDesignTokens.Breakpoints.extraLarge
+        }
+    }
+    
+    var containerPadding: CGFloat {
+        switch self {
+        case .compact: return PTDesignTokens.Spacing.md
+        case .regular: return PTDesignTokens.Spacing.lg
+        case .large: return PTDesignTokens.Spacing.xl
+        }
+    }
+    
+    var cardColumns: Int {
+        switch self {
+        case .compact: return 1
+        case .regular: return 1
+        case .large: return 2
+        }
+    }
+    
+    var sectionSpacing: CGFloat {
+        switch self {
+        case .compact: return PTDesignTokens.Spacing.lg
+        case .regular: return PTDesignTokens.Spacing.xl
+        case .large: return PTDesignTokens.Spacing.xxl
+        }
+    }
+}
+
+// MARK: - PT Container (Matching Website Container)
+
+/// Container component that matches the website's max-width and responsive padding
+/// Equivalent to the @utility container from globals.css
+struct PTContainer<Content: View>: View {
+    let content: Content
+    let alignment: HorizontalAlignment
+    
+    init(alignment: HorizontalAlignment = .center, @ViewBuilder content: () -> Content) {
+        self.alignment = alignment
+        self.content = content()
+    }
+    
+    var body: some View {
+        GeometryReader { geometry in
+            VStack(alignment: alignment, spacing: 0) {
+                content
+            }
+            .frame(maxWidth: min(geometry.size.width, PTDesignTokens.Breakpoints.extraLarge))
+            .padding(.horizontal, UIDevice.current.ptDeviceClass.containerPadding)
+        }
+    }
+}
+
+// MARK: - PT Section (Website Section Spacing)
+
+/// Section wrapper that provides consistent spacing matching the website
+struct PTSection<Content: View>: View {
+    let content: Content
+    let spacing: CGFloat?
+    
+    init(spacing: CGFloat? = nil, @ViewBuilder content: () -> Content) {
+        self.spacing = spacing
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(spacing: spacing ?? UIDevice.current.ptDeviceClass.sectionSpacing) {
+            content
+        }
+        .padding(.vertical, PTDesignTokens.Spacing.lg)
+    }
+}
+
+// MARK: - PT Card Grid (Responsive Grid System)
+
+/// Responsive card grid matching the website's layout patterns
+struct PTCardGrid<Item: Identifiable, Content: View>: View {
+    let items: [Item]
+    let content: (Item) -> Content
+    let spacing: CGFloat
+    let columns: Int?
+    
+    init(
+        items: [Item],
+        spacing: CGFloat = PTDesignTokens.Spacing.md,
+        columns: Int? = nil,
+        @ViewBuilder content: @escaping (Item) -> Content
+    ) {
+        self.items = items
+        self.content = content
+        self.spacing = spacing
+        self.columns = columns
+    }
+    
+    var body: some View {
+        let columnCount = columns ?? UIDevice.current.ptDeviceClass.cardColumns
+        let gridItems = Array(repeating: GridItem(.flexible(), spacing: spacing), count: columnCount)
+        
+        LazyVGrid(columns: gridItems, spacing: spacing) {
+            ForEach(items) { item in
+                content(item)
+            }
+        }
+    }
+}
+
+// MARK: - PT Stack (Responsive Stack with Consistent Spacing)
+
+/// Stack component that automatically adjusts spacing based on device class
+struct PTVStack<Content: View>: View {
+    let content: Content
+    let spacing: PTStackSpacing
+    let alignment: HorizontalAlignment
+    
+    init(
+        alignment: HorizontalAlignment = .center,
+        spacing: PTStackSpacing = .medium,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.alignment = alignment
+        self.spacing = spacing
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: alignment, spacing: spacing.value) {
+            content
+        }
+    }
+}
+
+struct PTHStack<Content: View>: View {
+    let content: Content
+    let spacing: PTStackSpacing
+    let alignment: VerticalAlignment
+    
+    init(
+        alignment: VerticalAlignment = .center,
+        spacing: PTStackSpacing = .medium,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.alignment = alignment
+        self.spacing = spacing
+        self.content = content()
+    }
+    
+    var body: some View {
+        HStack(alignment: alignment, spacing: spacing.value) {
+            content
+        }
+    }
+}
+
+enum PTStackSpacing {
+    case none
+    case small
+    case medium
+    case large
+    case extraLarge
+    case custom(CGFloat)
+    
+    var value: CGFloat {
+        switch self {
+        case .none: return 0
+        case .small: return PTDesignTokens.Spacing.sm
+        case .medium: return PTDesignTokens.Spacing.md
+        case .large: return PTDesignTokens.Spacing.lg
+        case .extraLarge: return PTDesignTokens.Spacing.xl
+        case .custom(let value): return value
+        }
+    }
+}
+
+// MARK: - PT Page Layout (Full Page with Navigation)
+
+/// Page layout component that provides consistent structure across the app
+struct PTPage<Content: View>: View {
+    let title: String
+    let content: Content
+    let showBackButton: Bool
+    let backgroundColor: Color
+    
+    init(
+        title: String,
+        showBackButton: Bool = false,
+        backgroundColor: Color = PTDesignTokens.Colors.background,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.showBackButton = showBackButton
+        self.backgroundColor = backgroundColor
+        self.content = content()
+    }
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                PTContainer {
+                    content
+                }
+            }
+            .background(backgroundColor.ignoresSafeArea())
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.large)
+        }
+    }
+}
+
+// MARK: - PT Hero Section (Website Hero Pattern)
+
+/// Hero section component matching the website's hero design patterns
+struct PTHeroSection: View {
+    let title: String
+    let subtitle: String?
+    let backgroundImage: String?
+    let backgroundColor: Color
+    
+    init(
+        title: String,
+        subtitle: String? = nil,
+        backgroundImage: String? = nil,
+        backgroundColor: Color = PTDesignTokens.Colors.background
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.backgroundImage = backgroundImage
+        self.backgroundColor = backgroundColor
+    }
+    
+    var body: some View {
+        ZStack {
+            // Background
+            backgroundColor
+            
+            // Background pattern (optional)
+            if let backgroundImage = backgroundImage {
+                Image(backgroundImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .opacity(0.1)
+            }
+            
+            // Content
+            VStack(spacing: PTDesignTokens.Spacing.lg) {
+                PTLogo(size: 64, showText: true)
+                
+                VStack(spacing: PTDesignTokens.Spacing.md) {
+                    Text(title)
+                        .font(PTFont.ptDisplayLarge)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+                        .multilineTextAlignment(.center)
+                    
+                    if let subtitle = subtitle {
+                        Text(subtitle)
+                            .font(PTFont.ptBodyText)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                
+                // Content can be added here if needed
+            }
+            .padding(.vertical, PTDesignTokens.Spacing.xxxl)
+            .padding(.horizontal, UIDevice.current.ptDeviceClass.containerPadding)
+        }
+    }
+}
+
+// MARK: - PT Card Layout (Website Card Pattern)
+
+/// Card component matching the website's card design system
+struct PTCard<Content: View>: View {
+    let content: Content
+    let padding: CGFloat
+    let backgroundColor: Color
+    let borderRadius: CGFloat
+    let shadow: Bool
+    
+    init(
+        padding: CGFloat = PTDesignTokens.Spacing.cardPadding,
+        backgroundColor: Color = PTDesignTokens.Colors.surface,
+        borderRadius: CGFloat = PTDesignTokens.BorderRadius.card,
+        shadow: Bool = true,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.content = content()
+        self.padding = padding
+        self.backgroundColor = backgroundColor
+        self.borderRadius = borderRadius
+        self.shadow = shadow
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            content
+        }
+        .padding(padding)
+        .background(backgroundColor)
+        .clipShape(RoundedRectangle(cornerRadius: borderRadius))
+        .shadow(
+            color: shadow ? PTDesignTokens.Shadows.card.color : Color.clear,
+            radius: shadow ? PTDesignTokens.Shadows.card.radius : 0,
+            x: shadow ? PTDesignTokens.Shadows.card.x : 0,
+            y: shadow ? PTDesignTokens.Shadows.card.y : 0
+        )
+    }
+}
+
+// MARK: - PT Content Section (Website Content Sections)
+
+/// Content section with optional header matching website patterns  
+struct PTContentSection<Header: View, Content: View>: View {
+    let header: Header?
+    let content: Content
+    
+    init(
+        @ViewBuilder content: () -> Content
+    ) where Header == EmptyView {
+        self.header = nil
+        self.content = content()
+    }
+    
+    init(
+        @ViewBuilder header: () -> Header,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.header = header()
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.lg) {
+            if let header = header {
+                header
+            }
+            
+            content
+        }
+    }
+}
+
+// MARK: - PT List Layout (Website List Patterns)
+
+/// List component with proper spacing and dividers
+struct PTList<Item: Identifiable, Content: View>: View {
+    let items: [Item]
+    let content: (Item) -> Content
+    let showDividers: Bool
+    let spacing: CGFloat
+    
+    init(
+        items: [Item],
+        showDividers: Bool = true,
+        spacing: CGFloat = PTDesignTokens.Spacing.md,
+        @ViewBuilder content: @escaping (Item) -> Content
+    ) {
+        self.items = items
+        self.content = content
+        self.showDividers = showDividers
+        self.spacing = spacing
+    }
+    
+    var body: some View {
+        LazyVStack(spacing: spacing) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                content(item)
+                
+                if showDividers && index < items.count - 1 {
+                    Divider()
+                        .background(PTDesignTokens.Colors.divider)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Responsive Modifiers
+
+extension View {
+    // Note: Responsive modifier removed for simplicity
+    // Can be added back when needed with proper @ViewBuilder support
+    
+    /// Apply container max-width and padding
+    func ptContainer() -> some View {
+        PTContainer {
+            self
+        }
+    }
+    
+    /// Apply section spacing
+    func ptSection(spacing: CGFloat? = nil) -> some View {
+        PTSection(spacing: spacing) {
+            self
+        }
+    }
+    
+    /// Apply card styling
+    func ptCard(
+        padding: CGFloat = PTDesignTokens.Spacing.cardPadding,
+        backgroundColor: Color = PTDesignTokens.Colors.surface,
+        shadow: Bool = true
+    ) -> some View {
+        PTCard(
+            padding: padding,
+            backgroundColor: backgroundColor,
+            shadow: shadow
+        ) {
+            self
+        }
+    }
+}
+
+// Helper modifier removed - not needed for current implementation
+
+// MARK: - Preview
+
+#if DEBUG
+struct PTLayout_Previews: PreviewProvider {
+    static var previews: some View {
+        PTPage(title: "Layout Demo") {
+            PTSection {
+                PTHeroSection(
+                    title: "PT Resources",
+                    subtitle: "Sermons and talks from the Proclamation Trust"
+                ) {
+                    Button("Get Started") { }
+                        .ptPrimaryStyle()
+                }
+                
+                PTContentSection {
+                    Text("Section Header")
+                        .font(PTFont.ptSectionTitle)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+                } content: {
+                    PTCardGrid(items: Array(1...6).map { MockItem(id: $0) }) { item in
+                        PTCard {
+                            VStack(alignment: .leading) {
+                                Text("Card \(item.id)")
+                                    .font(PTFont.ptCardTitle)
+                                Text("Card content here")
+                                    .font(PTFont.ptBodyText)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    struct MockItem: Identifiable {
+        let id: Int
+    }
+}
+#endif

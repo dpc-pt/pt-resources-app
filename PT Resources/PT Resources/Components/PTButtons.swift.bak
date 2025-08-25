@@ -1,0 +1,411 @@
+//
+//  PTButtons.swift
+//  PT Resources
+//
+//  Button components matching the Proclamation Trust website design system
+//  Replicates the button styles from pt-brand.css
+//
+
+import SwiftUI
+
+// MARK: - PT Button Styles (Matching Website CSS Classes)
+
+/// Primary button style (pt-btn-primary from website)
+/// Orange/Tang background, white text, hover state changes to outline
+struct PTPrimaryButtonStyle: ButtonStyle {
+    let isDisabled: Bool
+    
+    init(isDisabled: Bool = false) {
+        self.isDisabled = isDisabled
+    }
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(PTFont.ptButtonText)
+            .foregroundColor(textColor(isPressed: configuration.isPressed))
+            .padding(.horizontal, PTDesignTokens.Spacing.buttonPaddingHorizontal)
+            .padding(.vertical, PTDesignTokens.Spacing.buttonPaddingVertical)
+            .background(
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                    .fill(backgroundColor(isPressed: configuration.isPressed))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                            .stroke(PTDesignTokens.Colors.tang, lineWidth: 2)
+                    )
+            )
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .opacity(isDisabled ? 0.6 : 1.0)
+            .animation(PTDesignTokens.Animation.easeInOut, value: configuration.isPressed)
+    }
+    
+    private func textColor(isPressed: Bool) -> Color {
+        if isDisabled { return Color.white.opacity(0.7) }
+        if isPressed { return PTDesignTokens.Colors.tang }
+        return Color.white
+    }
+    
+    private func backgroundColor(isPressed: Bool) -> Color {
+        if isDisabled { return PTDesignTokens.Colors.tang.opacity(0.5) }
+        if isPressed { return Color.clear }
+        return PTDesignTokens.Colors.tang
+    }
+}
+
+/// Secondary button style (pt-btn-secondary from website)  
+/// Klein Blue background, white text, hover state changes to outline
+struct PTSecondaryButtonStyle: ButtonStyle {
+    let isDisabled: Bool
+    
+    init(isDisabled: Bool = false) {
+        self.isDisabled = isDisabled
+    }
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(PTFont.ptButtonText)
+            .foregroundColor(textColor(isPressed: configuration.isPressed))
+            .padding(.horizontal, PTDesignTokens.Spacing.buttonPaddingHorizontal)
+            .padding(.vertical, PTDesignTokens.Spacing.buttonPaddingVertical)
+            .background(
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                    .fill(backgroundColor(isPressed: configuration.isPressed))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                            .stroke(PTDesignTokens.Colors.kleinBlue, lineWidth: 2)
+                    )
+            )
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .opacity(isDisabled ? 0.6 : 1.0)
+            .animation(PTDesignTokens.Animation.easeInOut, value: configuration.isPressed)
+    }
+    
+    private func textColor(isPressed: Bool) -> Color {
+        if isDisabled { return Color.white.opacity(0.7) }
+        if isPressed { return PTDesignTokens.Colors.kleinBlue }
+        return Color.white
+    }
+    
+    private func backgroundColor(isPressed: Bool) -> Color {
+        if isDisabled { return PTDesignTokens.Colors.kleinBlue.opacity(0.5) }
+        if isPressed { return Color.clear }
+        return PTDesignTokens.Colors.kleinBlue
+    }
+}
+
+/// Outline button style (pt-btn-outline from website)
+/// Transparent background, Ink border and text, hover state fills with Ink
+struct PTOutlineButtonStyle: ButtonStyle {
+    let isDisabled: Bool
+    
+    init(isDisabled: Bool = false) {
+        self.isDisabled = isDisabled
+    }
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(PTFont.ptButtonText)
+            .foregroundColor(textColor(isPressed: configuration.isPressed))
+            .padding(.horizontal, PTDesignTokens.Spacing.buttonPaddingHorizontal)
+            .padding(.vertical, PTDesignTokens.Spacing.buttonPaddingVertical)
+            .background(
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                    .fill(backgroundColor(isPressed: configuration.isPressed))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                            .stroke(borderColor, lineWidth: 2)
+                    )
+            )
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .opacity(isDisabled ? 0.6 : 1.0)
+            .animation(PTDesignTokens.Animation.easeInOut, value: configuration.isPressed)
+    }
+    
+    private func textColor(isPressed: Bool) -> Color {
+        if isDisabled { return PTDesignTokens.Colors.ink.opacity(0.5) }
+        if isPressed { return Color.white }
+        return PTDesignTokens.Colors.ink
+    }
+    
+    private func backgroundColor(isPressed: Bool) -> Color {
+        if isPressed { return PTDesignTokens.Colors.ink }
+        return Color.clear
+    }
+    
+    private var borderColor: Color {
+        isDisabled ? PTDesignTokens.Colors.ink.opacity(0.5) : PTDesignTokens.Colors.ink
+    }
+}
+
+/// Ghost button style (subtle interaction, no background)
+/// Used for tertiary actions, matching website ghost button patterns
+struct PTGhostButtonStyle: ButtonStyle {
+    let isDisabled: Bool
+    
+    init(isDisabled: Bool = false) {
+        self.isDisabled = isDisabled
+    }
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(PTFont.ptButtonText)
+            .foregroundColor(textColor(isPressed: configuration.isPressed))
+            .padding(.horizontal, PTDesignTokens.Spacing.md)
+            .padding(.vertical, PTDesignTokens.Spacing.sm)
+            .background(
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                    .fill(backgroundColor(isPressed: configuration.isPressed))
+            )
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .opacity(isDisabled ? 0.5 : 1.0)
+            .animation(PTDesignTokens.Animation.easeInOut, value: configuration.isPressed)
+    }
+    
+    private func textColor(isPressed: Bool) -> Color {
+        if isDisabled { return PTDesignTokens.Colors.medium }
+        return PTDesignTokens.Colors.ink
+    }
+    
+    private func backgroundColor(isPressed: Bool) -> Color {
+        if isPressed { return PTDesignTokens.Colors.extraMedium.opacity(0.5) }
+        return Color.clear
+    }
+}
+
+/// Icon button style (for toolbar buttons, navigation items)
+/// Small, circular or square buttons with icons
+struct PTIconButtonStyle: ButtonStyle {
+    let isDisabled: Bool
+    let size: PTIconButtonSize
+    
+    enum PTIconButtonSize {
+        case small   // 32x32
+        case medium  // 40x40
+        case large   // 48x48
+        
+        var dimension: CGFloat {
+            switch self {
+            case .small: return 32
+            case .medium: return 40
+            case .large: return 48
+            }
+        }
+        
+        var padding: CGFloat {
+            switch self {
+            case .small: return 6
+            case .medium: return 8
+            case .large: return 12
+            }
+        }
+    }
+    
+    init(size: PTIconButtonSize = .medium, isDisabled: Bool = false) {
+        self.size = size
+        self.isDisabled = isDisabled
+    }
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundColor(textColor(isPressed: configuration.isPressed))
+            .frame(width: size.dimension, height: size.dimension)
+            .background(
+                Circle()
+                    .fill(backgroundColor(isPressed: configuration.isPressed))
+            )
+            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
+            .opacity(isDisabled ? 0.5 : 1.0)
+            .animation(PTDesignTokens.Animation.easeInOut, value: configuration.isPressed)
+    }
+    
+    private func textColor(isPressed: Bool) -> Color {
+        if isDisabled { return PTDesignTokens.Colors.medium }
+        if isPressed { return PTDesignTokens.Colors.kleinBlue }
+        return PTDesignTokens.Colors.ink
+    }
+    
+    private func backgroundColor(isPressed: Bool) -> Color {
+        if isPressed { return PTDesignTokens.Colors.extraMedium.opacity(0.8) }
+        return PTDesignTokens.Colors.extraMedium.opacity(0.3)
+    }
+}
+
+// MARK: - Button View Extensions
+
+extension Button {
+    /// Apply PT primary button style
+    func ptPrimaryStyle(isDisabled: Bool = false) -> some View {
+        self
+            .disabled(isDisabled)
+            .buttonStyle(PTPrimaryButtonStyle(isDisabled: isDisabled))
+    }
+    
+    /// Apply PT secondary button style
+    func ptSecondaryStyle(isDisabled: Bool = false) -> some View {
+        self
+            .disabled(isDisabled)
+            .buttonStyle(PTSecondaryButtonStyle(isDisabled: isDisabled))
+    }
+    
+    /// Apply PT outline button style
+    func ptOutlineStyle(isDisabled: Bool = false) -> some View {
+        self
+            .disabled(isDisabled)
+            .buttonStyle(PTOutlineButtonStyle(isDisabled: isDisabled))
+    }
+    
+    /// Apply PT ghost button style
+    func ptGhostStyle(isDisabled: Bool = false) -> some View {
+        self
+            .disabled(isDisabled)
+            .buttonStyle(PTGhostButtonStyle(isDisabled: isDisabled))
+    }
+    
+    /// Apply PT icon button style
+    func ptIconStyle(size: PTIconButtonStyle.PTIconButtonSize = .medium, isDisabled: Bool = false) -> some View {
+        self
+            .disabled(isDisabled)
+            .buttonStyle(PTIconButtonStyle(size: size, isDisabled: isDisabled))
+    }
+}
+
+// MARK: - Convenience Button Components
+
+/// Pre-built common buttons matching website patterns
+
+struct PTCallToActionButton: View {
+    let title: String
+    let action: () -> Void
+    let isLoading: Bool
+    let isDisabled: Bool
+    
+    init(
+        _ title: String,
+        isLoading: Bool = false,
+        isDisabled: Bool = false,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.action = action
+        self.isLoading = isLoading
+        self.isDisabled = isDisabled
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: PTDesignTokens.Spacing.sm) {
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                }
+                Text(title)
+                    .fontWeight(.medium)
+            }
+        }
+        .ptPrimaryStyle(isDisabled: isDisabled || isLoading)
+    }
+}
+
+struct PTSecondaryActionButton: View {
+    let title: String
+    let action: () -> Void
+    let isDisabled: Bool
+    
+    init(
+        _ title: String,
+        isDisabled: Bool = false,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.action = action
+        self.isDisabled = isDisabled
+    }
+    
+    var body: some View {
+        Button(title, action: action)
+            .ptSecondaryStyle(isDisabled: isDisabled)
+    }
+}
+
+struct PTLinkButton: View {
+    let title: String
+    let action: () -> Void
+    let isDisabled: Bool
+    
+    init(
+        _ title: String,
+        isDisabled: Bool = false,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.action = action
+        self.isDisabled = isDisabled
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(PTFont.ptBodyText)
+                .foregroundColor(isDisabled ? PTDesignTokens.Colors.medium : PTDesignTokens.Colors.kleinBlue)
+                .underline()
+        }
+        .disabled(isDisabled)
+    }
+}
+
+// MARK: - Button Previews
+
+#if DEBUG
+struct PTButtons_Previews: PreviewProvider {
+    static var previews: some View {
+        VStack(spacing: PTDesignTokens.Spacing.lg) {
+            // Button styles
+            Button("Primary Button") { }
+                .ptPrimaryStyle()
+            
+            Button("Secondary Button") { }
+                .ptSecondaryStyle()
+            
+            Button("Outline Button") { }
+                .ptOutlineStyle()
+            
+            Button("Ghost Button") { }
+                .ptGhostStyle()
+            
+            HStack(spacing: PTDesignTokens.Spacing.md) {
+                Button(action: {}) {
+                    Image(systemName: "heart")
+                }
+                .ptIconStyle(size: .small)
+                
+                Button(action: {}) {
+                    Image(systemName: "share")
+                }
+                .ptIconStyle(size: .medium)
+                
+                Button(action: {}) {
+                    Image(systemName: "bookmark")
+                }
+                .ptIconStyle(size: .large)
+            }
+            
+            // Pre-built components
+            PTCallToActionButton("Get Started") { }
+            
+            PTSecondaryActionButton("Learn More") { }
+            
+            PTLinkButton("View Details") { }
+            
+            // Disabled states
+            Button("Disabled Primary") { }
+                .ptPrimaryStyle(isDisabled: true)
+            
+            Button("Disabled Secondary") { }
+                .ptSecondaryStyle(isDisabled: true)
+        }
+        .padding(PTDesignTokens.Spacing.lg)
+        .background(PTDesignTokens.Colors.background)
+        .previewLayout(.sizeThatFits)
+    }
+}
+#endif

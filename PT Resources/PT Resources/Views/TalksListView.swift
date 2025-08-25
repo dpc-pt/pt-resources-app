@@ -34,13 +34,13 @@ struct TalksListView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.ptBackground.ignoresSafeArea()
+                PTDesignTokens.Colors.background.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     // Authentic PT Brand Header
                     PTBrandHeader("Resources", subtitle: "Sermons and talks from Proclamation Trust")
                     
-                    VStack(spacing: PTSpacing.md) {
+                    VStack(spacing: PTDesignTokens.Spacing.md) {
                         // Search Bar with PT styling
                         PTSearchBar(text: $viewModel.searchText, onSearchButtonClicked: {
                             viewModel.searchTalks()
@@ -54,8 +54,8 @@ struct TalksListView: View {
                             currentSortOption: viewModel.sortOption
                         )
                     }
-                    .padding(.horizontal, PTSpacing.screenPadding)
-                    .padding(.bottom, PTSpacing.sm)
+                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+                    .padding(.bottom, PTDesignTokens.Spacing.sm)
                 
                     // Talks List with PT styling
                     if viewModel.isLoading && viewModel.talks.isEmpty {
@@ -66,7 +66,7 @@ struct TalksListView: View {
                             .frame(maxHeight: .infinity)
                     } else {
                         ScrollView {
-                            LazyVStack(spacing: PTSpacing.md) {
+                            LazyVStack(spacing: PTDesignTokens.Spacing.md) {
                                 ForEach(viewModel.filteredTalks) { talk in
                                     TalkRowView(
                                         talk: talk,
@@ -76,7 +76,7 @@ struct TalksListView: View {
                                         onPlayTap: { playTalk(talk) },
                                         onDownloadTap: { downloadTalk(talk) }
                                     )
-                                    .padding(.horizontal, PTSpacing.screenPadding)
+                                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
                                     
                                     // Load more when near the end
                                     if talk == viewModel.filteredTalks.last && viewModel.hasMorePages {
@@ -85,8 +85,8 @@ struct TalksListView: View {
                                                 .rotationEffect(.degrees(360))
                                                 .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: true)
                                             Text("Loading more...")
-                                                .font(PTFont.captionText)
-                                                .foregroundColor(.ptDarkGray)
+                                                .font(PTFont.ptCaptionText)
+                                                .foregroundColor(PTDesignTokens.Colors.medium)
                                         }
                                         .padding()
                                         .onAppear {
@@ -95,8 +95,8 @@ struct TalksListView: View {
                                     }
                                 }
                             }
-                            .padding(.top, PTSpacing.sm)
-                            .padding(.bottom, PTSpacing.xl)
+                            .padding(.top, PTDesignTokens.Spacing.sm)
+                            .padding(.bottom, PTDesignTokens.Spacing.xl)
                         }
                         .refreshable {
                             viewModel.refreshTalks()
@@ -107,7 +107,7 @@ struct TalksListView: View {
                     if playerService.currentTalk != nil {
                         MiniPlayerView(playerService: playerService)
                             .transition(.move(edge: .bottom))
-                            .background(Color.ptSurface)
+                            .background(PTDesignTokens.Colors.surface)
                             .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -4)
                     }
                 }

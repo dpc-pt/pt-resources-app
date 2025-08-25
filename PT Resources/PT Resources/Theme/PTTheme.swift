@@ -7,36 +7,66 @@
 
 import SwiftUI
 
-// MARK: - Brand Colors
+// MARK: - PT Brand Colors (Matching Website)
 
 extension Color {
-    // Primary Brand Colors
-    static let ptNavy = Color(red: 0.11, green: 0.16, blue: 0.24)           // #1C2A3D
-    static let ptCoral = Color(red: 0.95, green: 0.35, blue: 0.24)          // #F35A3D
+    // Core PT Brand Colors (from website CSS variables)
+    static let ptInk = Color(hex: "#07324c")           // --pt-ink
+    static let ptTang = Color(hex: "#ff4c23")          // --pt-tang
+    static let ptKleinBlue = Color(hex: "#4060ab")     // --pt-klein-blue
+    static let ptTurmeric = Color(hex: "#ff921c")      // --pt-turmeric
+    static let ptLawn = Color(hex: "#0f9679")          // --pt-lawn
     
-    // Supporting Colors
-    static let ptRoyalBlue = Color(red: 0.22, green: 0.31, blue: 0.67)      // #384FAB
-    static let ptTurquoise = Color(red: 0.11, green: 0.67, blue: 0.76)      // #1CABC2
-    static let ptGreen = Color(red: 0.13, green: 0.69, blue: 0.58)          // #21B094
+    // Legacy colors for gradual migration
+    static let legacyBaseColor = Color(hex: "#cdd95f")     // legacy base-color
+    static let legacyDarkGray = Color(hex: "#313e3b")      // legacy dark-gray
+    static let legacyMediumGray = Color(hex: "#828c8a")    // legacy medium-gray
+    static let legacyYellow = Color(hex: "#d5d52c")        // legacy yellow
+    static let legacyExtraMediumGray = Color(hex: "#e4e4e4") // legacy extra-medium-gray
     
-    // Neutral Colors
-    static let ptLightGray = Color(red: 0.97, green: 0.97, blue: 0.97)      // #F7F7F7
-    static let ptMediumGray = Color(red: 0.85, green: 0.85, blue: 0.85)     // #D9D9D9
-    static let ptDarkGray = Color(red: 0.31, green: 0.31, blue: 0.31)       // #4F4F4F
+    // Neutral Colors (matching website design system)
+    static let ptLightGray = Color(hex: "#f7f7f7")      // very-light from website
+    static let ptMediumGray = Color(hex: "#e4e4e4")     // extra-medium from website
+    static let ptDarkGray = Color(hex: "#717580")       // medium from website
+    static let ptExtraDark = Color(hex: "#232323")      // dark from website
     
-    // Semantic Colors
-    static let ptBackground = Color.ptLightGray
+    // Semantic Colors (using PT brand colors)
+    static let ptBackground = Color.white               // Clean white background like website
     static let ptSurface = Color.white
-    static let ptPrimary = Color.ptNavy
-    static let ptSecondary = Color.ptCoral
-    static let ptAccent = Color.ptTurquoise
-    static let ptSuccess = Color.ptGreen
+    static let ptPrimary = Color.ptInk                  // Primary text/elements
+    static let ptSecondary = Color.ptTang               // Accent/CTA color
+    static let ptAccent = Color.ptKleinBlue            // Links and secondary actions
+    static let ptSuccess = Color.ptLawn                 // Success states
+    static let ptWarning = Color.ptTurmeric             // Warning states
+    
+    // Computed properties for hover/pressed states (matching website behavior)
+    static var ptTangHover: Color { Color.ptKleinBlue }  // Tang hovers to Klein Blue on website
+    static var ptKleinBlueHover: Color { Color.ptTang }  // Klein Blue hovers to Tang on website
 }
 
-// MARK: - Typography
+// Note: Color hex extension is now defined in PTDesignTokens.swift to avoid duplication
+
+// MARK: - Typography (Matching Website Scale)
 
 struct PTFont {
-    // Font Sizes
+    // Font Sizes (matching website tailwind.config.js fontSize scale)
+    static let text9: CGFloat = 9       // '9': '9px'
+    static let text10: CGFloat = 10     // '10': '10px'
+    static let text11: CGFloat = 11     // '11': '11px'
+    static let text13: CGFloat = 13     // '13': '13px'
+    static let text15: CGFloat = 15     // '15': '15px'
+    static let text17: CGFloat = 17     // '17': '17px'
+    static let text19: CGFloat = 19     // '19': '19px'
+    static let text22: CGFloat = 22     // '22': '22px'
+    static let text26: CGFloat = 26     // '26': ['26px', '38px']
+    static let text28: CGFloat = 28     // '28': ['1.75rem', '2.6rem']
+    static let text30: CGFloat = 30     // '30': ['1.875rem', '2.8rem']
+    static let text32: CGFloat = 32     // '32': ['2rem', '2.5rem']
+    static let text40: CGFloat = 40     // '40': ['2.5rem', '2.5rem']
+    static let text45: CGFloat = 45     // '45': ['2.813rem', '3rem']
+    static let text50: CGFloat = 50     // '50': ['3.125rem', '3.25rem']
+    
+    // Standard iOS sizes for fallback
     static let largeTitle: CGFloat = 34
     static let title1: CGFloat = 28
     static let title2: CGFloat = 22
@@ -49,51 +79,73 @@ struct PTFont {
     static let caption1: CGFloat = 12
     static let caption2: CGFloat = 11
     
-    // Font Weights
+    // Font system function
     static func system(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
         return .system(size: size, weight: weight, design: .default)
     }
     
-    // Branded Typography (fallback system)
-    static let brandTitle = Font.system(size: title1, weight: .bold, design: .default)
-    static let sectionTitle = Font.system(size: title2, weight: .semibold, design: .default)
-    static let cardTitle = Font.system(size: headline, weight: .semibold, design: .default)
-    static let cardSubtitle = Font.system(size: subheadline, weight: .medium, design: .default)
-    static let bodyText = Font.system(size: body, weight: .regular, design: .default)
-    static let captionText = Font.system(size: caption1, weight: .medium, design: .default)
+    // Branded Typography (will be enhanced by PTTypography.swift)
+    static let brandTitle = Font.system(size: text28, weight: .bold, design: .default)      // H1 equivalent
+    static let sectionTitle = Font.system(size: text22, weight: .semibold, design: .default) // H2 equivalent  
+    static let cardTitle = Font.system(size: text17, weight: .semibold, design: .default)   // H3 equivalent
+    static let cardSubtitle = Font.system(size: text15, weight: .medium, design: .default)  // Subtitle
+    static let bodyText = Font.system(size: text17, weight: .regular, design: .default)     // Body text
+    static let captionText = Font.system(size: text13, weight: .medium, design: .default)   // Caption
+    static let buttonText = Font.system(size: text15, weight: .medium, design: .default)    // Button text
+    static let smallText = Font.system(size: text13, weight: .regular, design: .default)    // Small text
+    
+    // Display fonts (large headings)
+    static let displayLarge = Font.system(size: text40, weight: .bold, design: .default)
+    static let displayMedium = Font.system(size: text32, weight: .bold, design: .default)
+    static let displaySmall = Font.system(size: text28, weight: .bold, design: .default)
     
     // These will be overridden by authentic PT fonts in PTTypography.swift if available
 }
 
-// MARK: - Spacing
+// MARK: - Spacing (Matching Website Scale)
 
 struct PTSpacing {
-    static let xs: CGFloat = 4
-    static let sm: CGFloat = 8
-    static let md: CGFloat = 16
-    static let lg: CGFloat = 24
-    static let xl: CGFloat = 32
-    static let xxl: CGFloat = 48
+    // Base spacing scale (matching website 8px, 16px, 24px increments)
+    static let xs: CGFloat = 4      // 4px
+    static let sm: CGFloat = 8      // 8px - website base unit
+    static let md: CGFloat = 16     // 16px - website standard spacing
+    static let lg: CGFloat = 24     // 24px - website section spacing
+    static let xl: CGFloat = 32     // 32px - website large spacing
+    static let xxl: CGFloat = 48    // 48px - website extra large spacing
+    static let xxxl: CGFloat = 64   // 64px - hero sections
     
-    // Component Specific
-    static let cardPadding: CGFloat = md
-    static let cardSpacing: CGFloat = md
-    static let sectionSpacing: CGFloat = lg
-    static let screenPadding: CGFloat = md
+    // Component Specific (matching website patterns)
+    static let cardPadding: CGFloat = lg        // 24px like website cards
+    static let cardSpacing: CGFloat = md        // 16px between cards
+    static let sectionSpacing: CGFloat = xl     // 32px between sections
+    static let screenPadding: CGFloat = md      // 16px screen edges
+    static let buttonPadding: CGFloat = 12      // Vertical button padding
+    static let buttonPaddingHorizontal: CGFloat = 24  // Horizontal button padding
+    
+    // Container widths (responsive like website)
+    static let maxContentWidth: CGFloat = 1200  // Max content width
+    static let containerPadding: CGFloat = md   // Container side padding
 }
 
-// MARK: - Corner Radius
+// MARK: - Corner Radius (Matching Website)
 
 struct PTCornerRadius {
-    static let small: CGFloat = 8
-    static let medium: CGFloat = 12
-    static let large: CGFloat = 16
-    static let extraLarge: CGFloat = 24
+    // Base radius scale (matching website border-radius values)
+    static let xs: CGFloat = 2      // 2px - xs from website
+    static let small: CGFloat = 6   // 6px - default from website
+    static let medium: CGFloat = 8  // calc(var(--radius) - 2px) when --radius is 10px
+    static let large: CGFloat = 10  // var(--radius) default
+    static let xl: CGFloat = 15     // xl from website
+    static let xxl: CGFloat = 20    // 2xl from website
+    static let xxxl: CGFloat = 30   // 3xl from website
+    static let full: CGFloat = 9999 // full border radius
     
-    // Component Specific
-    static let card: CGFloat = medium
-    static let button: CGFloat = small
-    static let sheet: CGFloat = large
+    // Component Specific (matching website component styles)
+    static let card: CGFloat = small        // 6px like website cards
+    static let button: CGFloat = small      // 6px like website buttons
+    static let input: CGFloat = small       // 6px like website inputs
+    static let sheet: CGFloat = large       // 10px for modals
+    static let image: CGFloat = small       // 6px for images
 }
 
 // MARK: - Shadows
@@ -135,57 +187,152 @@ struct PTCardStyle: ViewModifier {
 
 struct PTPrimaryButton: ViewModifier {
     let isPressed: Bool
+    let isDisabled: Bool
     
-    init(isPressed: Bool = false) {
+    init(isPressed: Bool = false, isDisabled: Bool = false) {
         self.isPressed = isPressed
+        self.isDisabled = isDisabled
     }
     
     func body(content: Content) -> some View {
         content
-            .foregroundColor(.white)
-            .padding(.horizontal, PTSpacing.lg)
-            .padding(.vertical, PTSpacing.md)
-            .background(Color.ptSecondary)
-            .cornerRadius(PTCornerRadius.button)
-            .scaleEffect(isPressed ? 0.96 : 1.0)
+            .font(PTFont.buttonText)
+            .foregroundColor(isDisabled ? .white.opacity(0.7) : .white)
+            .padding(.horizontal, PTSpacing.buttonPaddingHorizontal)
+            .padding(.vertical, PTSpacing.buttonPadding)
+            .background(
+                RoundedRectangle(cornerRadius: PTCornerRadius.button)
+                    .fill(buttonBackgroundColor)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PTCornerRadius.button)
+                            .stroke(buttonBorderColor, lineWidth: 2)
+                    )
+            )
+            .scaleEffect(isPressed ? 0.98 : 1.0)
             .animation(.easeInOut(duration: 0.2), value: isPressed)
+            .opacity(isDisabled ? 0.6 : 1.0)
+    }
+    
+    private var buttonBackgroundColor: Color {
+        if isDisabled { return Color.ptTang.opacity(0.5) }
+        if isPressed { return Color.clear }
+        return Color.ptTang
+    }
+    
+    private var buttonBorderColor: Color {
+        if isDisabled { return Color.ptTang.opacity(0.5) }
+        return Color.ptTang
     }
 }
 
 struct PTSecondaryButton: ViewModifier {
     let isPressed: Bool
+    let isDisabled: Bool
     
-    init(isPressed: Bool = false) {
+    init(isPressed: Bool = false, isDisabled: Bool = false) {
         self.isPressed = isPressed
+        self.isDisabled = isDisabled
     }
     
     func body(content: Content) -> some View {
         content
-            .foregroundColor(.ptPrimary)
-            .padding(.horizontal, PTSpacing.lg)
-            .padding(.vertical, PTSpacing.md)
-            .background(Color.clear)
-            .overlay(
+            .font(PTFont.buttonText)
+            .foregroundColor(buttonTextColor)
+            .padding(.horizontal, PTSpacing.buttonPaddingHorizontal)
+            .padding(.vertical, PTSpacing.buttonPadding)
+            .background(
                 RoundedRectangle(cornerRadius: PTCornerRadius.button)
-                    .stroke(Color.ptPrimary, lineWidth: 1)
+                    .fill(buttonBackgroundColor)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PTCornerRadius.button)
+                            .stroke(buttonBorderColor, lineWidth: 2)
+                    )
             )
-            .scaleEffect(isPressed ? 0.96 : 1.0)
+            .scaleEffect(isPressed ? 0.98 : 1.0)
             .animation(.easeInOut(duration: 0.2), value: isPressed)
+            .opacity(isDisabled ? 0.6 : 1.0)
+    }
+    
+    private var buttonTextColor: Color {
+        if isDisabled { return Color.ptKleinBlue.opacity(0.5) }
+        if isPressed { return Color.white }
+        return Color.ptKleinBlue
+    }
+    
+    private var buttonBackgroundColor: Color {
+        if isPressed { return Color.ptKleinBlue }
+        return Color.clear
+    }
+    
+    private var buttonBorderColor: Color {
+        if isDisabled { return Color.ptKleinBlue.opacity(0.5) }
+        return Color.ptKleinBlue
     }
 }
 
 // MARK: - View Extensions
+
+// MARK: - Additional Modifiers
+
+struct PTOutlineButton: ViewModifier {
+    let isPressed: Bool
+    let isDisabled: Bool
+    
+    init(isPressed: Bool = false, isDisabled: Bool = false) {
+        self.isPressed = isPressed
+        self.isDisabled = isDisabled
+    }
+    
+    func body(content: Content) -> some View {
+        content
+            .font(PTFont.buttonText)
+            .foregroundColor(buttonTextColor)
+            .padding(.horizontal, PTSpacing.buttonPaddingHorizontal)
+            .padding(.vertical, PTSpacing.buttonPadding)
+            .background(
+                RoundedRectangle(cornerRadius: PTCornerRadius.button)
+                    .fill(buttonBackgroundColor)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PTCornerRadius.button)
+                            .stroke(buttonBorderColor, lineWidth: 2)
+                    )
+            )
+            .scaleEffect(isPressed ? 0.98 : 1.0)
+            .animation(.easeInOut(duration: 0.2), value: isPressed)
+            .opacity(isDisabled ? 0.6 : 1.0)
+    }
+    
+    private var buttonTextColor: Color {
+        if isDisabled { return Color.ptInk.opacity(0.5) }
+        if isPressed { return Color.white }
+        return Color.ptInk
+    }
+    
+    private var buttonBackgroundColor: Color {
+        if isPressed { return Color.ptInk }
+        return Color.clear
+    }
+    
+    private var buttonBorderColor: Color {
+        if isDisabled { return Color.ptInk.opacity(0.5) }
+        return Color.ptInk
+    }
+}
 
 extension View {
     func ptCardStyle(isPressed: Bool = false) -> some View {
         self.modifier(PTCardStyle(isPressed: isPressed))
     }
     
-    func ptPrimaryButton(isPressed: Bool = false) -> some View {
-        self.modifier(PTPrimaryButton(isPressed: isPressed))
+    func ptPrimaryButton(isPressed: Bool = false, isDisabled: Bool = false) -> some View {
+        self.modifier(PTPrimaryButton(isPressed: isPressed, isDisabled: isDisabled))
     }
     
-    func ptSecondaryButton(isPressed: Bool = false) -> some View {
-        self.modifier(PTSecondaryButton(isPressed: isPressed))
+    func ptSecondaryButton(isPressed: Bool = false, isDisabled: Bool = false) -> some View {
+        self.modifier(PTSecondaryButton(isPressed: isPressed, isDisabled: isDisabled))
+    }
+    
+    func ptOutlineButton(isPressed: Bool = false, isDisabled: Bool = false) -> some View {
+        self.modifier(PTOutlineButton(isPressed: isPressed, isDisabled: isDisabled))
     }
 }
