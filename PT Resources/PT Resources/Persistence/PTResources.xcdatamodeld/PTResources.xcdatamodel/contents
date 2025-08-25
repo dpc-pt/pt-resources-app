@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22758" systemVersion="23F79" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="BookmarkEntity" representedClassName="BookmarkEntity" syncable="YES">
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="position" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="title" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="talk" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TalkEntity" inverseName="bookmarks" inverseEntity="TalkEntity"/>
+    </entity>
+    <entity name="ChapterEntity" representedClassName="ChapterEntity" syncable="YES">
+        <attribute name="id" optional="YES" attributeType="String"/>
+        <attribute name="title" optional="YES" attributeType="String"/>
+        <attribute name="startTime" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="endTime" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <relationship name="talk" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TalkEntity" inverseName="chapters" inverseEntity="TalkEntity"/>
+    </entity>
+    <entity name="DownloadTaskEntity" representedClassName="DownloadTaskEntity" syncable="YES">
+        <attribute name="id" optional="YES" attributeType="String"/>
+        <attribute name="talkID" optional="YES" attributeType="String"/>
+        <attribute name="downloadURL" optional="YES" attributeType="String"/>
+        <attribute name="localURL" optional="YES" attributeType="String"/>
+        <attribute name="status" optional="YES" attributeType="String" defaultValueString="pending"/>
+        <attribute name="progress" optional="YES" attributeType="Float" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="totalBytes" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="downloadedBytes" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="startedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="completedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="resumeData" optional="YES" attributeType="Binary"/>
+        <relationship name="talk" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TalkEntity" inverseName="downloadTask" inverseEntity="TalkEntity"/>
+    </entity>
+    <entity name="ESVPassageEntity" representedClassName="ESVPassageEntity" syncable="YES">
+        <attribute name="reference" optional="YES" attributeType="String"/>
+        <attribute name="text" optional="YES" attributeType="String"/>
+        <attribute name="cachedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="talks" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="TalkEntity" inverseName="passage" inverseEntity="TalkEntity"/>
+    </entity>
+    <entity name="PlaybackStateEntity" representedClassName="PlaybackStateEntity" syncable="YES">
+        <attribute name="talkID" optional="YES" attributeType="String"/>
+        <attribute name="position" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="isCompleted" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="lastPlayedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="playbackSpeed" optional="YES" attributeType="Float" defaultValueString="1.0" usesScalarValueType="YES"/>
+        <relationship name="talk" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TalkEntity" inverseName="playbackState" inverseEntity="TalkEntity"/>
+    </entity>
+    <entity name="SeriesEntity" representedClassName="SeriesEntity" syncable="YES">
+        <attribute name="id" optional="YES" attributeType="String"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="desc" optional="YES" attributeType="String"/>
+        <attribute name="imageURL" optional="YES" attributeType="String"/>
+        <relationship name="talks" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="TalkEntity" inverseName="seriesEntity" inverseEntity="TalkEntity"/>
+    </entity>
+    <entity name="SpeakerEntity" representedClassName="SpeakerEntity" syncable="YES">
+        <attribute name="id" optional="YES" attributeType="String"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="bio" optional="YES" attributeType="String"/>
+        <attribute name="imageURL" optional="YES" attributeType="String"/>
+        <relationship name="talks" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="TalkEntity" inverseName="speakerEntity" inverseEntity="TalkEntity"/>
+    </entity>
+    <entity name="TalkEntity" representedClassName="TalkEntity" syncable="YES">
+        <attribute name="id" optional="YES" attributeType="String"/>
+        <attribute name="title" optional="YES" attributeType="String"/>
+        <attribute name="desc" optional="YES" attributeType="String"/>
+        <attribute name="speaker" optional="YES" attributeType="String"/>
+        <attribute name="series" optional="YES" attributeType="String"/>
+        <attribute name="biblePassage" optional="YES" attributeType="String"/>
+        <attribute name="dateRecorded" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="duration" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="audioURL" optional="YES" attributeType="String"/>
+        <attribute name="localAudioURL" optional="YES" attributeType="String"/>
+        <attribute name="imageURL" optional="YES" attributeType="String"/>
+        <attribute name="isDownloaded" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="isFavorite" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="fileSize" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="lastAccessedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="bookmarks" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="BookmarkEntity" inverseName="talk" inverseEntity="BookmarkEntity"/>
+        <relationship name="chapters" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ChapterEntity" inverseName="talk" inverseEntity="ChapterEntity"/>
+        <relationship name="downloadTask" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="DownloadTaskEntity" inverseName="talk" inverseEntity="DownloadTaskEntity"/>
+        <relationship name="passage" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ESVPassageEntity" inverseName="talks" inverseEntity="ESVPassageEntity"/>
+        <relationship name="playbackState" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="PlaybackStateEntity" inverseName="talk" inverseEntity="PlaybackStateEntity"/>
+        <relationship name="seriesEntity" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="SeriesEntity" inverseName="talks" inverseEntity="SeriesEntity"/>
+        <relationship name="speakerEntity" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="SpeakerEntity" inverseName="talks" inverseEntity="SpeakerEntity"/>
+        <relationship name="transcript" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="TranscriptEntity" inverseName="talk" inverseEntity="TranscriptEntity"/>
+    </entity>
+    <entity name="TranscriptEntity" representedClassName="TranscriptEntity" syncable="YES">
+        <attribute name="id" optional="YES" attributeType="String"/>
+        <attribute name="talkID" optional="YES" attributeType="String"/>
+        <attribute name="text" optional="YES" attributeType="String"/>
+        <attribute name="segments" optional="YES" attributeType="Binary"/>
+        <attribute name="language" optional="YES" attributeType="String" defaultValueString="en"/>
+        <attribute name="status" optional="YES" attributeType="String" defaultValueString="pending"/>
+        <attribute name="jobID" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="completedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="talk" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TalkEntity" inverseName="transcript" inverseEntity="TalkEntity"/>
+    </entity>
+</model>

@@ -1,0 +1,209 @@
+//
+//  MiniPlayerView.swift
+//  PT Resources
+//
+//  Beautiful mini player with PT branding
+//
+
+import SwiftUI
+
+struct MiniPlayerView: View {
+    @ObservedObject var playerService: PlayerService
+    @State private var showingFullPlayer = false
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Progress bar
+            GeometryReader { geometry in
+                Rectangle()
+                    .fill(Color.ptMediumGray.opacity(0.3))
+                    .frame(height: 2)
+                    .overlay(
+                        HStack {
+                            Rectangle()
+                                .fill(Color.ptCoral)
+                                .frame(width: geometry.size.width * CGFloat(playerService.duration > 0 ? playerService.currentTime / playerService.duration : 0))
+                            Spacer(minLength: 0)
+                        }
+                    )
+            }
+            .frame(height: 2)
+            
+            Button(action: { showingFullPlayer = true }) {
+                HStack(spacing: PTSpacing.md) {
+                    // Artwork with PT styling and caching
+                    PTAsyncImage(url: URL(string: playerService.currentTalk?.imageURL ?? ""),
+                               targetSize: CGSize(width: 44, height: 44)) {
+                        RoundedRectangle(cornerRadius: PTCornerRadius.small)
+                            .fill(LinearGradient(
+                                colors: [Color.ptCoral.opacity(0.2), Color.ptTurquoise.opacity(0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                            .overlay(
+                                PTStarSymbol(size: 20)
+                                    .opacity(0.8)
+                            )
+                    }
+                }
+                    .frame(width: 44, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: PTCornerRadius.small))
+                    
+                    // Track Info with PT styling
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(playerService.currentTalk?.title ?? "")
+                            .font(PTFont.cardSubtitle)
+                            .foregroundColor(.ptPrimary)
+                            .lineLimit(1)
+                        
+                        Text(playerService.currentTalk?.speaker ?? "")
+                            .font(PTFont.captionText)
+                            .foregroundColor(.ptDarkGray)
+                            .lineLimit(1)
+                    }
+                    
+                    Spacer()
+                    
+                    // Controls with PT styling
+                    HStack(spacing: PTSpacing.sm) {
+                        // Play/Pause Button
+                        Button(action: {
+                            if playerService.playbackState.isPlaying {
+                                playerService.pause()
+                            } else {
+                                playerService.play()
+                            }
+                        }) {
+                            Image(systemName: playerService.playbackState.isPlaying ? "pause.fill" : "play.fill")
+                                .font(.title2)
+                                .foregroundColor(.ptCoral)
+                        }
+                        
+                        // Close Button
+                        Button(action: {
+                            playerService.stop()
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title3)
+                                .foregroundColor(.ptMediumGray)
+                        }
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+            .accessibilityMiniPlayer(
+                talkTitle: playerService.currentTalk?.title,
+                speaker: playerService.currentTalk?.speaker,
+                isPlaying: playerService.playbackState.isPlaying
+            )
+            .padding(.horizontal, PTSpacing.screenPadding)
+            .padding(.vertical, PTSpacing.md)
+            .background(Color.ptSurface)
+        }
+        .sheet(isPresented: $showingFullPlayer) {
+            FullPlayerView(playerService: playerService)
+        }
+    }
+}
+
+struct CircularProgressView: View {
+    let progress: Double
+    let lineWidth: CGFloat
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.gray.opacity(0.3), lineWidth: lineWidth)
+            
+            Circle()
+                .trim(from: 0, to: CGFloat(min(progress, 1.0)))
+                .stroke(Color.blue, lineWidth: lineWidth)
+                .rotationEffect(.degrees(-90))
+        }
+    }
+}
+
+// MARK: - Full Player View (Stub)
+
+struct FullPlayerView: View {
+    @ObservedObject var playerService: PlayerService
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                // TODO: Implement full player interface
+                Text("Full Player Coming Soon")
+                    .font(.title)
+                    .padding()
+                
+                if let talk = playerService.currentTalk {
+                    VStack(spacing: 16) {
+                        Text(talk.title)
+                            .font(.headline)
+                        Text(talk.speaker)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        HStack {
+                            Button("Previous") {
+                                playerService.skipBackward()
+                            }
+                            
+                            Spacer()
+                            
+                            Button(playerService.playbackState.isPlaying ? "Pause" : "Play") {
+                                if playerService.playbackState.isPlaying {
+                                    playerService.pause()
+                                } else {
+                                    playerService.play()
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            
+                            Spacer()
+                            
+                            Button("Next") {
+                                playerService.skipForward()
+                            }
+                        }
+                        .padding()
+                        
+                        Text("Speed: \(String(format: "%.1fx", playerService.playbackSpeed))")
+                        
+                        Slider(value: Binding(
+                            get: { playerService.playbackSpeed },
+                            set: { playerService.setPlaybackSpeed($0) }
+                        ), in: 0.5...3.0, step: 0.25)
+                    }
+                    .padding()
+                }
+                
+                Spacer()
+            }
+            .navigationTitle("Now Playing")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Preview
+
+struct MiniPlayerView_Previews: PreviewProvider {
+    static var previews: some View {
+        VStack {
+            Spacer()
+            MiniPlayerView(playerService: {
+                let service = PlayerService()
+                service.loadTalk(Talk.mockTalks[0])
+                return service
+            }())
+        }
+    }
+}

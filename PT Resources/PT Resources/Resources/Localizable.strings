@@ -1,0 +1,90 @@
+/* 
+  Localizable.strings
+  PT Resources
+
+  Localization strings for the PT Resources app
+*/
+
+// MARK: - General
+"app_name" = "PT Resources";
+"ok" = "OK";
+"cancel" = "Cancel";
+"done" = "Done";
+"save" = "Save";
+"delete" = "Delete";
+"edit" = "Edit";
+"share" = "Share";
+"retry" = "Retry";
+"loading" = "Loading...";
+"error" = "Error";
+
+// MARK: - Tabs
+"talks_tab" = "Talks";
+"downloads_tab" = "Downloads";
+"settings_tab" = "Settings";
+
+// MARK: - Talks
+"search_talks" = "Search talks...";
+"filter" = "Filter";
+"sort_by" = "Sort By";
+"no_talks_found" = "No Talks Found";
+"try_adjusting_search" = "Try adjusting your search or filters";
+"play" = "Play";
+"pause" = "Pause";
+"download" = "Download";
+"downloaded" = "Downloaded";
+
+// MARK: - Player
+"now_playing" = "Now Playing";
+"skip_forward" = "Skip Forward";
+"skip_backward" = "Skip Backward";
+"speed" = "Speed";
+"sleep_timer" = "Sleep Timer";
+
+// MARK: - Downloads
+"downloads_title" = "Downloads";
+"downloaded_talks_appear_here" = "Downloaded talks will appear here";
+"storage_used" = "Storage Used";
+"delete_download" = "Delete Download";
+"download_failed" = "Download Failed";
+
+// MARK: - Settings
+"settings_title" = "Settings";
+"playback_section" = "Playback";
+"default_speed" = "Default Speed";
+"skip_interval" = "Skip Interval";
+"storage_section" = "Storage";
+"auto_delete_after" = "Auto-delete after";
+"transcription_section" = "Transcription";
+"notifications_section" = "Notifications";
+"about_section" = "About";
+"version" = "Version";
+
+// MARK: - Transcription
+"request_transcription" = "Request Transcription";
+"transcription_pending" = "Transcription Pending";
+"transcription_processing" = "Transcription Processing";
+"transcription_completed" = "Transcription Completed";
+"transcription_failed" = "Transcription Failed";
+
+// MARK: - Bible Passages
+"bible_passage" = "Bible Passage";
+"passage_not_available" = "Passage not available";
+
+// MARK: - Errors
+"network_error" = "Network Error";
+"download_error" = "Download Error";
+"transcription_error" = "Transcription Error";
+"playback_error" = "Playback Error";
+"api_error" = "API Error";
+"rate_limited" = "Rate Limited";
+"try_again_later" = "Please try again later";
+
+// MARK: - Accessibility
+"play_button" = "Play button";
+"pause_button" = "Pause button";
+"download_button" = "Download button";
+"share_button" = "Share button";
+"search_field" = "Search field";
+"filter_button" = "Filter button";
+"sort_button" = "Sort button";

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>com.apple.CoreData</string>
+	<key>CFBundleVersion</key>
+	<string>1.0</string>
+	<key>NSManagedObjectModel_CurrentVersionName</key>
+	<string>PTResources</string>
+	<key>NSManagedObjectModel_VersionHashes</key>
+	<dict>
+		<key>PTResources</key>
+		<data>
+		</data>
+	</dict>
+	<key>NSManagedObjectModel_Versions</key>
+	<array>
+		<string>PTResources</string>
+	</array>
+</dict>
+</plist>
