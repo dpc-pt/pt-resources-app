@@ -106,7 +106,7 @@ struct PTMediaPlayerView: View {
             HStack {
                 Button(action: { dismiss() }) {
                     Image(systemName: "chevron.down")
-                        .font(.title2)
+                        .font(PTFont.ptCardTitle)
                         .foregroundColor(.white)
                         .padding()
                 }
@@ -115,7 +115,7 @@ struct PTMediaPlayerView: View {
                 
                 Button(action: { showingMoreOptions = true }) {
                     Image(systemName: "ellipsis")
-                        .font(.title2)
+                        .font(PTFont.ptCardTitle)
                         .foregroundColor(.white)
                         .padding()
                 }
@@ -174,7 +174,7 @@ struct PTMediaPlayerView: View {
             // Previous (Skip back 30s)
             Button(action: { playerService.skipBackward() }) {
                 Image(systemName: "gobackward.30")
-                    .font(.title)
+                    .font(PTFont.ptSectionTitle)
                     .foregroundColor(.white)
             }
             .scaleEffect(isPressed ? 0.95 : 1.0)
@@ -188,7 +188,7 @@ struct PTMediaPlayerView: View {
                 }
             }) {
                 Image(systemName: playerService.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 64))
+                    .font(PTFont.ptDisplayMedium)
                     .foregroundColor(.white)
             }
             .scaleEffect(isPressed ? 0.95 : 1.0)
@@ -196,7 +196,7 @@ struct PTMediaPlayerView: View {
             // Next (Skip forward 30s)
             Button(action: { playerService.skipForward() }) {
                 Image(systemName: "goforward.30")
-                    .font(.title)
+                    .font(PTFont.ptSectionTitle)
                     .foregroundColor(.white)
             }
             .scaleEffect(isPressed ? 0.95 : 1.0)

@@ -70,7 +70,7 @@ extension PTFont {
     static let ptSmallText = PTFonts.font(name: PTFonts.optimaRoman, size: text13, fallback: .regular)             // Small body text
     
     // Button and UI Typography
-    static let ptButtonText = PTFonts.font(name: PTFonts.optimaMedium, size: text15, fallback: .medium)            // Button text
+    static let ptButtonText = PTFonts.font(name: PTFonts.agendaMedium, size: text15, fallback: .medium)            // Button text
     static let ptTabBarText = PTFonts.font(name: PTFonts.optimaRoman, size: text13, fallback: .regular)            // Tab bar labels
     static let ptNavigationTitle = PTFonts.font(name: PTFonts.agendaBold, size: text19, fallback: .bold)           // Navigation titles
     
@@ -95,55 +95,46 @@ class FontManager {
     private var registeredFonts: Set<String> = []
     
     func registerFonts() {
-        registerFontFamily("Agenda-One")
-        registerFontFamily("Fields")
-        registerFontFamily("Optima")
+        // With Info.plist registration, fonts are automatically available
+        // Just verify they're loaded and log available fonts
+        verifyFonts()
     }
 
     /// Async version of font registration for modern concurrency
     func registerFontsAsync() async throws {
-        return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                self.registerFonts()
-                continuation.resume()
-            }
+        // Fonts are automatically loaded via Info.plist
+        // Just verify they're available
+        await MainActor.run {
+            verifyFonts()
         }
     }
     
-    private func registerFontFamily(_ familyName: String) {
-        guard let fontURLs = Bundle.main.urls(forResourcesWithExtension: nil, subdirectory: "Fonts/\(familyName)") else {
-            print("⚠️ No fonts found for family: \(familyName)")
-            return
-        }
+    private func verifyFonts() {
+        let expectedFonts = [
+            // Agenda One Fonts
+            "Agenda-One-Bold",
+            "Agenda-One-Medium",
+            
+            // Fields Display Fonts
+            "Fields-Display-Black",
+            "fields-display-medium",
+            
+            // Optima Fonts
+            "OptimaLTPro-BlackItalic",
+            "OptimaLTPro-Bold",
+            "OptimaLTPro-BoldItalic",
+            "OptimaLTPro-Italic",
+            "OptimaLTPro-Medium",
+            "OptimaLTPro-MediumItalic",
+            "OptimaLTPro-Roman"
+        ]
         
-        for fontURL in fontURLs {
-            registerFont(from: fontURL)
-        }
-    }
-    
-    private func registerFont(from url: URL) {
-        guard let fontDataProvider = CGDataProvider(url: url as CFURL) else {
-            print("⚠️ Could not create data provider for: \(url.lastPathComponent)")
-            return
-        }
-        
-        guard let font = CGFont(fontDataProvider) else {
-            print("⚠️ Could not create font from: \(url.lastPathComponent)")
-            return
-        }
-        
-        var error: Unmanaged<CFError>?
-        let success = CTFontManagerRegisterGraphicsFont(font, &error)
-        
-        if success {
-            if let fontName = font.postScriptName as String? {
+        for fontName in expectedFonts {
+            if UIFont(name: fontName, size: 17) != nil {
                 registeredFonts.insert(fontName)
-                print("✅ Registered font: \(fontName)")
-            }
-        } else {
-            if let error = error?.takeRetainedValue() {
-                let errorDescription = CFErrorCopyDescription(error)
-                print("❌ Failed to register font \(url.lastPathComponent): \(String(describing: errorDescription))")
+                print("✅ Font available: \(fontName)")
+            } else {
+                print("❌ Font not available: \(fontName)")
             }
         }
     }

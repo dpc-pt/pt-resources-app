@@ -104,7 +104,8 @@ final class TalksAPIService: TalksAPIServiceProtocol, ObservableObject {
                 throw APIError.httpError(httpResponse.statusCode)
             }
             
-            return try decoder.decode(Talk.self, from: data)
+            let detailResponse = try decoder.decode(TalkDetailResponse.self, from: data)
+            return detailResponse.resource
             
         } catch {
             if error is APIError {
@@ -345,10 +346,14 @@ extension TalksAPIService {
         // Simulate network delay
         try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
         
+        // Note: Mock services are now only used when explicitly requested for testing
+        // In normal development, we use the real Proclamation Trust API
+        let testAudioURL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+        
         return DownloadResponse(
-            downloadURL: "https://example.com/downloads/\(talkID).mp3",
+            downloadURL: testAudioURL,
             expiresAt: Date().addingTimeInterval(3600), // 1 hour from now
-            fileSize: 45_000_000 // 45 MB
+            fileSize: 4_500_000 // ~4.5 MB (approximate size of test file)
         )
     }
 }
@@ -396,10 +401,13 @@ final class MockTalksAPIService: TalksAPIServiceProtocol {
             throw APIError.serverError
         }
         
+        // Use a real MP3 file for testing when mock services are explicitly requested
+        let testAudioURL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+        
         return DownloadResponse(
-            downloadURL: "https://example.com/downloads/\(talkID).mp3",
+            downloadURL: testAudioURL,
             expiresAt: Date().addingTimeInterval(3600),
-            fileSize: 45_000_000
+            fileSize: 4_500_000 // ~4.5 MB
         )
     }
     

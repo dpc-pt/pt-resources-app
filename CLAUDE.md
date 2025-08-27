@@ -48,10 +48,18 @@ Since this is an iOS Xcode project, development is primarily done through Xcode 
 - NSManagedObject subclasses in `CoreDataEntities.swift`  
 - Background contexts for imports/exports
 
-### Mock vs Production
-- App automatically uses mock services when API keys are placeholder values
-- Set `Config.useMockServices = false` and add real API keys for production testing
+### Mock vs Production  
+- App now uses real Proclamation Trust APIs by default
+- Mock services only used when explicitly requested with `--use-mock-services` launch argument
+- All download functionality works with real API endpoints
 
 ### Common Build Issues
-- If Core Data entities not found: Ensure `CoreDataEntities.swift` is in target
-- If API tests fail: App defaults to mock mode, which should work offline
+- If Core Data entities not found: Ensure `CoreDataEntities.swift` is in target  
+- If API requests fail: App now uses real APIs; check network connectivity and API availability
+
+### Download System
+- Downloads now use direct `audioUrl` and `videoUrl` from talk detail API responses
+- Audio files saved to `Documents/audio/{talkID}.mp3`  
+- Video files saved to `Documents/video/{talkID}.mp4`
+- Download validation includes file size verification and integrity checks
+- Supports both audio-only and video-only talks (Vimeo URLs noted but not yet implemented)

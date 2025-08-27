@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 // MARK: - Navigation Item
 
@@ -279,6 +280,12 @@ private extension TalksListView {
             }
         }
         .onAppear {
+            loadDownloadedTalks()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .downloadCompleted)) { _ in
+            loadDownloadedTalks()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .downloadDeleted)) { _ in
             loadDownloadedTalks()
         }
     }

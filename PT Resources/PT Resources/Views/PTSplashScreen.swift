@@ -43,24 +43,6 @@ struct PTSplashScreen: View {
                     PTLogo(size: 120, showText: true)
                         .scaleEffect(logoScale)
                         .opacity(logoOpacity)
-                    
-                    // PT Resources text
-                    VStack(spacing: 8) {
-                        HStack(spacing: 8) {
-                            Text("pt")
-                                .font(PTFont.ptDisplayLarge)
-                                .foregroundColor(PTDesignTokens.Colors.tang)
-                            Text("resources")
-                                .font(PTFont.ptDisplayMedium)
-                                .foregroundColor(.white)
-                        }
-                        
-                        Text("Proclamation Trust")
-                            .font(PTFont.ptLogoText)
-                            .foregroundColor(.white.opacity(0.8))
-                            .tracking(2)
-                    }
-                    .opacity(textOpacity)
                 }
                 
                 Spacer()

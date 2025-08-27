@@ -172,6 +172,7 @@ final class TalksViewModel: ObservableObject {
                 entity.dateRecorded = talk.dateRecorded
                 entity.duration = Int32(talk.duration)
                 entity.audioURL = talk.audioURL
+                entity.videoURL = talk.videoURL
                 entity.imageURL = talk.imageURL
                 entity.fileSize = talk.fileSize ?? 0
                 entity.updatedAt = Date()
@@ -222,8 +223,12 @@ final class TalksViewModel: ObservableObject {
                     guard let id = entity.id,
                           let title = entity.title,
                           let speaker = entity.speaker,
-                          let audioURL = entity.audioURL,
                           let dateRecorded = entity.dateRecorded else {
+                        return nil
+                    }
+                    
+                    // At least one of audioURL or videoURL should exist
+                    guard entity.audioURL != nil || entity.videoURL != nil else {
                         return nil
                     }
                     
@@ -236,7 +241,8 @@ final class TalksViewModel: ObservableObject {
                         biblePassage: entity.biblePassage,
                         dateRecorded: dateRecorded,
                         duration: Int(entity.duration),
-                        audioURL: audioURL,
+                        audioURL: entity.audioURL,
+                        videoURL: entity.videoURL,
                         imageURL: entity.imageURL,
                         fileSize: entity.fileSize > 0 ? entity.fileSize : nil
                     )

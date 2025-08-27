@@ -79,12 +79,15 @@ final class PlayerService: NSObject, ObservableObject {
         let audioURL: URL
         if let localPath = getLocalAudioPath(for: talk.id), FileManager.default.fileExists(atPath: localPath) {
             audioURL = URL(fileURLWithPath: localPath)
-        } else {
-            guard let url = URL(string: talk.audioURL) else {
+        } else if let remoteAudioURL = talk.audioURL {
+            guard let url = URL(string: remoteAudioURL) else {
                 print("Invalid audio URL for talk: \(talk.id)")
                 return
             }
             audioURL = url
+        } else {
+            print("No audio URL available for talk: \(talk.id)")
+            return
         }
         
         setupPlayer(with: audioURL, startTime: startTime)

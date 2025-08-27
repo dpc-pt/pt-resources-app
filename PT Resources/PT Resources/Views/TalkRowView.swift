@@ -17,6 +17,15 @@ struct TalkRowView: View {
     
     @State private var isPressed = false
     
+    // Only show download option for talks with downloadable audio content
+    private var hasDownloadableAudio: Bool {
+        guard let audioURL = talk.audioURL, !audioURL.isEmpty else {
+            return false
+        }
+        // Skip Vimeo URLs and other video-only content
+        return !audioURL.contains("vimeo.com")
+    }
+    
     var body: some View {
         Button(action: onTalkTap) {
             HStack(spacing: PTDesignTokens.Spacing.md) {
@@ -110,35 +119,40 @@ struct TalkRowView: View {
                     }
                     .accessibilityPlayButton(isPlaying: false) // TODO: Pass actual playing state
                     
-                    // Download Button
-                    Button(action: onDownloadTap) {
-                        if let progress = downloadProgress {
-                            ZStack {
-                                Circle()
-                                    .stroke(PTDesignTokens.Colors.tang.opacity(0.3), lineWidth: 2)
-                                
-                                Circle()
-                                    .trim(from: 0, to: CGFloat(progress))
-                                    .stroke(PTDesignTokens.Colors.tang, lineWidth: 2)
-                                    .rotationEffect(.degrees(-90))
-                                
-                                Text("\(Int(progress * 100))%")
-                                    .font(.caption2)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(PTDesignTokens.Colors.tang)
+                    // Download Button - only show for talks with audio content
+                    if hasDownloadableAudio {
+                        Button(action: onDownloadTap) {
+                            if isDownloaded {
+                                // Prioritize showing checkmark when downloaded
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.title3)
+                                    .foregroundColor(PTDesignTokens.Colors.success)  // Using PT success color
+                            } else if let progress = downloadProgress {
+                                // Show progress only if not downloaded
+                                ZStack {
+                                    Circle()
+                                        .stroke(PTDesignTokens.Colors.tang.opacity(0.3), lineWidth: 2)
+                                    
+                                    Circle()
+                                        .trim(from: 0, to: CGFloat(progress))
+                                        .stroke(PTDesignTokens.Colors.tang, lineWidth: 2)
+                                        .rotationEffect(.degrees(-90))
+                                    
+                                    Text("\(Int(progress * 100))%")
+                                        .font(.caption2)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(PTDesignTokens.Colors.tang)
+                                }
+                                .frame(width: 28, height: 28)
+                            } else {
+                                // Default download button
+                                Image(systemName: "arrow.down.circle")
+                                    .font(.title3)
+                                    .foregroundColor(PTDesignTokens.Colors.medium)  // Using consistent gray
                             }
-                            .frame(width: 28, height: 28)
-                        } else if isDownloaded {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.title3)
-                                .foregroundColor(PTDesignTokens.Colors.success)  // Using PT success color
-                        } else {
-                            Image(systemName: "arrow.down.circle")
-                                .font(.title3)
-                                .foregroundColor(PTDesignTokens.Colors.medium)  // Using consistent gray
                         }
+                        .accessibilityDownloadButton(isDownloaded: isDownloaded, downloadProgress: downloadProgress)
                     }
-                    .accessibilityDownloadButton(isDownloaded: isDownloaded, downloadProgress: downloadProgress)
                 }
             }
         }

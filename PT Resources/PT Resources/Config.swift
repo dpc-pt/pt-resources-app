@@ -98,6 +98,8 @@ struct Config {
     /// Whether to use mock services (for testing and development)
     static var useMockServices: Bool {
         #if DEBUG
+        // Use real APIs by default now that we have access to public APIs
+        // Only use mock services if explicitly requested for testing
         return ProcessInfo.processInfo.arguments.contains("--use-mock-services")
         #else
         return false

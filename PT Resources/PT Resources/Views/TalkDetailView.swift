@@ -65,7 +65,7 @@ struct TalkDetailView: View {
             HStack {
                 Button(action: { dismiss() }) {
                     Image(systemName: "chevron.left")
-                        .font(.title2)
+                        .font(PTFont.ptCardTitle)
                         .foregroundColor(PTDesignTokens.Colors.ink)
                 }
                 
@@ -77,7 +77,7 @@ struct TalkDetailView: View {
                 // Share button
                 Button(action: shareTalk) {
                     Image(systemName: "square.and.arrow.up")
-                        .font(.title2)
+                        .font(PTFont.ptCardTitle)
                         .foregroundColor(PTDesignTokens.Colors.ink)
                 }
             }
@@ -249,7 +249,7 @@ struct TalkDetailView: View {
                 // Skip backward (10s)
                 Button(action: { playerService.skipBackward() }) {
                     Image(systemName: "gobackward.10")
-                        .font(.title2)
+                        .font(PTFont.ptCardTitle)
                         .foregroundColor(PTDesignTokens.Colors.ink)
                 }
                 
@@ -263,7 +263,7 @@ struct TalkDetailView: View {
                 // Skip forward (30s)
                 Button(action: { playerService.skipForward() }) {
                     Image(systemName: "goforward.30")
-                        .font(.title2)
+                        .font(PTFont.ptCardTitle)
                         .foregroundColor(PTDesignTokens.Colors.ink)
                 }
             }
@@ -332,8 +332,8 @@ struct TalkDetailView: View {
             // Transcription button
             Button(action: requestTranscription) {
                 HStack {
-                    Image(systemName: "text.bubble")
-                        .font(.title3)
+                                            Image(systemName: "text.bubble")
+                            .font(PTFont.ptCardSubtitle)
                     
                     Text("Get Transcript")
                         .font(PTFont.ptButtonText)
@@ -352,7 +352,7 @@ struct TalkDetailView: View {
                 Button(action: { showingBiblePassage = true }) {
                     HStack {
                         Image(systemName: "book")
-                            .font(.title3)
+                            .font(PTFont.ptCardSubtitle)
                         
                         Text("View \(biblePassage)")
                             .font(PTFont.ptButtonText)
@@ -394,7 +394,7 @@ struct TalkDetailView: View {
                     // Request transcription or show existing
                     VStack(spacing: PTDesignTokens.Spacing.md) {
                         Image(systemName: "text.bubble")
-                            .font(.system(size: 48))
+                            .font(PTFont.ptDisplaySmall)
                             .foregroundColor(PTDesignTokens.Colors.medium)
                         
                         Text("No transcript available")
@@ -447,7 +447,7 @@ struct TalkDetailView: View {
                     // Error state
                     VStack(spacing: PTDesignTokens.Spacing.md) {
                         Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 48))
+                            .font(PTFont.ptDisplaySmall)
                             .foregroundColor(PTDesignTokens.Colors.turmeric)
                         
                         Text("Unable to load passage")
@@ -508,7 +508,7 @@ struct TalkDetailView: View {
                     // No passage available
                     VStack(spacing: PTDesignTokens.Spacing.md) {
                         Image(systemName: "book")
-                            .font(.system(size: 48))
+                            .font(PTFont.ptDisplaySmall)
                             .foregroundColor(PTDesignTokens.Colors.medium)
                         
                         Text("No Bible passage available")

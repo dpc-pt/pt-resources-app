@@ -17,7 +17,7 @@ struct Talk: Codable, Identifiable, Hashable {
     let biblePassage: String?
     let dateRecorded: Date
     let duration: Int // Duration in seconds
-    let audioURL: String
+    let audioURL: String?
     let videoURL: String?
     let imageURL: String?
     let fileSize: Int64?
@@ -44,8 +44,10 @@ struct Talk: Codable, Identifiable, Hashable {
         description = try container.decodeIfPresent(String.self, forKey: .description)
         speaker = try container.decode(String.self, forKey: .speaker)
         series = try container.decodeIfPresent(String.self, forKey: .series)
-        audioURL = try container.decode(String.self, forKey: .audioURL)
+        
+        audioURL = try container.decodeIfPresent(String.self, forKey: .audioURL)
         videoURL = try container.decodeIfPresent(String.self, forKey: .videoURL)
+        
         imageURL = try container.decodeIfPresent(String.self, forKey: .imageURL)
         fileSize = try container.decodeIfPresent(Int64.self, forKey: .fileSize)
         category = try container.decodeIfPresent(String.self, forKey: .category)
@@ -77,7 +79,7 @@ struct Talk: Codable, Identifiable, Hashable {
         biblePassage: String? = nil,
         dateRecorded: Date,
         duration: Int = 0,
-        audioURL: String,
+        audioURL: String? = nil,
         videoURL: String? = nil,
         imageURL: String? = nil,
         fileSize: Int64? = nil,
@@ -116,6 +118,11 @@ struct Talk: Codable, Identifiable, Hashable {
     var shareURL: String {
         "\(Config.universalLinkDomain)/talks/\(id)"
     }
+}
+
+/// Response model for individual talk detail
+struct TalkDetailResponse: Codable {
+    let resource: Talk
 }
 
 /// Response model for paginated talks

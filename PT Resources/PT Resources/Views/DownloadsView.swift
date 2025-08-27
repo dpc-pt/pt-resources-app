@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 struct DownloadsView: View {
     @StateObject private var downloadService: DownloadService
@@ -54,6 +55,18 @@ struct DownloadsView: View {
         .onAppear {
             loadDownloadedTalks()
             calculateStorageUsage()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .downloadCompleted)) { _ in
+            loadDownloadedTalks()
+            calculateStorageUsage()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .downloadDeleted)) { _ in
+            loadDownloadedTalks()
+            calculateStorageUsage()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .downloadFailed)) { _ in
+            // Optionally refresh to ensure consistency
+            loadDownloadedTalks()
         }
     }
     

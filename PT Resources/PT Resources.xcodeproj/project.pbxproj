@@ -6,6 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A617863C2E5C782B00316D77 /* fields-display-medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = A61786322E5C782B00316D77 /* fields-display-medium.otf */; };
+		A617863D2E5C782B00316D77 /* Agenda-One-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A617862F2E5C782B00316D77 /* Agenda-One-Medium.ttf */; };
+		A617863E2E5C782B00316D77 /* Agenda-One-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A617862E2E5C782B00316D77 /* Agenda-One-Bold.ttf */; };
+		A617863F2E5C782B00316D77 /* Fields-Display-Black.otf in Resources */ = {isa = PBXBuildFile; fileRef = A61786312E5C782B00316D77 /* Fields-Display-Black.otf */; };
+		A61786402E5C782B00316D77 /* OptimaLTPro-MediumItalic.otf in Resources */ = {isa = PBXBuildFile; fileRef = A61786392E5C782B00316D77 /* OptimaLTPro-MediumItalic.otf */; };
+		A61786412E5C782B00316D77 /* OptimaLTPro-Roman.otf in Resources */ = {isa = PBXBuildFile; fileRef = A617863A2E5C782B00316D77 /* OptimaLTPro-Roman.otf */; };
+		A61786422E5C782B00316D77 /* OptimaLTPro-Medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = A61786382E5C782B00316D77 /* OptimaLTPro-Medium.otf */; };
+		A61786432E5C782B00316D77 /* OptimaLTPro-BlackItalic.otf in Resources */ = {isa = PBXBuildFile; fileRef = A61786342E5C782B00316D77 /* OptimaLTPro-BlackItalic.otf */; };
+		A61786442E5C782B00316D77 /* OptimaLTPro-BoldItalic.otf in Resources */ = {isa = PBXBuildFile; fileRef = A61786362E5C782B00316D77 /* OptimaLTPro-BoldItalic.otf */; };
+		A61786452E5C782B00316D77 /* OptimaLTPro-Italic.otf in Resources */ = {isa = PBXBuildFile; fileRef = A61786372E5C782B00316D77 /* OptimaLTPro-Italic.otf */; };
+		A61786462E5C782B00316D77 /* OptimaLTPro-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = A61786352E5C782B00316D77 /* OptimaLTPro-Bold.otf */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		A6837A9B2E53BC710053B246 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -24,6 +38,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		A617862E2E5C782B00316D77 /* Agenda-One-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Agenda-One-Bold.ttf"; sourceTree = "<group>"; };
+		A617862F2E5C782B00316D77 /* Agenda-One-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Agenda-One-Medium.ttf"; sourceTree = "<group>"; };
+		A61786312E5C782B00316D77 /* Fields-Display-Black.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fields-Display-Black.otf"; sourceTree = "<group>"; };
+		A61786322E5C782B00316D77 /* fields-display-medium.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "fields-display-medium.otf"; sourceTree = "<group>"; };
+		A61786342E5C782B00316D77 /* OptimaLTPro-BlackItalic.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "OptimaLTPro-BlackItalic.otf"; sourceTree = "<group>"; };
+		A61786352E5C782B00316D77 /* OptimaLTPro-Bold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "OptimaLTPro-Bold.otf"; sourceTree = "<group>"; };
+		A61786362E5C782B00316D77 /* OptimaLTPro-BoldItalic.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "OptimaLTPro-BoldItalic.otf"; sourceTree = "<group>"; };
+		A61786372E5C782B00316D77 /* OptimaLTPro-Italic.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "OptimaLTPro-Italic.otf"; sourceTree = "<group>"; };
+		A61786382E5C782B00316D77 /* OptimaLTPro-Medium.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "OptimaLTPro-Medium.otf"; sourceTree = "<group>"; };
+		A61786392E5C782B00316D77 /* OptimaLTPro-MediumItalic.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "OptimaLTPro-MediumItalic.otf"; sourceTree = "<group>"; };
+		A617863A2E5C782B00316D77 /* OptimaLTPro-Roman.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "OptimaLTPro-Roman.otf"; sourceTree = "<group>"; };
 		A6837A8B2E53BC6F0053B246 /* PT Resources.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "PT Resources.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A6837A9A2E53BC710053B246 /* PT ResourcesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "PT ResourcesTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A6837AA42E53BC710053B246 /* PT ResourcesUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "PT ResourcesUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -72,9 +97,44 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		A61786302E5C782B00316D77 /* PT Resources/Fonts/Agenda-One */ = {
+			isa = PBXGroup;
+			children = (
+				A617862E2E5C782B00316D77 /* Agenda-One-Bold.ttf */,
+				A617862F2E5C782B00316D77 /* Agenda-One-Medium.ttf */,
+			);
+			path = "PT Resources/Fonts/Agenda-One";
+			sourceTree = "<group>";
+		};
+		A61786332E5C782B00316D77 /* PT Resources/Fonts/Fields */ = {
+			isa = PBXGroup;
+			children = (
+				A61786312E5C782B00316D77 /* Fields-Display-Black.otf */,
+				A61786322E5C782B00316D77 /* fields-display-medium.otf */,
+			);
+			path = "PT Resources/Fonts/Fields";
+			sourceTree = "<group>";
+		};
+		A617863B2E5C782B00316D77 /* PT Resources/Fonts/Optima */ = {
+			isa = PBXGroup;
+			children = (
+				A61786342E5C782B00316D77 /* OptimaLTPro-BlackItalic.otf */,
+				A61786352E5C782B00316D77 /* OptimaLTPro-Bold.otf */,
+				A61786362E5C782B00316D77 /* OptimaLTPro-BoldItalic.otf */,
+				A61786372E5C782B00316D77 /* OptimaLTPro-Italic.otf */,
+				A61786382E5C782B00316D77 /* OptimaLTPro-Medium.otf */,
+				A61786392E5C782B00316D77 /* OptimaLTPro-MediumItalic.otf */,
+				A617863A2E5C782B00316D77 /* OptimaLTPro-Roman.otf */,
+			);
+			path = "PT Resources/Fonts/Optima";
+			sourceTree = "<group>";
+		};
 		A6837A822E53BC6F0053B246 = {
 			isa = PBXGroup;
 			children = (
+				A61786302E5C782B00316D77 /* PT Resources/Fonts/Agenda-One */,
+				A61786332E5C782B00316D77 /* PT Resources/Fonts/Fields */,
+				A617863B2E5C782B00316D77 /* PT Resources/Fonts/Optima */,
 				A6837A8D2E53BC6F0053B246 /* PT Resources */,
 				A6837A9D2E53BC710053B246 /* PT ResourcesTests */,
 				A6837AA72E53BC710053B246 /* PT ResourcesUITests */,
@@ -212,6 +272,17 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A617863C2E5C782B00316D77 /* fields-display-medium.otf in Resources */,
+				A617863D2E5C782B00316D77 /* Agenda-One-Medium.ttf in Resources */,
+				A617863E2E5C782B00316D77 /* Agenda-One-Bold.ttf in Resources */,
+				A617863F2E5C782B00316D77 /* Fields-Display-Black.otf in Resources */,
+				A61786402E5C782B00316D77 /* OptimaLTPro-MediumItalic.otf in Resources */,
+				A61786412E5C782B00316D77 /* OptimaLTPro-Roman.otf in Resources */,
+				A61786422E5C782B00316D77 /* OptimaLTPro-Medium.otf in Resources */,
+				A61786432E5C782B00316D77 /* OptimaLTPro-BlackItalic.otf in Resources */,
+				A61786442E5C782B00316D77 /* OptimaLTPro-BoldItalic.otf in Resources */,
+				A61786452E5C782B00316D77 /* OptimaLTPro-Italic.otf in Resources */,
+				A61786462E5C782B00316D77 /* OptimaLTPro-Bold.otf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -400,6 +471,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "The Proclamation Trust";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
+				INFOPLIST_KEY_UIAppFonts = "Agenda-One-Bold.ttf Agenda-One-Medium.ttf Fields-Display-Black.otf fields-display-medium.otf OptimaLTPro-BlackItalic.otf OptimaLTPro-Bold.otf OptimaLTPro-BoldItalic.otf OptimaLTPro-Italic.otf OptimaLTPro-Medium.otf OptimaLTPro-MediumItalic.otf OptimaLTPro-Roman.otf";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -430,6 +502,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "The Proclamation Trust";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
+				INFOPLIST_KEY_UIAppFonts = "Agenda-One-Bold.ttf Agenda-One-Medium.ttf Fields-Display-Black.otf fields-display-medium.otf OptimaLTPro-BlackItalic.otf OptimaLTPro-Bold.otf OptimaLTPro-BoldItalic.otf OptimaLTPro-Italic.otf OptimaLTPro-Medium.otf OptimaLTPro-MediumItalic.otf OptimaLTPro-Roman.otf";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

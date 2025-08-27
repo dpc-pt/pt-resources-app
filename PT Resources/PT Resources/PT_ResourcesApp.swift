@@ -33,6 +33,11 @@ struct PT_ResourcesApp: App {
                 } catch {
                     print("⚠️ Font registration failed: \(error)")
                 }
+                
+                // Debug font availability
+                #if DEBUG
+                PTFontDebugger.shared.debugFonts()
+                #endif
 
                 // Show splash screen for 2-3 seconds (configurable)
                 try? await Task.sleep(nanoseconds: 2_500_000_000) // 2.5 seconds

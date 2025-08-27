@@ -22,7 +22,7 @@ struct MainTabView: View {
             // Resources Tab
             TalksListView()
                 .tabItem {
-                    Image(systemName: "play.rectangle.stack.fill")
+                    Image(systemName: "waveform.circle.fill")
                     Text("Resources")
                 }
                 .tag(1)

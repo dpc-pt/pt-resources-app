@@ -30,7 +30,9 @@ extension TalkEntity {
     @NSManaged public var dateRecorded: Date?
     @NSManaged public var duration: Int32
     @NSManaged public var audioURL: String?
+    @NSManaged public var videoURL: String?
     @NSManaged public var localAudioURL: String?
+    @NSManaged public var localVideoURL: String?
     @NSManaged public var imageURL: String?
     @NSManaged public var isDownloaded: Bool
     @NSManaged public var isFavorite: Bool

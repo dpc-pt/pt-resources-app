@@ -19,7 +19,7 @@ struct PTSearchBar: View {
             HStack(spacing: PTDesignTokens.Spacing.sm) {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(PTDesignTokens.Colors.medium)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(PTFont.ptButtonText)
                 
                 TextField("Search talks, speakers, series...", text: $text)
                     .font(PTFont.ptBodyText)  // Using PT brand typography
@@ -35,7 +35,7 @@ struct PTSearchBar: View {
                     }) {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(PTDesignTokens.Colors.light)
-                            .font(.system(size: 16))
+                            .font(PTFont.ptButtonText)
                     }
                 }
             }
@@ -66,7 +66,7 @@ struct PTFilterSortBar: View {
             Button(action: { showingFilters = true }) {
                 HStack(spacing: PTDesignTokens.Spacing.xs) {
                     Image(systemName: "line.3.horizontal.decrease.circle")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(PTFont.ptButtonText)
                     Text("Filter")
                         .font(PTFont.ptButtonText)  // Using PT button typography
                     if activeFiltersCount > 0 {
@@ -94,7 +94,7 @@ struct PTFilterSortBar: View {
             Button(action: { showingSortOptions = true }) {
                 HStack(spacing: PTDesignTokens.Spacing.xs) {
                     Image(systemName: "arrow.up.arrow.down")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(PTFont.ptButtonText)
                     Text(currentSortOption.displayName)
                         .font(PTFont.ptButtonText)  // Using PT button typography
                 }

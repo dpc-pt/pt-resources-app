@@ -72,13 +72,13 @@ final class TranscriptionService: ObservableObject {
         
         // Create transcription request
         let request = CreateTranscriptionRequest(
-            audioURL: talk.audioURL,
+            audioURL: talk.audioURL ?? "",
             talkID: talk.id,
             language: "en", // TODO: Make configurable
             priority: priority
         )
         
-        guard let url = URL(string: Config.APIEndpoint.createTranscription(audioURL: talk.audioURL, talkID: talk.id).url) else {
+        guard let url = URL(string: Config.APIEndpoint.createTranscription(audioURL: talk.audioURL ?? "", talkID: talk.id).url) else {
             throw TranscriptionError.invalidURL
         }
         
