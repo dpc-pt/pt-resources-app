@@ -43,6 +43,9 @@ final class PlayerService: NSObject, ObservableObject {
     private var isAudioSessionConfigured = false
     private var backgroundTaskIdentifier: UIBackgroundTaskIdentifier = .invalid
 
+    // Artwork cache to improve performance
+    private var artworkCache: [String: MPMediaItemArtwork] = [:]
+
     // Sleep timer
     @Published var sleepTimerMinutes: Int?
     private var sleepTimer: Timer?
@@ -69,19 +72,20 @@ final class PlayerService: NSObject, ObservableObject {
     }
     
     deinit {
-        Task { @MainActor in
-            cleanup()
+        // Perform cleanup on the main actor without capturing self strongly
+        Task.detached { @MainActor [weak self] in
+            self?.cleanup()
         }
     }
     
     // MARK: - Public Methods
-    
+
     func loadTalk(_ talk: Talk, startTime: TimeInterval = 0) {
         cleanup()
-        
+
         self.currentTalk = talk
         self.currentTime = startTime
-        
+
         // Determine audio URL (local or remote)
         let audioURL: URL
         if let localPath = getLocalAudioPath(for: talk.id), FileManager.default.fileExists(atPath: localPath) {
@@ -96,19 +100,63 @@ final class PlayerService: NSObject, ObservableObject {
             print("No audio URL available for talk: \(talk.id)")
             return
         }
-        
+
         // Setup audio session before loading player
         setupAudioSessionIfNeeded()
-        
-        // Start background task immediately when loading a talk
-        // This ensures background task is active if user switches apps quickly after loading
-        startBackgroundTask()
-        
+
+        // Setup player and load metadata first
         setupPlayer(with: audioURL, startTime: startTime)
         updateNowPlayingInfo()
-        
+
         // Load chapters
         loadChapters(for: talk.id)
+    }
+
+    func loadResource(_ resource: ResourceDetail, startTime: TimeInterval = 0) {
+        cleanup()
+
+        // Convert ResourceDetail to Talk for internal use
+        // Parse date from string (format: "1 January 2016")
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "d MMMM yyyy"
+        let parsedDate = dateFormatter.date(from: resource.date) ?? Date()
+
+        let talk = Talk(
+            id: resource.id,
+            title: resource.title,
+            description: resource.description,
+            speaker: resource.speaker,
+            series: resource.category, // Use category as series
+            biblePassage: resource.scriptureReference,
+            dateRecorded: parsedDate,
+            duration: 0, // Duration will be set when player loads
+            audioURL: resource.audioUrl,
+            imageURL: resource.imageUrl
+        )
+
+        self.currentTalk = talk
+        self.currentTime = startTime
+
+        // Determine audio URL (local or remote)
+        let audioURL: URL
+        if let localPath = getLocalAudioPath(for: resource.id), FileManager.default.fileExists(atPath: localPath) {
+            audioURL = URL(fileURLWithPath: localPath)
+        } else if let remoteAudioURL = resource.audioURL {
+            audioURL = remoteAudioURL
+        } else {
+            print("No audio URL available for resource: \(resource.id)")
+            return
+        }
+
+        // Setup audio session before loading player
+        setupAudioSessionIfNeeded()
+
+        // Setup player and load metadata first
+        setupPlayer(with: audioURL, startTime: startTime)
+        updateNowPlayingInfo()
+
+        // Load chapters
+        loadChapters(for: resource.id)
     }
     
     func play() {
@@ -117,7 +165,7 @@ final class PlayerService: NSObject, ObservableObject {
         // Ensure audio session is configured before playing
         setupAudioSessionIfNeeded()
 
-        // Ensure background task is active (may already be started in loadTalk)
+        // Start background task for playback
         startBackgroundTask()
 
         player.play()
@@ -137,7 +185,7 @@ final class PlayerService: NSObject, ObservableObject {
         updateNowPlayingInfo()
 
         // Keep background task active for lock screen controls
-        // Only end background task when stopping completely
+        // Background task will be ended when stop() is called or app goes to background
 
         // Save playback state
         savePlaybackState()
@@ -296,13 +344,21 @@ final class PlayerService: NSObject, ObservableObject {
     }
 
     func startBackgroundTask() {
-        guard backgroundTaskIdentifier == .invalid else { return }
+        // End any existing background task first
+        endBackgroundTask()
 
         backgroundTaskIdentifier = UIApplication.shared.beginBackgroundTask(withName: "AudioPlayback") {
             // Background task expired - system will end it automatically
             // Just clean up our identifier
-            self.backgroundTaskIdentifier = .invalid
-            print("Background task expired - system ended task automatically")
+            Task { @MainActor in
+                self.backgroundTaskIdentifier = .invalid
+                print("Background task expired - system ended task automatically")
+
+                // Stop playback if background task expires
+                if self.playbackState == .playing {
+                    self.pause()
+                }
+            }
         }
 
         print("Started background task for audio playback: \(backgroundTaskIdentifier.rawValue)")
@@ -491,7 +547,7 @@ final class PlayerService: NSObject, ObservableObject {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
             return
         }
-        
+
         var nowPlayingInfo: [String: Any] = [
             MPMediaItemPropertyTitle: talk.title,
             MPMediaItemPropertyArtist: talk.speaker,
@@ -499,20 +555,116 @@ final class PlayerService: NSObject, ObservableObject {
             MPNowPlayingInfoPropertyElapsedPlaybackTime: currentTime,
             MPNowPlayingInfoPropertyPlaybackRate: playbackState == .playing ? playbackSpeed : 0.0
         ]
-        
+
         if let series = talk.series {
             nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = series
         }
-        
-        // TODO: Load and set artwork
-        // if let imageURL = talk.imageURL {
-        //     loadArtwork(from: imageURL) { artwork in
-        //         nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
-        //         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-        //     }
-        // }
-        
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+
+        // Load and set artwork for lock screen/dynamic island
+        if let imageURL = talk.imageURL {
+            loadArtwork(from: imageURL) { artwork in
+                if let artwork = artwork {
+                    nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
+                }
+                MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+            }
+        } else {
+            // Use default artwork if no image URL is available
+            let defaultArtwork = createDefaultArtwork()
+            nowPlayingInfo[MPMediaItemPropertyArtwork] = defaultArtwork
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+        }
+    }
+
+    private func loadArtwork(from imageURL: String, completion: @escaping (MPMediaItemArtwork?) -> Void) {
+        // Check cache first
+        if let cachedArtwork = artworkCache[imageURL] {
+            completion(cachedArtwork)
+            return
+        }
+
+        guard let url = URL(string: imageURL) else {
+            completion(nil)
+            return
+        }
+
+        // Use URLSession to load the image
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            guard let self = self,
+                  let data = data,
+                  let image = UIImage(data: data),
+                  error == nil else {
+                Task { @MainActor in
+                    completion(nil)
+                }
+                return
+            }
+
+            Task { @MainActor in
+                // Create MPMediaItemArtwork from the loaded image
+                let artwork = MPMediaItemArtwork(boundsSize: image.size) { size in
+                    // Resize image to fit the requested size while maintaining aspect ratio
+                    let aspectRatio = image.size.width / image.size.height
+                    let newSize: CGSize
+
+                    if size.width / size.height > aspectRatio {
+                        newSize = CGSize(width: size.height * aspectRatio, height: size.height)
+                    } else {
+                        newSize = CGSize(width: size.width, height: size.width / aspectRatio)
+                    }
+
+                    return self.resizeImage(image, to: newSize)
+                }
+
+                // Cache the artwork for future use
+                self.artworkCache[imageURL] = artwork
+
+                completion(artwork)
+            }
+        }.resume()
+    }
+
+    private func createDefaultArtwork() -> MPMediaItemArtwork {
+        // Create a default artwork with the PT logo
+        let boundsSize = CGSize(width: 300, height: 300)
+
+        return MPMediaItemArtwork(boundsSize: boundsSize) { size in
+            // Create a simple colored background with PT logo overlay
+            let renderer = UIGraphicsImageRenderer(size: size)
+            return renderer.image { context in
+                // Background color (PT brand color)
+                UIColor(hex: "#07324c").setFill()
+                context.fill(CGRect(origin: .zero, size: size))
+
+                // Add PT logo text in the center
+                let paragraphStyle = NSMutableParagraphStyle()
+                paragraphStyle.alignment = .center
+
+                let attributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: size.width * 0.15, weight: .bold),
+                    .foregroundColor: UIColor.white,
+                    .paragraphStyle: paragraphStyle
+                ]
+
+                let text = "PT"
+                let textSize = text.size(withAttributes: attributes)
+                let textRect = CGRect(
+                    x: (size.width - textSize.width) / 2,
+                    y: (size.height - textSize.height) / 2,
+                    width: textSize.width,
+                    height: textSize.height
+                )
+
+                text.draw(in: textRect, withAttributes: attributes)
+            }
+        }
+    }
+
+    private func resizeImage(_ image: UIImage, to newSize: CGSize) -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { context in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
     }
     
     private func updateCurrentChapter() {
@@ -663,6 +815,33 @@ final class PlayerService: NSObject, ObservableObject {
         }
 
         cancellables.removeAll()
+    }
+}
+
+// MARK: - UIColor Extension for Hex Colors
+
+extension UIColor {
+    convenience init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3: // RGB (12-bit)
+            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6: // RGB (24-bit)
+            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8: // ARGB (32-bit)
+            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            (a, r, g, b) = (1, 1, 1, 0)
+        }
+        self.init(
+            red: CGFloat(r) / 255,
+            green: CGFloat(g) / 255,
+            blue: CGFloat(b) / 255,
+            alpha: CGFloat(a) / 255
+        )
     }
 }
 

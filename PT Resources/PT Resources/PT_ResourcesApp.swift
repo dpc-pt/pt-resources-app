@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AVFoundation
+import UIKit
 
 @main
 struct PT_ResourcesApp: App {
@@ -89,6 +90,35 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             }
         }
     }
+    func application(
+            _ application: UIApplication,
+            didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil
+        ) -> Bool {
+            
+            // Debug: list all available fonts in the console
+            for family in UIFont.familyNames.sorted() {
+                print("Family: \(family)")
+                for name in UIFont.fontNames(forFamilyName: family) {
+                    print("  \(name)")
+                }
+            }
+            
+            if let resourcePath = Bundle.main.resourcePath {
+                let fm = FileManager.default
+                if let items = try? fm.contentsOfDirectory(atPath: resourcePath) {
+                    print("Bundle root contents:", items)
+                }
+                if let fontsFolder = Bundle.main.resourcePath.map({ $0 + "/Fonts" }),
+                   fm.fileExists(atPath: fontsFolder) {
+                    let fontItems = try? fm.contentsOfDirectory(atPath: fontsFolder)
+                    print("Fonts folder contents:", fontItems ?? [])
+                } else {
+                    print("❌ No Fonts folder in bundle")
+                }
+            }
+            
+            return true
+        }
 
     func applicationWillTerminate(_ application: UIApplication) {
         // Clean up when app terminates

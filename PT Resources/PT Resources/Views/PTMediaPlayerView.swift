@@ -2,53 +2,55 @@
 //  PTMediaPlayerView.swift
 //  PT Resources
 //
-//  Modern media player with PT branding inspired by Apple Music/Spotify
+//  Now Playing screen matching TalkDetailView design with PT branding
 //
 
 import SwiftUI
+
+// PTLogo is already available in this module
 
 struct PTMediaPlayerView: View {
     let resource: ResourceDetail
     @ObservedObject var playerService = PlayerService.shared
     @Environment(\.dismiss) private var dismiss
 
-    @State private var isExpanded = false
-    @State private var showingMoreOptions = false
     @State private var dragOffset: CGFloat = 0
-    @State private var isPressed = false
+    @State private var showingMoreOptions = false
 
     init(resource: ResourceDetail) {
         self.resource = resource
     }
-    
+
     var body: some View {
-        ZStack {
-            // Background with blur effect
-            backgroundView
-            
-            VStack(spacing: 0) {
-                // Drag indicator
-                dragIndicator
-                
-                // Artwork and basic info
-                artworkSection
-                
-                // Controls section
-                controlsSection
-                
-                // Progress and time
-                progressSection
-                
-                // Action buttons
-                actionButtons
-                
-                // Related resources
-                if !resource.relatedResources.isEmpty {
-                    relatedResourcesSection
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Hero Section with Resource Art & Info
+                    heroSection
+
+                    // Media Player Controls
+                    mediaPlayerSection
+                        .padding(.horizontal, PTDesignTokens.Spacing.md)
+                        .padding(.bottom, PTDesignTokens.Spacing.lg)
+
+                    // Resource Information Card
+                    resourceInfoSection
+                        .padding(.horizontal, PTDesignTokens.Spacing.md)
+                        .padding(.bottom, PTDesignTokens.Spacing.lg)
+
+                    // Action Buttons
+                    actionButtonsSection
+                        .padding(.horizontal, PTDesignTokens.Spacing.md)
+                        .padding(.bottom, PTDesignTokens.Spacing.xl)
+
+                    // Related resources
+                    if !resource.relatedResources.isEmpty {
+                        relatedResourcesSection
+                    }
                 }
-                
-                Spacer()
             }
+            .background(PTDesignTokens.Colors.background)
+            .navigationBarHidden(true)
         }
         .gesture(
             DragGesture()
@@ -70,264 +72,408 @@ struct PTMediaPlayerView: View {
         .offset(y: dragOffset)
     }
     
-    // MARK: - Background View
-    
-    private var backgroundView: some View {
-        Rectangle()
-            .fill(
+    // MARK: - Hero Section
+
+    private var heroSection: some View {
+        GeometryReader { geometry in
+            ZStack {
+                // Background image or default
+                Group {
+                    if let imageURL = resource.resourceImageURL {
+                        AsyncImage(url: imageURL) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            defaultArtworkView
+                        }
+                    } else {
+                        defaultArtworkView
+                    }
+                }
+                .clipped()
+
+                // Dark overlay for text readability
                 LinearGradient(
-                    colors: [
-                        PTDesignTokens.Colors.ink,
-                        PTDesignTokens.Colors.kleinBlue.opacity(0.8),
-                        PTDesignTokens.Colors.background
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+                    colors: [Color.clear, Color.black.opacity(0.6)],
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
-            )
-            .ignoresSafeArea()
-    }
-    
-    // MARK: - Drag Indicator
-    
-    private var dragIndicator: some View {
-        RoundedRectangle(cornerRadius: 2)
-            .fill(Color.white.opacity(0.3))
-            .frame(width: 36, height: 4)
-            .padding(.top, 8)
-    }
-    
-    // MARK: - Artwork Section
-    
-    private var artworkSection: some View {
-        VStack(spacing: PTDesignTokens.Spacing.lg) {
-            // Close button
-            HStack {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "chevron.down")
-                        .font(PTFont.ptCardTitle)
-                        .foregroundColor(.white)
-                        .padding()
+
+                VStack(spacing: 0) {
+                    // Navigation overlay
+                    HStack {
+                        Button(action: { dismiss() }) {
+                            Image(systemName: "chevron.left")
+                                .font(PTFont.ptCardTitle)
+                                .foregroundColor(.white)
+                                .padding(PTDesignTokens.Spacing.sm)
+                                .background(
+                                    Circle()
+                                        .fill(Color.black.opacity(0.4))
+                                )
+                        }
+
+                        Spacer()
+
+                        HStack(spacing: PTDesignTokens.Spacing.sm) {
+                            // Share button
+                            Button(action: shareResource) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(PTFont.ptCardTitle)
+                                    .foregroundColor(.white)
+                                    .padding(PTDesignTokens.Spacing.sm)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.black.opacity(0.4))
+                                    )
+                            }
+                        }
+                    }
+                    .padding(PTDesignTokens.Spacing.md)
+                    .zIndex(1)
+
+                    Spacer()
+
+                    // Resource info overlay
+                    VStack(spacing: PTDesignTokens.Spacing.md) {
+                        Text(resource.title)
+                            .font(PTFont.ptDisplayMedium)
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(3)
+                            .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+
+                        Text(resource.speaker)
+                            .font(PTFont.ptSectionTitle)
+                            .foregroundColor(.white.opacity(0.9))
+                            .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+
+                        HStack(spacing: PTDesignTokens.Spacing.md) {
+                            if !resource.scriptureReference.isEmpty {
+                                Text(resource.scriptureReference)
+                                    .font(PTFont.ptCaptionText)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, PTDesignTokens.Spacing.sm)
+                                    .padding(.vertical, PTDesignTokens.Spacing.xs)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.white.opacity(0.2))
+                                    )
+                            }
+
+                            Text(resource.date)
+                                .font(PTFont.ptCaptionText)
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                    }
+                    .padding(PTDesignTokens.Spacing.lg)
+                    .zIndex(1)
                 }
-                
-                Spacer()
-                
-                Button(action: { showingMoreOptions = true }) {
-                    Image(systemName: "ellipsis")
-                        .font(PTFont.ptCardTitle)
-                        .foregroundColor(.white)
-                        .padding()
-                }
-            }
-            
-            // Artwork
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [PTDesignTokens.Colors.tang.opacity(0.3), PTDesignTokens.Colors.kleinBlue.opacity(0.3)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay(
-                    Image("pt-resources")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 120, height: 40)
-                        .opacity(0.8)
-                )
-                .frame(width: 280, height: 280)
-                .cornerRadius(PTDesignTokens.BorderRadius.huge)
-                .shadow(color: Color.black.opacity(0.3), radius: 20, x: 0, y: 10)
-            
-            // Track info
-            VStack(spacing: PTDesignTokens.Spacing.xs) {
-                Text(resource.title)
-                    .font(PTFont.ptSectionTitle)
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                
-                Text(resource.speaker)
-                    .font(PTFont.ptBodyText)
-                    .foregroundColor(.white.opacity(0.7))
-                
-                Text(resource.conference)
-                    .font(PTFont.ptCaptionText)
-                    .foregroundColor(.white.opacity(0.6))
-                    .padding(.horizontal, PTDesignTokens.Spacing.md)
-                    .padding(.vertical, PTDesignTokens.Spacing.xs)
-                    .background(
-                        Capsule()
-                            .fill(Color.white.opacity(0.15))
-                    )
             }
         }
-        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+        .frame(height: 320)
+        .cornerRadius(PTDesignTokens.BorderRadius.xl, corners: [.bottomLeft, .bottomRight])
+    }
+
+    private var defaultArtworkView: some View {
+        Rectangle()
+            .fill(PTDesignTokens.Colors.veryLight)
+            .overlay(
+                PTLogo(size: 60, showText: false)
+                    .opacity(0.3)
+            )
     }
     
-    // MARK: - Controls Section
-    
-    private var controlsSection: some View {
-        HStack(spacing: PTDesignTokens.Spacing.xxl) {
-            // Previous (Skip back 30s)
-            Button(action: { playerService.skipBackward() }) {
-                Image(systemName: "gobackward.30")
-                    .font(PTFont.ptSectionTitle)
-                    .foregroundColor(.white)
+    // MARK: - Media Player Section
+
+    private var mediaPlayerSection: some View {
+        VStack(spacing: PTDesignTokens.Spacing.lg) {
+            // Progress bar
+            VStack(spacing: PTDesignTokens.Spacing.sm) {
+                ProgressView(value: playerService.currentTime, total: playerService.duration)
+                    .progressViewStyle(PTMediaProgressStyle())
+                    .frame(height: 6)
+
+                HStack {
+                    Text(timeString(from: playerService.currentTime))
+                        .font(PTFont.ptCaptionText)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                        .monospacedDigit()
+
+                    Spacer()
+
+                    Text(timeString(from: playerService.duration))
+                        .font(PTFont.ptCaptionText)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                        .monospacedDigit()
+                }
             }
-            .scaleEffect(isPressed ? 0.95 : 1.0)
-            
-            // Play/Pause
-            Button(action: { 
-                if playerService.isPlaying {
-                    playerService.pause()
+
+            // Playback controls
+            HStack(spacing: PTDesignTokens.Spacing.xxl) {
+                // Skip backward (10s)
+                Button(action: { playerService.skipBackward() }) {
+                    Image(systemName: "gobackward.10")
+                        .font(.system(size: 24))
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+                        .padding(PTDesignTokens.Spacing.sm)
+                        .background(
+                            Circle()
+                                .fill(PTDesignTokens.Colors.veryLight)
+                        )
+                }
+
+                // Play/Pause
+                Button(action: {
+                if playerService.currentTalk?.id == resource.id {
+                    togglePlayback()
                 } else {
+                    // Load this resource into the player
+                    playerService.loadResource(resource)
                     playerService.play()
                 }
             }) {
-                Image(systemName: playerService.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                    .font(PTFont.ptDisplayMedium)
+                Image(systemName: playerService.currentTalk?.id == resource.id && playerService.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 32))
                     .foregroundColor(.white)
+                    .padding(PTDesignTokens.Spacing.lg)
+                    .background(
+                        Circle()
+                            .fill(PTDesignTokens.Colors.tang)
+                            .shadow(color: PTDesignTokens.Colors.tang.opacity(0.3), radius: 8, x: 0, y: 4)
+                    )
+                }
+                .scaleEffect(playerService.isPlaying ? 1.05 : 1.0)
+                .animation(.easeInOut(duration: 0.2), value: playerService.isPlaying)
+
+                // Skip forward (30s)
+                Button(action: { playerService.skipForward() }) {
+                    Image(systemName: "goforward.30")
+                        .font(.system(size: 24))
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+                        .padding(PTDesignTokens.Spacing.sm)
+                        .background(
+                            Circle()
+                                .fill(PTDesignTokens.Colors.veryLight)
+                        )
+                }
             }
-            .scaleEffect(isPressed ? 0.95 : 1.0)
-            
-            // Next (Skip forward 30s)
-            Button(action: { playerService.skipForward() }) {
-                Image(systemName: "goforward.30")
-                    .font(PTFont.ptSectionTitle)
-                    .foregroundColor(.white)
-            }
-            .scaleEffect(isPressed ? 0.95 : 1.0)
-        }
-        .padding(.vertical, PTDesignTokens.Spacing.lg)
-    }
-    
-    // MARK: - Progress Section
-    
-    private var progressSection: some View {
-        VStack(spacing: PTDesignTokens.Spacing.sm) {
-            // Progress bar
-            ProgressView(value: playerService.currentTime, total: playerService.duration)
-                .progressViewStyle(PTMediaProgressStyle())
-                .frame(height: 4)
-            
-            // Time labels
-            HStack {
-                Text(timeString(from: playerService.currentTime))
-                    .font(PTFont.ptCaptionText)
-                    .foregroundColor(.white.opacity(0.7))
-                
-                Spacer()
-                
-                Text("-\(timeString(from: playerService.duration - playerService.currentTime))")
-                    .font(PTFont.ptCaptionText)
-                    .foregroundColor(.white.opacity(0.7))
-            }
-        }
-        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
-        .padding(.vertical, PTDesignTokens.Spacing.md)
-    }
-    
-    // MARK: - Action Buttons
-    
-    private var actionButtons: some View {
-        HStack(spacing: PTDesignTokens.Spacing.xl) {
+
             // Speed control
-            Button(action: { 
-                playerService.adjustPlaybackSpeed()
-            }) {
-                VStack(spacing: 4) {
-                    Image(systemName: "speedometer")
-                        .font(.title3)
-                        .foregroundColor(.white)
-                    
-                    Text("\(playerService.playbackSpeed, specifier: "%.1f")x")
-                        .font(PTFont.ptCaptionText)
-                        .foregroundColor(.white.opacity(0.8))
-                }
-            }
-            
-            Spacer()
-            
-            // Download
-            Button(action: { 
-                // TODO: Implement download
-            }) {
-                VStack(spacing: 4) {
-                    Image(systemName: "arrow.down.circle")
-                        .font(.title3)
-                        .foregroundColor(.white)
-                    
-                    Text("Download")
-                        .font(PTFont.ptCaptionText)
-                        .foregroundColor(.white.opacity(0.8))
-                }
-            }
-            
-            Spacer()
-            
-            // Share
-            Button(action: { 
-                // TODO: Implement share
-            }) {
-                VStack(spacing: 4) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.title3)
-                        .foregroundColor(.white)
-                    
-                    Text("Share")
-                        .font(PTFont.ptCaptionText)
-                        .foregroundColor(.white.opacity(0.8))
-                }
-            }
-            
-            Spacer()
-            
-            // More options
-            Button(action: { showingMoreOptions = true }) {
-                VStack(spacing: 4) {
-                    Image(systemName: "ellipsis")
-                        .font(.title3)
-                        .foregroundColor(.white)
-                    
-                    Text("More")
-                        .font(PTFont.ptCaptionText)
-                        .foregroundColor(.white.opacity(0.8))
+            HStack {
+                Text("Playback Speed")
+                    .font(PTFont.ptCardSubtitle)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
+
+                Spacer()
+
+                Button(action: { playerService.adjustPlaybackSpeed() }) {
+                    Text("\(playerService.playbackSpeed, specifier: "%.1f")×")
+                        .font(PTFont.ptButtonText)
+                        .foregroundColor(PTDesignTokens.Colors.kleinBlue)
+                        .padding(.horizontal, PTDesignTokens.Spacing.md)
+                        .padding(.vertical, PTDesignTokens.Spacing.sm)
+                        .background(
+                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                                .fill(PTDesignTokens.Colors.kleinBlue.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                                        .stroke(PTDesignTokens.Colors.kleinBlue, lineWidth: 1)
+                                )
+                        )
                 }
             }
         }
-        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
-        .padding(.vertical, PTDesignTokens.Spacing.lg)
+        .padding(PTDesignTokens.Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
+                .fill(PTDesignTokens.Colors.surface)
+                .shadow(color: PTDesignTokens.Colors.ink.opacity(0.1), radius: 8, x: 0, y: 4)
+        )
+    }
+    
+    // MARK: - Resource Info Section
+
+    private var resourceInfoSection: some View {
+        VStack(spacing: PTDesignTokens.Spacing.lg) {
+            // Conference info (if available)
+            if !resource.conference.isEmpty {
+                HStack {
+                    VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
+                        Text("Conference")
+                            .font(PTFont.ptCaptionText)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
+                            .textCase(.uppercase)
+                            .tracking(0.5)
+
+                        Text(resource.conference)
+                            .font(PTFont.ptCardTitle)
+                            .foregroundColor(PTDesignTokens.Colors.ink)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "rectangle.stack")
+                        .font(.system(size: 24))
+                        .foregroundColor(PTDesignTokens.Colors.kleinBlue)
+                }
+                .padding(PTDesignTokens.Spacing.md)
+                .background(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.lg)
+                        .fill(PTDesignTokens.Colors.kleinBlue.opacity(0.05))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.lg)
+                                .stroke(PTDesignTokens.Colors.kleinBlue.opacity(0.2), lineWidth: 1)
+                        )
+                )
+            }
+
+            // Description (if available)
+            if !resource.description.isEmpty {
+                VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.sm) {
+                    Text("About This Resource")
+                        .font(PTFont.ptSectionTitle)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+
+                    Text(resource.description)
+                        .font(PTFont.ptBodyText)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+                        .lineSpacing(PTDesignTokens.Typography.lineHeightRelaxed)
+                        .lineLimit(nil)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(PTDesignTokens.Spacing.lg)
+                .background(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
+                        .fill(PTDesignTokens.Colors.surface)
+                        .shadow(color: PTDesignTokens.Colors.ink.opacity(0.1), radius: 8, x: 0, y: 4)
+                )
+            }
+        }
+    }
+
+    // MARK: - Action Buttons Section
+
+    private var actionButtonsSection: some View {
+        VStack(spacing: PTDesignTokens.Spacing.md) {
+            // Primary action - Scripture Reference
+            if !resource.scriptureReference.isEmpty {
+                Button(action: { /* TODO: Implement scripture view */ }) {
+                    HStack(spacing: PTDesignTokens.Spacing.md) {
+                        Image(systemName: "book.closed")
+                            .font(.system(size: 20))
+                            .foregroundColor(.white)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Bible Passage")
+                                .font(PTFont.ptButtonText)
+                                .foregroundColor(.white)
+                            Text(resource.scriptureReference)
+                                .font(PTFont.ptCaptionText)
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(PTFont.ptCaptionText)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    .padding(PTDesignTokens.Spacing.lg)
+                    .background(
+                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
+                            .fill(PTDesignTokens.Colors.kleinBlue)
+                            .shadow(color: PTDesignTokens.Colors.kleinBlue.opacity(0.3), radius: 8, x: 0, y: 4)
+                    )
+                }
+            }
+
+            // Secondary action - Share
+            Button(action: shareResource) {
+                HStack(spacing: PTDesignTokens.Spacing.md) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 20))
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Share Resource")
+                            .font(PTFont.ptButtonText)
+                            .foregroundColor(PTDesignTokens.Colors.ink)
+                        Text("Share this resource with others")
+                            .font(PTFont.ptCaptionText)
+                            .foregroundColor(PTDesignTokens.Colors.kleinBlue)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(PTFont.ptCaptionText)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                }
+                .padding(PTDesignTokens.Spacing.lg)
+                .background(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
+                        .fill(PTDesignTokens.Colors.surface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
+                                .stroke(PTDesignTokens.Colors.light.opacity(0.3), lineWidth: 1)
+                        )
+                        .shadow(color: PTDesignTokens.Colors.ink.opacity(0.1), radius: 8, x: 0, y: 4)
+                )
+            }
+        }
     }
     
     // MARK: - Related Resources
-    
+
     private var relatedResourcesSection: some View {
         VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.md) {
-            HStack {
-                Text("Related Resources")
-                    .font(PTFont.ptCardTitle)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
-                
-                Spacer()
-            }
-            
+            Text("Related Resources")
+                .font(PTFont.ptSectionTitle)
+                .foregroundColor(PTDesignTokens.Colors.ink)
+
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: PTDesignTokens.Spacing.md) {
                     ForEach(resource.relatedResources.prefix(5)) { related in
                         PTRelatedResourceCard(resource: related)
                     }
                 }
-                .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
             }
         }
-        .padding(.vertical, PTDesignTokens.Spacing.md)
+        .padding(PTDesignTokens.Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
+                .fill(PTDesignTokens.Colors.surface)
+                .shadow(color: PTDesignTokens.Colors.ink.opacity(0.1), radius: 8, x: 0, y: 4)
+        )
     }
     
     // MARK: - Helper Methods
-    
+
+    private func togglePlayback() {
+        if playerService.isPlaying {
+            playerService.pause()
+        } else {
+            playerService.play()
+        }
+    }
+
+    private func shareResource() {
+        let shareText = "Check out this resource: \(resource.title) by \(resource.speaker)"
+        var activityItems: [Any] = [shareText]
+        if let audioURL = resource.audioURL {
+            activityItems.append(audioURL)
+        }
+        let activityVC = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first {
+            window.rootViewController?.present(activityVC, animated: true)
+        }
+    }
+
     private func timeString(from timeInterval: TimeInterval) -> String {
         let minutes = Int(timeInterval) / 60
         let seconds = Int(timeInterval) % 60
@@ -344,42 +490,52 @@ struct PTMediaPlayerView: View {
 struct PTRelatedResourceCard: View {
     let resource: RelatedResource
     @State private var isPressed = false
-    
+
     var body: some View {
         Button(action: {
             // TODO: Navigate to related resource
         }) {
             VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.sm) {
                 // Artwork
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [PTDesignTokens.Colors.lawn.opacity(0.3), PTDesignTokens.Colors.kleinBlue.opacity(0.3)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .overlay(
-                        Image("pt-resources")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 60, height: 20)
-                            .opacity(0.6)
-                    )
-                    .frame(width: 140, height: 140)
-                    .cornerRadius(PTDesignTokens.BorderRadius.md)
-                
+                ZStack {
+                    Rectangle()
+                        .fill(PTDesignTokens.Colors.veryLight)
+                        .frame(width: 140, height: 140)
+                        .cornerRadius(PTDesignTokens.BorderRadius.lg)
+
+                    if let imageURL = resource.resourceImageURL {
+                        AsyncImage(url: imageURL) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 140, height: 140)
+                                .cornerRadius(PTDesignTokens.BorderRadius.lg)
+                        } placeholder: {
+                            PTLogo(size: 40, showText: false)
+                                .opacity(0.3)
+                        }
+                    } else {
+                        PTLogo(size: 40, showText: false)
+                            .opacity(0.3)
+                    }
+                }
+
                 // Info
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
                     Text(resource.title)
                         .font(PTFont.ptCaptionText)
-                        .foregroundColor(.white)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
-                    
+
                     Text(resource.speaker)
+                        .font(PTFont.ptCaptionText)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                        .lineLimit(1)
+
+                    Text(resource.date)
                         .font(.caption2)
-                        .foregroundColor(.white.opacity(0.6))
+                        .foregroundColor(PTDesignTokens.Colors.medium)
                         .lineLimit(1)
                 }
                 .frame(width: 140, alignment: .leading)

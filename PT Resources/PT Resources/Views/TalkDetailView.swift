@@ -2,7 +2,7 @@
 //  TalkDetailView.swift
 //  PT Resources
 //
-//  Comprehensive talk details view with offline playback support
+//  Beautiful talk details view with PT design system
 //
 
 import SwiftUI
@@ -16,7 +16,6 @@ struct TalkDetailView: View {
     
     @Environment(\.dismiss) private var dismiss
     
-    @State private var selectedTab: TalkDetailTab = .overview
     @State private var showingTranscript = false
     @State private var showingBiblePassage = false
     @State private var biblePassage: ESVPassage?
@@ -24,507 +23,639 @@ struct TalkDetailView: View {
     @State private var biblePassageError: String?
     @State private var isDownloading = false
     @State private var downloadProgress: Float = 0.0
-    @State private var isPressed = false
     @State private var isTalkDownloaded = false
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Header
-                headerSection
-                
-                // Tab selector
-                tabSelector
-                
-                // Content based on selected tab
-                TabView(selection: $selectedTab) {
-                    overviewTab
-                        .tag(TalkDetailTab.overview)
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Hero Section with Talk Art & Info
+                    heroSection
                     
-                    transcriptTab
-                        .tag(TalkDetailTab.transcript)
+                    // Media Player Controls
+                    mediaPlayerSection
+                        .padding(.horizontal, PTDesignTokens.Spacing.md)
+                        .padding(.bottom, PTDesignTokens.Spacing.lg)
                     
-                    biblePassageTab
-                        .tag(TalkDetailTab.biblePassage)
+                    // Talk Information Card
+                    talkInfoSection
+                        .padding(.horizontal, PTDesignTokens.Spacing.md)
+                        .padding(.bottom, PTDesignTokens.Spacing.lg)
+                    
+                    // Action Buttons
+                    actionButtonsSection
+                        .padding(.horizontal, PTDesignTokens.Spacing.md)
+                        .padding(.bottom, PTDesignTokens.Spacing.xl)
                 }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             }
+            .background(PTDesignTokens.Colors.background)
+            .navigationBarHidden(true)
         }
-        .navigationBarHidden(true)
         .onAppear {
             loadBiblePassage()
             checkDownloadStatus()
         }
+        .sheet(isPresented: $showingTranscript) {
+            transcriptSheet
+        }
+        .sheet(isPresented: $showingBiblePassage) {
+            biblePassageSheet
+        }
     }
     
-    // MARK: - Header Section
+    // MARK: - Hero Section
     
-    private var headerSection: some View {
-        VStack(spacing: PTDesignTokens.Spacing.lg) {
-            // Navigation bar
-            HStack {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "chevron.left")
-                        .font(PTFont.ptCardTitle)
-                        .foregroundColor(PTDesignTokens.Colors.ink)
-                }
-                
-                Spacer()
-                
-                // Download button
-                downloadButton
-                
-                // Share button
-                Button(action: shareTalk) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(PTFont.ptCardTitle)
-                        .foregroundColor(PTDesignTokens.Colors.ink)
-                }
-            }
-            .padding(.horizontal, PTDesignTokens.Spacing.md)
-            
-            // Talk artwork and basic info
-            VStack(spacing: PTDesignTokens.Spacing.md) {
-                // Artwork
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [PTDesignTokens.Colors.tang.opacity(0.1), PTDesignTokens.Colors.kleinBlue.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .overlay(
-                        PTLogo(size: 40, showText: false)
-                    )
-                    .frame(width: 200, height: 200)
-                    .cornerRadius(PTDesignTokens.BorderRadius.lg)
-                
-                // Talk info
-                VStack(spacing: PTDesignTokens.Spacing.sm) {
-                    Text(talk.title)
-                        .font(PTFont.ptSectionTitle)
-                        .foregroundColor(PTDesignTokens.Colors.ink)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(3)
-                    
-                    Text(talk.speaker)
-                        .font(PTFont.ptCardTitle)
-                        .foregroundColor(PTDesignTokens.Colors.tang)
-                    
-                    if let series = talk.series {
-                        Text(series)
-                            .font(PTFont.ptCardSubtitle)
-                            .foregroundColor(PTDesignTokens.Colors.medium)
+    private var heroSection: some View {
+        GeometryReader { geometry in
+            ZStack {
+                // Background image or default
+                Group {
+                    if let imageURL = talk.imageURL, let url = URL(string: imageURL) {
+                        AsyncImage(url: url) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            defaultArtworkView
+                        }
+                    } else {
+                        defaultArtworkView
                     }
-                    
-                    HStack(spacing: PTDesignTokens.Spacing.md) {
-                        if let biblePassage = talk.biblePassage {
-                            Text(biblePassage)
-                                .font(PTFont.ptCaptionText)
-                                .foregroundColor(PTDesignTokens.Colors.kleinBlue)
-                                .padding(.horizontal, PTDesignTokens.Spacing.sm)
-                                .padding(.vertical, PTDesignTokens.Spacing.xs)
+                }
+                .clipped()
+                
+                // Dark overlay for text readability
+                LinearGradient(
+                    colors: [Color.clear, Color.black.opacity(0.6)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                
+                VStack(spacing: 0) {
+                    // Navigation overlay
+                    HStack {
+                        Button(action: { dismiss() }) {
+                            Image(systemName: "chevron.left")
+                                .font(PTFont.ptCardTitle)
+                                .foregroundColor(.white)
+                                .padding(PTDesignTokens.Spacing.sm)
                                 .background(
-                                    Capsule()
-                                        .fill(PTDesignTokens.Colors.kleinBlue.opacity(0.1))
+                                    Circle()
+                                        .fill(Color.black.opacity(0.4))
                                 )
                         }
                         
-                        Text(talk.formattedDate)
-                            .font(PTFont.ptCaptionText)
-                            .foregroundColor(PTDesignTokens.Colors.medium)
+                        Spacer()
                         
-                        Text(talk.formattedDuration)
-                            .font(PTFont.ptCaptionText)
-                            .foregroundColor(PTDesignTokens.Colors.medium)
+                        HStack(spacing: PTDesignTokens.Spacing.sm) {
+                            // Download button
+                            Button(action: toggleDownload) {
+                                Group {
+                                    if isDownloading {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                            .tint(.white)
+                                    } else {
+                                        Image(systemName: isTalkDownloaded ? "checkmark.circle.fill" : "arrow.down.circle")
+                                            .font(PTFont.ptCardTitle)
+                                    }
+                                }
+                                .foregroundColor(.white)
+                                .padding(PTDesignTokens.Spacing.sm)
+                                .background(
+                                    Circle()
+                                        .fill(Color.black.opacity(0.4))
+                                )
+                            }
+                            
+                            // Share button
+                            Button(action: shareTalk) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(PTFont.ptCardTitle)
+                                    .foregroundColor(.white)
+                                    .padding(PTDesignTokens.Spacing.sm)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.black.opacity(0.4))
+                                    )
+                            }
+                        }
                     }
-                }
-            }
-            .padding(.horizontal, PTDesignTokens.Spacing.lg)
-        }
-        .padding(.top, PTDesignTokens.Spacing.md)
-    }
-    
-    // MARK: - Download Button
-    
-    private var downloadButton: some View {
-        Group {
-            if isDownloading {
-                // Download progress
-                VStack(spacing: 2) {
-                    ProgressView(value: downloadProgress)
-                        .progressViewStyle(LinearProgressViewStyle(tint: PTDesignTokens.Colors.tang))
-                        .frame(width: 60, height: 4)
+                    .padding(PTDesignTokens.Spacing.md)
+                    .zIndex(1)
                     
-                    Text("\(Int(downloadProgress * 100))%")
-                        .font(PTFont.ptCaptionText)
-                        .foregroundColor(PTDesignTokens.Colors.medium)
-                }
-            } else {
-                // Download/Delete button
-                Button(action: toggleDownload) {
-                    if isTalkDownloaded {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(PTDesignTokens.Colors.success)
-                    } else {
-                        Image(systemName: "arrow.down.circle")
-                            .font(.title2)
-                            .foregroundColor(PTDesignTokens.Colors.ink)
-                    }
-                }
-            }
-        }
-    }
-    
-    // MARK: - Tab Selector
-    
-    private var tabSelector: some View {
-        HStack(spacing: 0) {
-            ForEach(TalkDetailTab.allCases, id: \.self) { tab in
-                Button(action: { selectedTab = tab }) {
-                    VStack(spacing: PTDesignTokens.Spacing.xs) {
-                        Text(tab.displayName)
-                            .font(PTFont.ptCardSubtitle)
-                            .foregroundColor(selectedTab == tab ? PTDesignTokens.Colors.ink : PTDesignTokens.Colors.medium)
+                    Spacer()
+                    
+                    // Talk info overlay
+                    VStack(spacing: PTDesignTokens.Spacing.md) {
+                        Text(talk.title)
+                            .font(PTFont.ptDisplayMedium)
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(3)
+                            .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
                         
-                        Rectangle()
-                            .fill(selectedTab == tab ? PTDesignTokens.Colors.tang : Color.clear)
-                            .frame(height: 2)
+                        Text(talk.speaker)
+                            .font(PTFont.ptSectionTitle)
+                            .foregroundColor(.white.opacity(0.9))
+                            .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                        
+                        HStack(spacing: PTDesignTokens.Spacing.md) {
+                            if let biblePassage = talk.biblePassage {
+                                Text(biblePassage)
+                                    .font(PTFont.ptCaptionText)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, PTDesignTokens.Spacing.sm)
+                                    .padding(.vertical, PTDesignTokens.Spacing.xs)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.white.opacity(0.2))
+                                    )
+                            }
+                            
+                            Text(talk.formattedYear)
+                                .font(PTFont.ptCaptionText)
+                                .foregroundColor(.white.opacity(0.8))
+                            
+                            if talk.duration > 0 {
+                                Text("•")
+                                    .foregroundColor(.white.opacity(0.6))
+                                
+                                Text(talk.formattedDuration)
+                                    .font(PTFont.ptCaptionText)
+                                    .foregroundColor(.white.opacity(0.8))
+                            }
+                        }
+                        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
                     }
+                    .padding(PTDesignTokens.Spacing.lg)
+                    .zIndex(1)
                 }
-                .frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal, PTDesignTokens.Spacing.lg)
-        .padding(.top, PTDesignTokens.Spacing.lg)
+        .frame(height: 320)
+        .cornerRadius(PTDesignTokens.BorderRadius.xl, corners: [.bottomLeft, .bottomRight])
     }
     
-    // MARK: - Overview Tab
-    
-    private var overviewTab: some View {
-        ScrollView {
-            VStack(spacing: PTDesignTokens.Spacing.lg) {
-                // Media Player
-                mediaPlayerSection
-                
-                // Description
-                if let description = talk.description {
-                    descriptionSection(description)
-                }
-                
-                // Action buttons
-                actionButtonsSection
-            }
-            .padding(PTDesignTokens.Spacing.lg)
-        }
+    private var defaultArtworkView: some View {
+        Rectangle()
+            .fill(PTDesignTokens.Colors.veryLight)
+            .overlay(
+                PTLogo(size: 60, showText: false)
+                    .opacity(0.3)
+            )
     }
+    
+    
+    
     
     // MARK: - Media Player Section
     
     private var mediaPlayerSection: some View {
-        VStack(spacing: PTDesignTokens.Spacing.md) {
+        VStack(spacing: PTDesignTokens.Spacing.lg) {
             // Progress bar
             VStack(spacing: PTDesignTokens.Spacing.sm) {
                 ProgressView(value: playerService.currentTime, total: playerService.duration)
                     .progressViewStyle(PTMediaProgressStyle())
-                    .frame(height: 4)
+                    .frame(height: 6)
                 
                 HStack {
                     Text(timeString(from: playerService.currentTime))
                         .font(PTFont.ptCaptionText)
                         .foregroundColor(PTDesignTokens.Colors.medium)
+                        .monospacedDigit()
                     
                     Spacer()
                     
                     Text(timeString(from: playerService.duration))
                         .font(PTFont.ptCaptionText)
                         .foregroundColor(PTDesignTokens.Colors.medium)
+                        .monospacedDigit()
                 }
             }
             
             // Playback controls
-            HStack(spacing: PTDesignTokens.Spacing.xl) {
+            HStack(spacing: PTDesignTokens.Spacing.xxl) {
                 // Skip backward (10s)
                 Button(action: { playerService.skipBackward() }) {
                     Image(systemName: "gobackward.10")
-                        .font(PTFont.ptCardTitle)
+                        .font(.system(size: 24))
                         .foregroundColor(PTDesignTokens.Colors.ink)
+                        .padding(PTDesignTokens.Spacing.sm)
+                        .background(
+                            Circle()
+                                .fill(PTDesignTokens.Colors.veryLight)
+                        )
                 }
                 
                 // Play/Pause
                 Button(action: togglePlayback) {
-                    Image(systemName: playerService.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 48))
-                        .foregroundColor(PTDesignTokens.Colors.tang)
+                    Image(systemName: playerService.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 32))
+                        .foregroundColor(.white)
+                        .padding(PTDesignTokens.Spacing.lg)
+                        .background(
+                            Circle()
+                                .fill(PTDesignTokens.Colors.tang)
+                                .shadow(color: PTDesignTokens.Colors.tang.opacity(0.3), radius: 8, x: 0, y: 4)
+                        )
                 }
+                .scaleEffect(playerService.isPlaying ? 1.05 : 1.0)
+                .animation(.easeInOut(duration: 0.2), value: playerService.isPlaying)
                 
                 // Skip forward (30s)
                 Button(action: { playerService.skipForward() }) {
                     Image(systemName: "goforward.30")
-                        .font(PTFont.ptCardTitle)
+                        .font(.system(size: 24))
                         .foregroundColor(PTDesignTokens.Colors.ink)
+                        .padding(PTDesignTokens.Spacing.sm)
+                        .background(
+                            Circle()
+                                .fill(PTDesignTokens.Colors.veryLight)
+                        )
                 }
             }
             
             // Speed control
             HStack {
-                Text("Speed:")
-                    .font(PTFont.ptCaptionText)
-                    .foregroundColor(PTDesignTokens.Colors.medium)
+                Text("Playback Speed")
+                    .font(PTFont.ptCardSubtitle)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
                 
                 Spacer()
                 
                 Button(action: { playerService.adjustPlaybackSpeed() }) {
-                    Text("\(playerService.playbackSpeed, specifier: "%.1f")x")
-                        .font(PTFont.ptCaptionText)
+                    Text("\(playerService.playbackSpeed, specifier: "%.1f")×")
+                        .font(PTFont.ptButtonText)
                         .foregroundColor(PTDesignTokens.Colors.kleinBlue)
-                        .padding(.horizontal, PTDesignTokens.Spacing.sm)
-                        .padding(.vertical, PTDesignTokens.Spacing.xs)
+                        .padding(.horizontal, PTDesignTokens.Spacing.md)
+                        .padding(.vertical, PTDesignTokens.Spacing.sm)
                         .background(
-                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.sm)
+                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
                                 .fill(PTDesignTokens.Colors.kleinBlue.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                                        .stroke(PTDesignTokens.Colors.kleinBlue, lineWidth: 1)
+                                )
                         )
                 }
             }
         }
-        .padding(PTDesignTokens.Spacing.md)
+        .padding(PTDesignTokens.Spacing.lg)
         .background(
-            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
                 .fill(PTDesignTokens.Colors.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                        .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
-                )
+                .shadow(color: PTDesignTokens.Colors.ink.opacity(0.1), radius: 8, x: 0, y: 4)
         )
     }
     
-    // MARK: - Description Section
+    // MARK: - Talk Info Section
     
-    private func descriptionSection(_ description: String) -> some View {
-        VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.sm) {
-            Text("Description")
-                .font(PTFont.ptCardTitle)
-                .foregroundColor(PTDesignTokens.Colors.ink)
-            
-            Text(description)
-                .font(PTFont.ptBodyText)
-                .foregroundColor(PTDesignTokens.Colors.ink)
-                .lineLimit(nil)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(PTDesignTokens.Spacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                .fill(PTDesignTokens.Colors.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                        .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
+    private var talkInfoSection: some View {
+        VStack(spacing: PTDesignTokens.Spacing.lg) {
+            // Series info (if available)
+            if let series = talk.series {
+                HStack {
+                    VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
+                        Text("Series")
+                            .font(PTFont.ptCaptionText)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
+                            .textCase(.uppercase)
+                            .tracking(0.5)
+                        
+                        Text(series)
+                            .font(PTFont.ptCardTitle)
+                            .foregroundColor(PTDesignTokens.Colors.ink)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "rectangle.stack")
+                        .font(.system(size: 24))
+                        .foregroundColor(PTDesignTokens.Colors.kleinBlue)
+                }
+                .padding(PTDesignTokens.Spacing.md)
+                .background(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.lg)
+                        .fill(PTDesignTokens.Colors.kleinBlue.opacity(0.05))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.lg)
+                                .stroke(PTDesignTokens.Colors.kleinBlue.opacity(0.2), lineWidth: 1)
+                        )
                 )
-        )
+            }
+            
+            // Description (if available)
+            if let description = talk.description, !description.isEmpty {
+                VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.sm) {
+                    Text("About This Talk")
+                        .font(PTFont.ptSectionTitle)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+                    
+                    Text(description)
+                        .font(PTFont.ptBodyText)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+                        .lineSpacing(PTDesignTokens.Typography.lineHeightRelaxed)
+                        .lineLimit(nil)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(PTDesignTokens.Spacing.lg)
+                .background(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
+                        .fill(PTDesignTokens.Colors.surface)
+                        .shadow(color: PTDesignTokens.Colors.ink.opacity(0.1), radius: 8, x: 0, y: 4)
+                )
+            }
+        }
     }
     
     // MARK: - Action Buttons Section
     
     private var actionButtonsSection: some View {
         VStack(spacing: PTDesignTokens.Spacing.md) {
-            // Transcription button
-            Button(action: requestTranscription) {
-                HStack {
-                                            Image(systemName: "text.bubble")
-                            .font(PTFont.ptCardSubtitle)
+            // Primary action - Transcript
+            Button(action: { showingTranscript = true }) {
+                HStack(spacing: PTDesignTokens.Spacing.md) {
+                    Image(systemName: "text.bubble")
+                        .font(.system(size: 20))
+                        .foregroundColor(.white)
                     
-                    Text("Get Transcript")
-                        .font(PTFont.ptButtonText)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Transcript")
+                            .font(PTFont.ptButtonText)
+                            .foregroundColor(.white)
+                        Text("Read the full text of this talk")
+                            .font(PTFont.ptCaptionText)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(PTFont.ptCaptionText)
+                        .foregroundColor(.white.opacity(0.7))
                 }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, PTDesignTokens.Spacing.md)
+                .padding(PTDesignTokens.Spacing.lg)
                 .background(
-                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
                         .fill(PTDesignTokens.Colors.kleinBlue)
+                        .shadow(color: PTDesignTokens.Colors.kleinBlue.opacity(0.3), radius: 8, x: 0, y: 4)
                 )
             }
             
-            // Bible passage button
+            // Secondary action - Bible Passage
             if let biblePassage = talk.biblePassage {
                 Button(action: { showingBiblePassage = true }) {
-                    HStack {
-                        Image(systemName: "book")
-                            .font(PTFont.ptCardSubtitle)
-                        
-                        Text("View \(biblePassage)")
-                            .font(PTFont.ptButtonText)
-                    }
-                    .foregroundColor(PTDesignTokens.Colors.kleinBlue)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, PTDesignTokens.Spacing.md)
-                    .background(
-                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
-                            .stroke(PTDesignTokens.Colors.kleinBlue, lineWidth: 1)
-                    )
-                }
-            }
-        }
-    }
-    
-    // MARK: - Transcript Tab
-    
-    private var transcriptTab: some View {
-        ScrollView {
-            VStack(spacing: PTDesignTokens.Spacing.lg) {
-                if transcriptionService.transcriptionQueue.contains(where: { $0.talkID == talk.id }) {
-                    // Transcription in progress
-                    VStack(spacing: PTDesignTokens.Spacing.md) {
-                        ProgressView()
-                            .scaleEffect(1.2)
-                        
-                        Text("Generating transcript...")
-                            .font(PTFont.ptCardTitle)
+                    HStack(spacing: PTDesignTokens.Spacing.md) {
+                        Image(systemName: "book.closed")
+                            .font(.system(size: 20))
                             .foregroundColor(PTDesignTokens.Colors.ink)
                         
-                        Text("This may take a few minutes")
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Bible Passage")
+                                .font(PTFont.ptButtonText)
+                                .foregroundColor(PTDesignTokens.Colors.ink)
+                            Text(biblePassage)
+                                .font(PTFont.ptCaptionText)
+                                .foregroundColor(PTDesignTokens.Colors.kleinBlue)
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
                             .font(PTFont.ptCaptionText)
                             .foregroundColor(PTDesignTokens.Colors.medium)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(PTDesignTokens.Spacing.xl)
-                } else {
-                    // Request transcription or show existing
-                    VStack(spacing: PTDesignTokens.Spacing.md) {
-                        Image(systemName: "text.bubble")
-                            .font(PTFont.ptDisplaySmall)
-                            .foregroundColor(PTDesignTokens.Colors.medium)
-                        
-                        Text("No transcript available")
-                            .font(PTFont.ptCardTitle)
-                            .foregroundColor(PTDesignTokens.Colors.ink)
-                        
-                        Text("Request a transcript to see the full text of this talk")
-                            .font(PTFont.ptBodyText)
-                            .foregroundColor(PTDesignTokens.Colors.medium)
-                            .multilineTextAlignment(.center)
-                        
-                        Button(action: requestTranscription) {
-                            Text("Request Transcript")
-                                .font(PTFont.ptButtonText)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, PTDesignTokens.Spacing.lg)
-                                .padding(.vertical, PTDesignTokens.Spacing.md)
-                                .background(
-                                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
-                                        .fill(PTDesignTokens.Colors.tang)
-                                )
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(PTDesignTokens.Spacing.xl)
+                    .padding(PTDesignTokens.Spacing.lg)
+                    .background(
+                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
+                            .fill(PTDesignTokens.Colors.surface)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
+                                    .stroke(PTDesignTokens.Colors.light.opacity(0.3), lineWidth: 1)
+                            )
+                            .shadow(color: PTDesignTokens.Colors.ink.opacity(0.1), radius: 8, x: 0, y: 4)
+                    )
                 }
             }
-            .padding(PTDesignTokens.Spacing.lg)
         }
     }
     
-    // MARK: - Bible Passage Tab
+    // MARK: - Transcript Sheet
     
-    private var biblePassageTab: some View {
-        ScrollView {
+    private var transcriptSheet: some View {
+        NavigationStack {
             VStack(spacing: PTDesignTokens.Spacing.lg) {
-                if isLoadingBiblePassage {
-                    // Loading state
-                    VStack(spacing: PTDesignTokens.Spacing.md) {
+                if transcriptionService.transcriptionQueue.contains(where: { $0.talkID == talk.id }) {
+                    // Transcription in progress
+                    VStack(spacing: PTDesignTokens.Spacing.lg) {
+                        PTLogo(size: 64, showText: false)
+                            .opacity(0.6)
+                        
+                        VStack(spacing: PTDesignTokens.Spacing.sm) {
+                            Text("Generating Transcript")
+                                .font(PTFont.ptSectionTitle)
+                                .foregroundColor(PTDesignTokens.Colors.ink)
+                            
+                            Text("This may take a few minutes")
+                                .font(PTFont.ptBodyText)
+                                .foregroundColor(PTDesignTokens.Colors.medium)
+                        }
+                        
                         ProgressView()
                             .scaleEffect(1.2)
-                        
-                        Text("Loading Bible passage...")
-                            .font(PTFont.ptCardTitle)
-                            .foregroundColor(PTDesignTokens.Colors.ink)
+                            .tint(PTDesignTokens.Colors.tang)
                     }
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(PTDesignTokens.Spacing.xl)
-                } else if let error = biblePassageError {
-                    // Error state
-                    VStack(spacing: PTDesignTokens.Spacing.md) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(PTFont.ptDisplaySmall)
-                            .foregroundColor(PTDesignTokens.Colors.turmeric)
+                } else {
+                    // Request transcription or show existing
+                    VStack(spacing: PTDesignTokens.Spacing.lg) {
+                        Image(systemName: "text.bubble")
+                            .font(.system(size: 64))
+                            .foregroundColor(PTDesignTokens.Colors.kleinBlue.opacity(0.6))
                         
-                        Text("Unable to load passage")
-                            .font(PTFont.ptCardTitle)
-                            .foregroundColor(PTDesignTokens.Colors.ink)
+                        VStack(spacing: PTDesignTokens.Spacing.sm) {
+                            Text("No Transcript Available")
+                                .font(PTFont.ptSectionTitle)
+                                .foregroundColor(PTDesignTokens.Colors.ink)
+                            
+                            Text("Request a transcript to see the full text of this talk. This usually takes a few minutes to generate.")
+                                .font(PTFont.ptBodyText)
+                                .foregroundColor(PTDesignTokens.Colors.medium)
+                                .multilineTextAlignment(.center)
+                                .lineSpacing(PTDesignTokens.Typography.lineHeightRelaxed)
+                        }
                         
-                        Text(error)
-                            .font(PTFont.ptBodyText)
-                            .foregroundColor(PTDesignTokens.Colors.medium)
-                            .multilineTextAlignment(.center)
-                        
-                        Button(action: loadBiblePassage) {
-                            Text("Try Again")
+                        Button(action: {
+                            requestTranscription()
+                            showingTranscript = false
+                        }) {
+                            Text("Request Transcript")
                                 .font(PTFont.ptButtonText)
                                 .foregroundColor(.white)
-                                .padding(.horizontal, PTDesignTokens.Spacing.lg)
+                                .frame(maxWidth: .infinity)
                                 .padding(.vertical, PTDesignTokens.Spacing.md)
                                 .background(
                                     RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
                                         .fill(PTDesignTokens.Colors.tang)
+                                        .shadow(color: PTDesignTokens.Colors.tang.opacity(0.3), radius: 8, x: 0, y: 4)
                                 )
                         }
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(PTDesignTokens.Spacing.xl)
-                } else if let passage = biblePassage {
-                    // Bible passage content
-                    VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.md) {
-                        Text(passage.reference)
-                            .font(PTFont.ptSectionTitle)
-                            .foregroundColor(PTDesignTokens.Colors.ink)
-                        
-                        ForEach(passage.passages, id: \.self) { text in
-                            Text(text)
-                                .font(PTFont.ptBodyText)
-                                .foregroundColor(PTDesignTokens.Colors.ink)
-                                .lineSpacing(PTDesignTokens.Typography.lineHeightRelaxed)
-                        }
-                        
-                        if let copyright = passage.copyright {
-                            Text(copyright)
-                                .font(PTFont.ptCaptionText)
-                                .foregroundColor(PTDesignTokens.Colors.medium)
-                                .padding(.top, PTDesignTokens.Spacing.md)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(PTDesignTokens.Spacing.md)
-                    .background(
-                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                            .fill(PTDesignTokens.Colors.surface)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                                    .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
-                            )
-                    )
-                } else {
-                    // No passage available
-                    VStack(spacing: PTDesignTokens.Spacing.md) {
-                        Image(systemName: "book")
-                            .font(PTFont.ptDisplaySmall)
-                            .foregroundColor(PTDesignTokens.Colors.medium)
-                        
-                        Text("No Bible passage available")
-                            .font(PTFont.ptCardTitle)
-                            .foregroundColor(PTDesignTokens.Colors.ink)
-                        
-                        Text("This talk doesn't reference a specific Bible passage")
-                            .font(PTFont.ptBodyText)
-                            .foregroundColor(PTDesignTokens.Colors.medium)
-                            .multilineTextAlignment(.center)
-                    }
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(PTDesignTokens.Spacing.xl)
                 }
             }
-            .padding(PTDesignTokens.Spacing.lg)
+            .navigationTitle("Transcript")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        showingTranscript = false
+                    }
+                    .font(PTFont.ptButtonText)
+                    .foregroundColor(PTDesignTokens.Colors.tang)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Bible Passage Sheet
+    
+    private var biblePassageSheet: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: PTDesignTokens.Spacing.lg) {
+                    if isLoadingBiblePassage {
+                        // Loading state
+                        VStack(spacing: PTDesignTokens.Spacing.lg) {
+                            PTLogo(size: 64, showText: false)
+                                .opacity(0.6)
+                            
+                            VStack(spacing: PTDesignTokens.Spacing.sm) {
+                                Text("Loading Bible Passage")
+                                    .font(PTFont.ptSectionTitle)
+                                    .foregroundColor(PTDesignTokens.Colors.ink)
+                                
+                                Text("Fetching the text from ESV API")
+                                    .font(PTFont.ptBodyText)
+                                    .foregroundColor(PTDesignTokens.Colors.medium)
+                            }
+                            
+                            ProgressView()
+                                .scaleEffect(1.2)
+                                .tint(PTDesignTokens.Colors.kleinBlue)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(PTDesignTokens.Spacing.xl)
+                    } else if let error = biblePassageError {
+                        // Error state
+                        VStack(spacing: PTDesignTokens.Spacing.lg) {
+                            Image(systemName: "wifi.exclamationmark")
+                                .font(.system(size: 64))
+                                .foregroundColor(PTDesignTokens.Colors.turmeric)
+                            
+                            VStack(spacing: PTDesignTokens.Spacing.sm) {
+                                Text("Unable to Load Passage")
+                                    .font(PTFont.ptSectionTitle)
+                                    .foregroundColor(PTDesignTokens.Colors.ink)
+                                
+                                Text(error)
+                                    .font(PTFont.ptBodyText)
+                                    .foregroundColor(PTDesignTokens.Colors.medium)
+                                    .multilineTextAlignment(.center)
+                                    .lineSpacing(PTDesignTokens.Typography.lineHeightRelaxed)
+                            }
+                            
+                            Button(action: loadBiblePassage) {
+                                Text("Try Again")
+                                    .font(PTFont.ptButtonText)
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, PTDesignTokens.Spacing.md)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                                            .fill(PTDesignTokens.Colors.tang)
+                                            .shadow(color: PTDesignTokens.Colors.tang.opacity(0.3), radius: 8, x: 0, y: 4)
+                                    )
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(PTDesignTokens.Spacing.xl)
+                    } else if let passage = biblePassage {
+                        // Bible passage content
+                        VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.lg) {
+                            Text(passage.reference)
+                                .font(PTFont.ptDisplayMedium)
+                                .foregroundColor(PTDesignTokens.Colors.ink)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
+                                .padding(.bottom, PTDesignTokens.Spacing.md)
+                            
+                            ForEach(passage.passages, id: \.self) { text in
+                                Text(text)
+                                    .font(PTFont.ptBodyText)
+                                    .foregroundColor(PTDesignTokens.Colors.ink)
+                                    .lineSpacing(PTDesignTokens.Typography.lineHeightRelaxed)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.vertical, PTDesignTokens.Spacing.sm)
+                            }
+                            
+                            if let copyright = passage.copyright {
+                                Divider()
+                                    .padding(.vertical, PTDesignTokens.Spacing.md)
+                                
+                                Text(copyright)
+                                    .font(PTFont.ptCaptionText)
+                                    .foregroundColor(PTDesignTokens.Colors.medium)
+                                    .multilineTextAlignment(.center)
+                                    .frame(maxWidth: .infinity)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(PTDesignTokens.Spacing.lg)
+                        .background(
+                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
+                                .fill(PTDesignTokens.Colors.surface)
+                                .shadow(color: PTDesignTokens.Colors.ink.opacity(0.1), radius: 8, x: 0, y: 4)
+                        )
+                    } else {
+                        // No passage available
+                        VStack(spacing: PTDesignTokens.Spacing.lg) {
+                            Image(systemName: "book.closed")
+                                .font(.system(size: 64))
+                                .foregroundColor(PTDesignTokens.Colors.medium)
+                            
+                            VStack(spacing: PTDesignTokens.Spacing.sm) {
+                                Text("No Bible Passage")
+                                    .font(PTFont.ptSectionTitle)
+                                    .foregroundColor(PTDesignTokens.Colors.ink)
+                                
+                                Text("This talk doesn't reference a specific Bible passage")
+                                    .font(PTFont.ptBodyText)
+                                    .foregroundColor(PTDesignTokens.Colors.medium)
+                                    .multilineTextAlignment(.center)
+                                    .lineSpacing(PTDesignTokens.Typography.lineHeightRelaxed)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(PTDesignTokens.Spacing.xl)
+                    }
+                }
+                .padding(PTDesignTokens.Spacing.md)
+            }
+            .navigationTitle("Bible Passage")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        showingBiblePassage = false
+                    }
+                    .font(PTFont.ptButtonText)
+                    .foregroundColor(PTDesignTokens.Colors.tang)
+                }
+            }
         }
     }
     
@@ -632,40 +763,60 @@ struct TalkDetailView: View {
     }
 }
 
-// MARK: - Supporting Types
 
-enum TalkDetailTab: CaseIterable {
-    case overview
-    case transcript
-    case biblePassage
-    
-    var displayName: String {
-        switch self {
-        case .overview: return "Overview"
-        case .transcript: return "Transcript"
-        case .biblePassage: return "Bible Passage"
-        }
+// MARK: - Progress View Style
+
+// MARK: - Extensions
+
+extension View {
+    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape(RoundedCorner(radius: radius, corners: corners))
     }
 }
+
+struct RoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
+        )
+        return Path(path.cgPath)
+    }
+}
+
 
 // MARK: - Progress View Style
 
 struct PTMediaProgressStyle: ProgressViewStyle {
     func makeBody(configuration: Configuration) -> some View {
-        ZStack(alignment: .leading) {
-            // Background
-            RoundedRectangle(cornerRadius: 2)
-                .fill(PTDesignTokens.Colors.light.opacity(0.3))
-                .frame(height: 4)
-            
-            // Progress
-            RoundedRectangle(cornerRadius: 2)
-                .fill(PTDesignTokens.Colors.tang)
-                .frame(
-                    width: CGFloat(configuration.fractionCompleted ?? 0) * UIScreen.main.bounds.width * 0.8,
-                    height: 4
-                )
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                // Background
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(PTDesignTokens.Colors.light.opacity(0.3))
+                    .frame(height: 6)
+                
+                // Progress
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(
+                        LinearGradient(
+                            colors: [PTDesignTokens.Colors.tang, PTDesignTokens.Colors.tang.opacity(0.8)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(
+                        width: max(0, min(geometry.size.width * CGFloat(configuration.fractionCompleted ?? 0), geometry.size.width)),
+                        height: 6
+                    )
+                    .animation(.easeInOut(duration: 0.2), value: configuration.fractionCompleted)
+            }
         }
+        .frame(height: 6)
     }
 }
 

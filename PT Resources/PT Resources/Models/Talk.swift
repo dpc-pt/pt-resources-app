@@ -115,6 +115,12 @@ struct Talk: Codable, Identifiable, Hashable {
         return formatter.string(from: dateRecorded)
     }
     
+    var formattedYear: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy"
+        return formatter.string(from: dateRecorded)
+    }
+    
     var shareURL: String {
         "\(Config.universalLinkDomain)/talks/\(id)"
     }

@@ -12,8 +12,8 @@ import SwiftUI
 struct PTFonts {
     // PT Font Names (matching website font-face declarations)
     // Fields Display (for headings) - pt-heading font family
-    static let fieldsDisplayMedium = "fields-display-medium"     // Medium weight
-    static let fieldsDisplayBlack = "Fields-Display-Black"       // Black weight
+    static let fieldsDisplayMedium = "FieldsDisplay-Medium"     // Medium weight
+    static let fieldsDisplayBlack = "FieldsDisplay-Black"       // Black weight
     
     // Optima (for body text) - pt-body font family 
     static let optimaRoman = "OptimaLTPro-Roman"                 // Regular weight
@@ -23,8 +23,8 @@ struct PTFonts {
     static let optimaBoldItalic = "OptimaLTPro-BoldItalic"       // Bold italic
     
     // Agenda One (for special typography) - matching website
-    static let agendaMedium = "Agenda-One-Medium"                // Medium weight
-    static let agendaBold = "Agenda-One-Bold"                    // Bold weight
+    static let agendaMedium = "AgendaOne-Medium"                // Medium weight
+    static let agendaBold = "AgendaOne-Bold"                    // Bold weight
     
     // Font fallback system
     static func font(name: String, size: CGFloat, fallback: Font.Weight = .regular) -> Font {

@@ -155,25 +155,8 @@ struct PTWelcomeHeader: View {
                 .multilineTextAlignment(.leading)
         }
         .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
-        .padding(.vertical, PTDesignTokens.Spacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            PTDesignTokens.Colors.surface,
-                            PTDesignTokens.Colors.veryLight.opacity(0.5)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                        .stroke(PTDesignTokens.Colors.light.opacity(0.3), lineWidth: 0.5)
-                )
-        )
-        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+        .padding(.top, PTDesignTokens.Spacing.lg)
+        .padding(.bottom, PTDesignTokens.Spacing.md)
     }
 }
 

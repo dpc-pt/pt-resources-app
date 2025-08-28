@@ -29,22 +29,9 @@
 		A6837AA42E53BC710053B246 /* PT ResourcesUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "PT ResourcesUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		A6DF43142E6095C80092569D /* Exceptions for "PT Resources" folder in "PT Resources" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"PT-Resources-Info.plist",
-			);
-			target = A6837A8A2E53BC6F0053B246 /* PT Resources */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A6837A8D2E53BC6F0053B246 /* PT Resources */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				A6DF43142E6095C80092569D /* Exceptions for "PT Resources" folder in "PT Resources" target */,
-			);
 			path = "PT Resources";
 			sourceTree = "<group>";
 		};

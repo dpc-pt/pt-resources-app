@@ -4,17 +4,17 @@
 <dict>
 	<key>UIAppFonts</key>
 	<array>
-		<string>Fonts/Agenda-One-Bold.ttf</string>
-		<string>Fonts/Agenda-One-Medium.ttf</string>
-		<string>Fonts/OptimaLTPro-BlackItalic.otf</string>
-		<string>Fonts/OptimaLTPro-Bold.otf</string>
-		<string>Fonts/OptimaLTPro-BoldItalic.otf</string>
-		<string>Fonts/OptimaLTPro-Roman.otf</string>
-		<string>Fonts/OptimaLTPro-Italic.otf</string>
-		<string>Fonts/OptimaLTPro-Medium.otf</string>
-		<string>Fonts/OptimaLTPro-MediumItalic.otf</string>
-		<string>Fonts/Fields-Display-Black.otf</string>
-		<string>Fonts/fields-display-medium.otf</string>
+		<string>Agenda-One-Bold.ttf</string>
+		<string>Agenda-One-Medium.ttf</string>
+		<string>OptimaLTPro-BlackItalic.otf</string>
+		<string>OptimaLTPro-Bold.otf</string>
+		<string>OptimaLTPro-BoldItalic.otf</string>
+		<string>OptimaLTPro-Roman.otf</string>
+		<string>OptimaLTPro-Italic.otf</string>
+		<string>OptimaLTPro-Medium.otf</string>
+		<string>OptimaLTPro-MediumItalic.otf</string>
+		<string>Fields-Display-Black.otf</string>
+		<string>fields-display-medium.otf</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>
