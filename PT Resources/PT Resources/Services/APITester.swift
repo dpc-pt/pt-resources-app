@@ -32,7 +32,7 @@ final class APITester {
         await testEndpoint(Config.APIEndpoint.stats, description: "API Statistics")
         
         // Test blog posts endpoint
-        await testEndpoint(Config.APIEndpoint.blogPosts, description: "Blog Posts")
+        await testEndpoint(Config.APIEndpoint.blogPosts(), description: "Blog Posts")
         
         print("✅ API testing complete")
     }

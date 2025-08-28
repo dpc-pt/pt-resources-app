@@ -10,7 +10,7 @@ import SwiftUI
 struct ResourceDetailView: View {
     let resourceId: String
     @StateObject private var resourceService = ResourceDetailService()
-    @StateObject private var playerService = PlayerService()
+    @ObservedObject private var playerService = PlayerService.shared
     @StateObject private var downloadService = DownloadService(apiService: TalksAPIService())
     
     @State private var resource: ResourceDetail?
@@ -53,7 +53,7 @@ struct ResourceDetailView: View {
         }
         .fullScreenCover(isPresented: $showingMediaPlayer) {
             if let resource = resource {
-                PTMediaPlayerView(resource: resource, playerService: playerService)
+                PTMediaPlayerView(resource: resource)
             }
         }
     }

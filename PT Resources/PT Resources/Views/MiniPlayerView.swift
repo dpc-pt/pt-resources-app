@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct MiniPlayerView: View {
-    @ObservedObject var playerService: PlayerService
+    @ObservedObject var playerService = PlayerService.shared
     @State private var showingFullPlayer = false
     
     var body: some View {
@@ -75,7 +75,7 @@ struct MiniPlayerView: View {
                             }
                         }) {
                             Image(systemName: playerService.playbackState.isPlaying ? "pause.fill" : "play.fill")
-                                .font(.title2)
+                                .font(PTFont.ptSectionTitle)
                                 .foregroundColor(PTDesignTokens.Colors.tang)
                         }
                         
@@ -84,7 +84,7 @@ struct MiniPlayerView: View {
                             playerService.stop()
                         }) {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.title3)
+                                .font(PTFont.ptCardTitle)
                                 .foregroundColor(PTDesignTokens.Colors.medium)
                         }
                 }
@@ -125,7 +125,7 @@ struct CircularProgressView: View {
 // MARK: - Full Player View (Stub)
 
 struct FullPlayerView: View {
-    @ObservedObject var playerService: PlayerService
+    @ObservedObject var playerService = PlayerService.shared
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -133,15 +133,15 @@ struct FullPlayerView: View {
             VStack {
                 // TODO: Implement full player interface
                 Text("Full Player Coming Soon")
-                    .font(.title)
+                    .font(PTFont.ptDisplayMedium)
                     .padding()
                 
                 if let talk = playerService.currentTalk {
                     VStack(spacing: 16) {
                         Text(talk.title)
-                            .font(.headline)
+                            .font(PTFont.ptSectionTitle)
                         Text(talk.speaker)
-                            .font(.subheadline)
+                            .font(PTFont.ptCardSubtitle)
                             .foregroundColor(.secondary)
                         
                         HStack {
@@ -200,7 +200,7 @@ struct MiniPlayerView_Previews: PreviewProvider {
         VStack {
             Spacer()
             MiniPlayerView(playerService: {
-                let service = PlayerService()
+                let service = PlayerService.shared
                 service.loadTalk(Talk.mockTalks[0])
                 return service
             }())

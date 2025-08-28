@@ -27,19 +27,36 @@ struct LatestBlogPost: Codable, Identifiable {
     let author: String
     let date: String
     let url: String
-    
+
     enum CodingKeys: String, CodingKey {
         case id, title, excerpt, image, category, author, date, url
         case wpId = "wp_id"
     }
-    
+
     var imageURL: URL? {
         guard let image = image else { return nil }
         return URL(string: image)
     }
-    
+
     var fullURL: URL? {
         return URL(string: "https://www.proctrust.org.uk\(url)")
+    }
+
+    /// Converts LatestBlogPost to BlogPost for compatibility with BlogDetailView
+    func toBlogPost() -> BlogPost {
+        return BlogPost(
+            id: id,
+            title: title,
+            excerpt: excerpt,
+            date: date,
+            slug: wpId ?? id, // Use wpId as slug if available, otherwise use id
+            url: fullURL?.absoluteString ?? "https://www.proctrust.org.uk\(url)",
+            author: author,
+            image: image,
+            category: category,
+            content: nil, // LatestBlogPost doesn't have full content
+            publishedDate: nil // Will be parsed from date string in BlogPost.init
+        )
     }
 }
 

@@ -11,7 +11,7 @@ import Combine
 struct DownloadsView: View {
     @StateObject private var downloadService: DownloadService
     @StateObject private var networkMonitor = NetworkMonitor()
-    @StateObject private var playerService = PlayerService()
+    @ObservedObject private var playerService = PlayerService.shared
     
     @State private var downloadedTalks: [DownloadedTalk] = []
     @State private var isLoading = false

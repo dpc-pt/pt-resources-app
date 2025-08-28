@@ -7,11 +7,16 @@
 
 import SwiftUI
 
-// MARK: - Navigation Item
+// MARK: - Navigation Items
 
 struct ConferenceNavigationItem: Identifiable {
     let id = UUID()
     let conferenceId: String
+}
+
+struct BlogPostNavigationItem: Identifiable {
+    let id = UUID()
+    let blogPost: BlogPost
 }
 
 struct HomeView: View {
@@ -20,6 +25,12 @@ struct HomeView: View {
     @State private var isLoading = false
     @State private var error: APIError?
     @State private var selectedConferenceId: String?
+    @State private var selectedBlogPost: BlogPost?
+    @Binding var selectedTab: Int
+
+    init(selectedTab: Binding<Int>) {
+        self._selectedTab = selectedTab
+    }
     
     var body: some View {
         NavigationStack {
@@ -27,34 +38,50 @@ struct HomeView: View {
                 PTDesignTokens.Colors.background.ignoresSafeArea()
                 
                 if isLoading && latestContent == nil {
-                    PTLoadingView()
+                    PTWelcomeLoadingView()
                 } else if let latestContent = latestContent {
                     ScrollView {
                         LazyVStack(spacing: PTDesignTokens.Spacing.lg) {
-                            // Blog Post Card (Main Featured)
-                            if let blogPost = latestContent.blogPost {
-                                PTFeaturedBlogCard(blogPost: blogPost)
+                            // Welcome Header
+                            PTWelcomeHeader()
+
+                            // Quick Actions
+                            PTQuickActionsView(selectedTab: $selectedTab)
+
+                            // Content Section
+                            VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.md) {
+                                Text("Latest Resources")
+                                    .font(PTFont.ptSectionTitle)
+                                    .foregroundColor(PTDesignTokens.Colors.ink)
                                     .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
-                            }
-                            
-                            // Latest Conference
-                            if let latestConference = latestContent.latestConference {
-                                PTConferenceCard(
-                                    conference: latestConference,
-                                    isLatest: true,
-                                    onTap: { selectedConferenceId = latestConference.conferenceId }
-                                )
-                                .padding(.horizontal, PTSpacing.screenPadding)
-                            }
-                            
-                            // Archive Media
-                            if let archiveMedia = latestContent.archiveMedia {
-                                PTConferenceCard(
-                                    conference: archiveMedia,
-                                    isLatest: false,
-                                    onTap: { selectedConferenceId = archiveMedia.conferenceId }
-                                )
-                                .padding(.horizontal, PTSpacing.screenPadding)
+
+                                // Blog Post Card (Main Featured)
+                                if let blogPost = latestContent.blogPost {
+                                    PTFeaturedBlogCard(blogPost: blogPost, onTap: {
+                                        selectedBlogPost = blogPost.toBlogPost()
+                                    })
+                                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+                                }
+
+                                // Latest Conference
+                                if let latestConference = latestContent.latestConference {
+                                    PTConferenceCard(
+                                        conference: latestConference,
+                                        isLatest: true,
+                                        onTap: { selectedConferenceId = latestConference.conferenceId }
+                                    )
+                                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+                                }
+
+                                // Archive Media
+                                if let archiveMedia = latestContent.archiveMedia {
+                                    PTConferenceCard(
+                                        conference: archiveMedia,
+                                        isLatest: false,
+                                        onTap: { selectedConferenceId = archiveMedia.conferenceId }
+                                    )
+                                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+                                }
                             }
                         }
                         .padding(.top, PTDesignTokens.Spacing.md)
@@ -67,8 +94,7 @@ struct HomeView: View {
                     PTEmptyStateView()
                 }
             }
-            .navigationTitle("Home")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
         }
         .task {
             await loadLatestContent()
@@ -78,6 +104,9 @@ struct HomeView: View {
             set: { _ in selectedConferenceId = nil }
         )) { item in
             TalksListView() // TODO: Filter by conference ID
+        }
+        .sheet(item: $selectedBlogPost) { blogPost in
+            BlogDetailView(blogPost: blogPost)
         }
     }
     
@@ -104,33 +133,218 @@ struct HomeView: View {
     }
 }
 
+// MARK: - Welcome Header
+
+struct PTWelcomeHeader: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.sm) {
+            VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
+                Text("Welcome")
+                    .font(PTFont.ptDisplayLarge)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
+
+                Text("to Proclamation Trust")
+                    .font(PTFont.ptSectionTitle)
+                    .foregroundColor(PTDesignTokens.Colors.tang)
+            }
+
+            Text("Here to help you teach the Bible")
+                .font(PTFont.ptBodyText)
+                .foregroundColor(PTDesignTokens.Colors.medium)
+                .lineSpacing(4)
+                .multilineTextAlignment(.leading)
+        }
+        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+        .padding(.vertical, PTDesignTokens.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            PTDesignTokens.Colors.surface,
+                            PTDesignTokens.Colors.veryLight.opacity(0.5)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                        .stroke(PTDesignTokens.Colors.light.opacity(0.3), lineWidth: 0.5)
+                )
+        )
+        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+    }
+}
+
+// MARK: - Quick Actions
+
+struct PTQuickActionsView: View {
+    @Binding var selectedTab: Int
+
+    var body: some View {
+        VStack(spacing: PTDesignTokens.Spacing.sm) {
+            Text("Quick Actions")
+                .font(PTFont.ptCardTitle)
+                .foregroundColor(PTDesignTokens.Colors.ink)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+
+            HStack(spacing: PTDesignTokens.Spacing.sm) {
+                PTQuickActionButton(
+                    title: "Browse Talks",
+                    subtitle: "Sermons & resources",
+                    icon: "headphones",
+                    color: PTDesignTokens.Colors.kleinBlue
+                ) {
+                    selectedTab = 1 // Talks tab
+                }
+
+                PTQuickActionButton(
+                    title: "Read Blog",
+                    subtitle: "Latest updates",
+                    icon: "newspaper",
+                    color: PTDesignTokens.Colors.tang
+                ) {
+                    selectedTab = 3 // Blog tab
+                }
+
+                PTQuickActionButton(
+                    title: "Downloads",
+                    subtitle: "Offline access",
+                    icon: "arrow.down.circle",
+                    color: PTDesignTokens.Colors.lawn
+                ) {
+                    selectedTab = 2 // Downloads tab
+                }
+            }
+            .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+        }
+    }
+}
+
+struct PTQuickActionButton: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let color: Color
+    let action: () -> Void
+
+    @State private var isPressed = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: PTDesignTokens.Spacing.sm) {
+                ZStack {
+                    Circle()
+                        .fill(color.opacity(0.1))
+                        .frame(width: 48, height: 48)
+
+                    Image(systemName: icon)
+                        .font(PTFont.ptCardTitle)
+                        .foregroundColor(color)
+                }
+
+                VStack(spacing: PTDesignTokens.Spacing.xs) {
+                    Text(title)
+                        .font(PTFont.ptCaptionText)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+                        .fontWeight(.semibold)
+
+                    Text(subtitle)
+                        .font(PTFont.ptCaptionText)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, PTDesignTokens.Spacing.sm)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .background(
+            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                .fill(PTDesignTokens.Colors.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                        .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
+                )
+        )
+        .scaleEffect(isPressed ? 0.95 : 1.0)
+        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+            withAnimation(.easeInOut(duration: 0.1)) {
+                isPressed = pressing
+            }
+        }, perform: {})
+    }
+}
+
+// MARK: - Welcome Loading View
+
+struct PTWelcomeLoadingView: View {
+    @State private var isAnimating = false
+
+    var body: some View {
+        VStack(spacing: PTDesignTokens.Spacing.lg) {
+            // Welcome text while loading
+            VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.sm) {
+                Text("Welcome")
+                    .font(PTFont.ptDisplayLarge)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
+
+                Text("Preparing your resources...")
+                    .font(PTFont.ptBodyText)
+                    .foregroundColor(PTDesignTokens.Colors.medium)
+            }
+
+            // Animated loading indicator
+            VStack(spacing: PTDesignTokens.Spacing.md) {
+                PTLogo(size: 48, showText: false)
+                    .rotationEffect(.degrees(isAnimating ? 360 : 0))
+                    .animation(.linear(duration: 2).repeatForever(autoreverses: false), value: isAnimating)
+                    .onAppear {
+                        isAnimating = true
+                    }
+
+                Text("Loading the latest talks and resources")
+                    .font(PTFont.ptCaptionText)
+                    .foregroundColor(PTDesignTokens.Colors.medium)
+            }
+        }
+        .padding(PTDesignTokens.Spacing.xl)
+    }
+}
+
 // MARK: - Featured Blog Card
 
 struct PTFeaturedBlogCard: View {
     let blogPost: LatestBlogPost
+    let onTap: () -> Void
     @State private var isPressed = false
-    
+
     var body: some View {
-        Button(action: {
-            // TODO: Open blog post
-        }) {
+        Button(action: onTap) {
             VStack(alignment: .leading, spacing: 0) {
                 // Hero Image
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [PTDesignTokens.Colors.tang.opacity(0.1), PTDesignTokens.Colors.kleinBlue.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                AsyncImage(url: blogPost.imageURL) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [PTDesignTokens.Colors.tang.opacity(0.1), PTDesignTokens.Colors.kleinBlue.opacity(0.1)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-                    .overlay(
-                        Image("pt-resources")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 120, height: 40)
-                            .opacity(0.6)
-                    )
+                        .overlay(
+                            Image("pt-resources")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 120, height: 40)
+                                .opacity(0.6)
+                        )
+                }
                 .frame(height: 200)
                 .clipped()
                 
@@ -202,24 +416,30 @@ struct PTConferenceCard: View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 0) {
                 // Conference Image
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                isLatest ? PTDesignTokens.Colors.kleinBlue.opacity(0.1) : PTDesignTokens.Colors.lawn.opacity(0.1),
-                                isLatest ? PTDesignTokens.Colors.kleinBlue.opacity(0.1) : PTDesignTokens.Colors.tang.opacity(0.1)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                AsyncImage(url: conference.imageURL) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    isLatest ? PTDesignTokens.Colors.kleinBlue.opacity(0.1) : PTDesignTokens.Colors.lawn.opacity(0.1),
+                                    isLatest ? PTDesignTokens.Colors.kleinBlue.opacity(0.1) : PTDesignTokens.Colors.tang.opacity(0.1)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-                    .overlay(
-                        Image("pt-resources")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 80, height: 26)
-                            .opacity(isLatest ? 0.6 : 0.5)
-                    )
+                        .overlay(
+                            Image("pt-resources")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 80, height: 26)
+                                .opacity(isLatest ? 0.6 : 0.5)
+                        )
+                }
                 .frame(height: 140)
                 .clipped()
                 
@@ -285,11 +505,13 @@ struct PTConferenceCard: View {
 // MARK: - Previews
 
 struct HomeView_Previews: PreviewProvider {
+    @State static var selectedTab = 0
+
     static var previews: some View {
-        HomeView()
+        HomeView(selectedTab: $selectedTab)
             .preferredColorScheme(.light)
-        
-        HomeView()
+
+        HomeView(selectedTab: $selectedTab)
             .preferredColorScheme(.dark)
     }
 }

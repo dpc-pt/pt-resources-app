@@ -18,7 +18,7 @@ struct ResourceNavigationItem: Identifiable {
 struct TalksListView: View {
     
     @StateObject private var viewModel: TalksViewModel
-    @StateObject private var playerService: PlayerService
+    @ObservedObject private var playerService = PlayerService.shared
     @StateObject private var downloadService: DownloadService
     @StateObject private var networkMonitor = NetworkMonitor()
     
@@ -31,7 +31,6 @@ struct TalksListView: View {
     
     init(apiService: TalksAPIServiceProtocol = TalksAPIService()) {
         self._viewModel = StateObject(wrappedValue: TalksViewModel(apiService: apiService))
-        self._playerService = StateObject(wrappedValue: PlayerService())
         self._downloadService = StateObject(wrappedValue: DownloadService(apiService: apiService))
     }
     
@@ -325,7 +324,7 @@ private extension TalksListView {
     var offlineEmptyState: some View {
         VStack(spacing: PTDesignTokens.Spacing.lg) {
             Image(systemName: "arrow.down.circle")
-                .font(.system(size: 60))
+                .font(PTFont.ptDisplayLarge)
                 .foregroundColor(PTDesignTokens.Colors.medium)
             
             Text("No Downloaded Talks")
@@ -426,11 +425,11 @@ struct EmptyStateView: View {
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "waveform")
-                .font(.system(size: 60))
+                .font(PTFont.ptDisplayLarge)
                 .foregroundColor(.secondary)
             
             Text("No Talks Found")
-                .font(.title2)
+                .font(PTFont.ptSectionTitle)
                 .fontWeight(.medium)
             
             Text("Try adjusting your search or filters")

@@ -9,17 +9,16 @@ import SwiftUI
 
 struct PTMediaPlayerView: View {
     let resource: ResourceDetail
-    @StateObject private var playerService: PlayerService
+    @ObservedObject var playerService = PlayerService.shared
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var isExpanded = false
     @State private var showingMoreOptions = false
     @State private var dragOffset: CGFloat = 0
     @State private var isPressed = false
-    
-    init(resource: ResourceDetail, playerService: PlayerService) {
+
+    init(resource: ResourceDetail) {
         self.resource = resource
-        self._playerService = StateObject(wrappedValue: playerService)
     }
     
     var body: some View {
@@ -401,8 +400,7 @@ struct PTRelatedResourceCard: View {
 struct PTMediaPlayerView_Previews: PreviewProvider {
     static var previews: some View {
         PTMediaPlayerView(
-            resource: ResourceDetailResponse.mockData.resource,
-            playerService: PlayerService()
+            resource: ResourceDetailResponse.mockData.resource
         )
     }
 }

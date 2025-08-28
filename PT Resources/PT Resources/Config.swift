@@ -217,7 +217,8 @@ extension Config {
         case resources(query: String? = nil, speaker: String? = nil, series: String? = nil, page: Int = 1, limit: Int = 12)
         case resourceDetail(id: String)
         case resourceDownload(id: String)
-        case blogPosts
+        case blogPosts(limit: Int = 100, offset: Int = 0)
+        case blogPostDetail(id: String)
         case filters
         case latest
         case stats
@@ -254,8 +255,17 @@ extension Config {
                 // Assuming download URL is available in the resource detail
                 return "\(proclamationAPIBaseURL)/\(id)/download"
                 
-            case .blogPosts:
-                return "\(proclamationAPIBaseURL)/blog-post"
+            case .blogPosts(let limit, let offset):
+                var components = URLComponents(string: "https://www.proctrust.org.uk/api/blog")!
+                var queryItems: [URLQueryItem] = [
+                    URLQueryItem(name: "limit", value: "\(limit)"),
+                    URLQueryItem(name: "offset", value: "\(offset)")
+                ]
+                components.queryItems = queryItems
+                return components.url?.absoluteString ?? "https://www.proctrust.org.uk/api/blog"
+
+            case .blogPostDetail(let id):
+                return "https://www.proctrust.org.uk/api/blog/\(id)"
                 
             case .filters:
                 return "\(proclamationAPIBaseURL)/filters"

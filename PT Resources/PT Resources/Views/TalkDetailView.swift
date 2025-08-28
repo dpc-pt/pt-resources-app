@@ -9,7 +9,7 @@ import SwiftUI
 
 struct TalkDetailView: View {
     let talk: Talk
-    @ObservedObject var playerService: PlayerService
+    @ObservedObject var playerService = PlayerService.shared
     @ObservedObject var downloadService: DownloadService
     @StateObject private var transcriptionService = TranscriptionService()
     @StateObject private var esvService = ESVService()
@@ -675,7 +675,6 @@ struct TalkDetailView_Previews: PreviewProvider {
     static var previews: some View {
         TalkDetailView(
             talk: Talk.mockTalks[0],
-            playerService: PlayerService(),
             downloadService: DownloadService(apiService: TalksAPIService())
         )
     }

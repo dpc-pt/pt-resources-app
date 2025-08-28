@@ -101,7 +101,7 @@ struct TalkRowView: View {
                         // Download status indicator
                         if isDownloaded {
                             Image(systemName: "arrow.down.circle.fill")
-                                .font(.caption)
+                                .font(PTFont.ptCaptionText)
                                 .foregroundColor(PTDesignTokens.Colors.success)  // Using PT success color
                         }
                     }
@@ -114,7 +114,7 @@ struct TalkRowView: View {
                     // Play Button
                     Button(action: onPlayTap) {
                         Image(systemName: "play.circle.fill")
-                            .font(.title2)
+                            .font(PTFont.ptSectionTitle)
                             .foregroundColor(PTDesignTokens.Colors.tang)  // Using PT Tang
                     }
                     .accessibilityPlayButton(isPlaying: false) // TODO: Pass actual playing state
@@ -125,7 +125,7 @@ struct TalkRowView: View {
                             if isDownloaded {
                                 // Prioritize showing checkmark when downloaded
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.title3)
+                                    .font(PTFont.ptCardTitle)
                                     .foregroundColor(PTDesignTokens.Colors.success)  // Using PT success color
                             } else if let progress = downloadProgress {
                                 // Show progress only if not downloaded
@@ -139,7 +139,7 @@ struct TalkRowView: View {
                                         .rotationEffect(.degrees(-90))
                                     
                                     Text("\(Int(progress * 100))%")
-                                        .font(.caption2)
+                                        .font(PTFont.ptCaptionText)
                                         .fontWeight(.medium)
                                         .foregroundColor(PTDesignTokens.Colors.tang)
                                 }
@@ -147,7 +147,7 @@ struct TalkRowView: View {
                             } else {
                                 // Default download button
                                 Image(systemName: "arrow.down.circle")
-                                    .font(.title3)
+                                    .font(PTFont.ptCardTitle)
                                     .foregroundColor(PTDesignTokens.Colors.medium)  // Using consistent gray
                             }
                         }

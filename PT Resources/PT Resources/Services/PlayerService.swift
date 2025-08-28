@@ -10,12 +10,17 @@ import AVFoundation
 import MediaPlayer
 import CoreData
 import Combine
+import UIKit
 
 @MainActor
 final class PlayerService: NSObject, ObservableObject {
-    
+
+    // MARK: - Singleton Instance
+
+    static let shared = PlayerService()
+
     // MARK: - Published Properties
-    
+
     @Published var currentTalk: Talk?
     @Published var playbackState: PlaybackState = .stopped
     @Published var currentTime: TimeInterval = 0
@@ -24,39 +29,41 @@ final class PlayerService: NSObject, ObservableObject {
     @Published var isBuffering = false
     @Published var chapters: [Chapter] = []
     @Published var currentChapterIndex: Int = 0
-    
+
     // MARK: - Private Properties
-    
+
     private var player: AVPlayer?
     private var timeObserver: Any?
     private var audioEngine: AVAudioEngine?
     private var playerNode: AVAudioPlayerNode?
     private var timePitchNode: AVAudioUnitTimePitch?
-    
+
     private var persistenceController: PersistenceController
     private var cancellables = Set<AnyCancellable>()
-    
+    private var isAudioSessionConfigured = false
+    private var backgroundTaskIdentifier: UIBackgroundTaskIdentifier = .invalid
+
     // Sleep timer
     @Published var sleepTimerMinutes: Int?
     private var sleepTimer: Timer?
-    
+
     // Queue management
     @Published var playQueue: [Talk] = []
     @Published var currentQueueIndex = 0
-    
+
     // MARK: - Computed Properties
-    
+
     var isPlaying: Bool {
         return playbackState == .playing
     }
-    
+
     // MARK: - Initialization
-    
-    init(persistenceController: PersistenceController = .shared) {
+
+    private init(persistenceController: PersistenceController = .shared) {
         self.persistenceController = persistenceController
         super.init()
-        
-        setupAudioSession()
+
+        // Defer audio session setup until first audio playback
         setupRemoteTransportControls()
         setupNotificationObservers()
     }
@@ -90,6 +97,13 @@ final class PlayerService: NSObject, ObservableObject {
             return
         }
         
+        // Setup audio session before loading player
+        setupAudioSessionIfNeeded()
+        
+        // Start background task immediately when loading a talk
+        // This ensures background task is active if user switches apps quickly after loading
+        startBackgroundTask()
+        
         setupPlayer(with: audioURL, startTime: startTime)
         updateNowPlayingInfo()
         
@@ -99,23 +113,32 @@ final class PlayerService: NSObject, ObservableObject {
     
     func play() {
         guard let player = player else { return }
-        
+
+        // Ensure audio session is configured before playing
+        setupAudioSessionIfNeeded()
+
+        // Ensure background task is active (may already be started in loadTalk)
+        startBackgroundTask()
+
         player.play()
         playbackState = .playing
         updateNowPlayingInfo()
         startTimeObserver()
-        
+
         // Save playback state
         savePlaybackState()
     }
-    
+
     func pause() {
         guard let player = player else { return }
-        
+
         player.pause()
         playbackState = .paused
         updateNowPlayingInfo()
-        
+
+        // Keep background task active for lock screen controls
+        // Only end background task when stopping completely
+
         // Save playback state
         savePlaybackState()
     }
@@ -126,6 +149,9 @@ final class PlayerService: NSObject, ObservableObject {
         currentTime = 0
         currentTalk = nil
         updateNowPlayingInfo()
+
+        // End background task since playback has stopped
+        endBackgroundTask()
     }
     
     func seek(to time: TimeInterval) {
@@ -156,7 +182,7 @@ final class PlayerService: NSObject, ObservableObject {
         
         playbackSpeed = speed
         
-        if let player = player {
+        if player != nil {
             // Use AVAudioEngine for pitch-corrected speed adjustment
             setupAudioEngineWithSpeed(speed)
         }
@@ -224,14 +250,85 @@ final class PlayerService: NSObject, ObservableObject {
     }
     
     // MARK: - Private Methods
-    
-    private func setupAudioSession() {
+
+    private func setupAudioSessionIfNeeded() {
+        guard !isAudioSessionConfigured else { return }
+
         do {
             let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.playback, mode: .spokenAudio, options: [.allowAirPlay, .allowBluetooth])
-            try audioSession.setActive(true)
-        } catch {
+
+            // Configure audio session for background playback
+            try audioSession.setCategory(.playback,
+                                        mode: .spokenAudio,
+                                        options: [.allowAirPlay, .allowBluetooth])
+
+            // Set preferred buffer duration for smooth playback
+            try audioSession.setPreferredIOBufferDuration(0.005)
+
+            // Activate the audio session
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            isAudioSessionConfigured = true
+
+            print("Audio session configured successfully for background playback")
+
+        } catch let error as NSError {
             print("Failed to setup audio session: \(error)")
+            print("Error domain: \(error.domain), code: \(error.code)")
+
+            // Log additional context for common error codes
+            if error.domain == NSOSStatusErrorDomain {
+                switch error.code {
+                case -50:
+                    print("Audio session error -50: Invalid parameter. Check that background audio capability is enabled in Xcode project settings.")
+                case -12985:
+                    print("Audio session error -12985: Session is not active. This may occur if another app is using the audio session.")
+                case -12986:
+                    print("Audio session error -12986: Hardware not available. Audio hardware may be in use by another application.")
+                default:
+                    print("Audio session error code \(error.code) - check AVFoundation documentation for details")
+                }
+            }
+
+            // Don't set isAudioSessionConfigured to true on failure
+        } catch {
+            print("Unexpected error setting up audio session: \(error)")
+        }
+    }
+
+    func startBackgroundTask() {
+        guard backgroundTaskIdentifier == .invalid else { return }
+
+        backgroundTaskIdentifier = UIApplication.shared.beginBackgroundTask(withName: "AudioPlayback") {
+            // Background task expired - system will end it automatically
+            // Just clean up our identifier
+            self.backgroundTaskIdentifier = .invalid
+            print("Background task expired - system ended task automatically")
+        }
+
+        print("Started background task for audio playback: \(backgroundTaskIdentifier.rawValue)")
+    }
+
+    private func endBackgroundTask() {
+        if backgroundTaskIdentifier != .invalid {
+            UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
+            backgroundTaskIdentifier = .invalid
+            print("Ended background task for audio playback")
+        }
+    }
+    
+    private func reactivateAudioSessionIfNeeded() {
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+            
+            // Check if audio session is active
+            if !audioSession.isOtherAudioPlaying {
+                try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+                print("Reactivated audio session for lock screen playback")
+            }
+        } catch {
+            print("Failed to reactivate audio session: \(error)")
+            // Force reconfiguration on next play
+            isAudioSessionConfigured = false
         }
     }
     
@@ -300,48 +397,75 @@ final class PlayerService: NSObject, ObservableObject {
     
     private func setupRemoteTransportControls() {
         let commandCenter = MPRemoteCommandCenter.shared()
-        
+
+        // Enable all commands we want to support
+        commandCenter.playCommand.isEnabled = true
+        commandCenter.pauseCommand.isEnabled = true
+        commandCenter.skipForwardCommand.isEnabled = true
+        commandCenter.skipBackwardCommand.isEnabled = true
+        commandCenter.nextTrackCommand.isEnabled = true
+        commandCenter.previousTrackCommand.isEnabled = true
+        commandCenter.changePlaybackPositionCommand.isEnabled = true
+
         commandCenter.playCommand.addTarget { [weak self] event in
-            self?.play()
+            Task { @MainActor in
+                // Ensure audio session is active when responding to lock screen play
+                self?.reactivateAudioSessionIfNeeded()
+                self?.play()
+            }
             return .success
         }
-        
+
         commandCenter.pauseCommand.addTarget { [weak self] event in
-            self?.pause()
+            Task { @MainActor in
+                self?.pause()
+            }
             return .success
         }
-        
+
         commandCenter.skipForwardCommand.addTarget { [weak self] event in
-            self?.skipForward()
+            Task { @MainActor in
+                self?.skipForward()
+            }
             return .success
         }
-        
+
         commandCenter.skipBackwardCommand.addTarget { [weak self] event in
-            self?.skipBackward()
+            Task { @MainActor in
+                self?.skipBackward()
+            }
             return .success
         }
-        
+
         commandCenter.nextTrackCommand.addTarget { [weak self] event in
-            self?.playNext()
+            Task { @MainActor in
+                self?.playNext()
+            }
             return .success
         }
-        
+
         commandCenter.previousTrackCommand.addTarget { [weak self] event in
-            self?.playPrevious()
+            Task { @MainActor in
+                self?.playPrevious()
+            }
             return .success
         }
-        
+
         commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
             if let event = event as? MPChangePlaybackPositionCommandEvent {
-                self?.seek(to: event.positionTime)
+                Task { @MainActor in
+                    self?.seek(to: event.positionTime)
+                }
                 return .success
             }
             return .commandFailed
         }
-        
+
         // Configure skip intervals
         commandCenter.skipForwardCommand.preferredIntervals = [NSNumber(value: Config.skipInterval)]
         commandCenter.skipBackwardCommand.preferredIntervals = [NSNumber(value: Config.skipInterval)]
+
+        print("Remote transport controls configured successfully")
     }
     
     private func setupNotificationObservers() {
@@ -404,12 +528,13 @@ final class PlayerService: NSObject, ObservableObject {
     private func handlePlaybackEnd() {
         // Mark talk as completed
         markTalkAsCompleted()
-        
+
         // Play next in queue if available
         if currentQueueIndex < playQueue.count - 1 {
             playNext()
         } else {
-            playbackState = .stopped
+            // End playback completely
+            stop()
         }
     }
     
@@ -509,18 +634,34 @@ final class PlayerService: NSObject, ObservableObject {
     
     private func cleanup() {
         player?.pause()
-        
+
         if let timeObserver = timeObserver {
             player?.removeTimeObserver(timeObserver)
             self.timeObserver = nil
         }
-        
+
         player = nil
         audioEngine?.stop()
         audioEngine = nil
         playerNode = nil
         timePitchNode = nil
+
+        // End background task
+        endBackgroundTask()
         
+        // Deactivate audio session only when completely stopping
+        if isAudioSessionConfigured {
+            do {
+                try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+                isAudioSessionConfigured = false
+                print("Deactivated audio session")
+            } catch {
+                print("Failed to deactivate audio session: \(error)")
+                // Still reset the flag
+                isAudioSessionConfigured = false
+            }
+        }
+
         cancellables.removeAll()
     }
 }

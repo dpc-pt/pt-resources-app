@@ -8,10 +8,12 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @State private var selectedTab = 0
+
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             // Home Tab
-            HomeView()
+            HomeView(selectedTab: $selectedTab)
                 .tabItem {
                     Image(systemName: "house.fill")
                     Text("Home")
@@ -37,14 +39,14 @@ struct MainTabView: View {
                 .tag(2)
                 .accessibilityIdentifier(PTAccessibility.downloadsTab)
 
-            // More Tab (Future)
-            PTComingSoonView(feature: "More", description: "Settings, about, and additional features")
+            // Blog Tab
+            BlogListView()
                 .tabItem {
-                    Image(systemName: "ellipsis.circle.fill")
-                    Text("More")
+                    Image(systemName: "newspaper.fill")
+                    Text("Blog")
                 }
                 .tag(3)
-                .accessibilityIdentifier(PTAccessibility.moreTab)
+                .accessibilityIdentifier(PTAccessibility.blogTab)
         }
         .tint(PTDesignTokens.Colors.tang)  // Using PT Tang for selected state
         .onAppear {
@@ -73,48 +75,7 @@ struct MainTabView: View {
     }
 }
 
-// MARK: - Coming Soon View
 
-struct PTComingSoonView: View {
-    let feature: String
-    let description: String
-    
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                PTDesignTokens.Colors.background.ignoresSafeArea()  // Using PT background color
-                
-                VStack(spacing: PTDesignTokens.Spacing.xl) {
-                    PTLogo(size: 80, showText: false)
-                    
-                    VStack(spacing: PTDesignTokens.Spacing.md) {
-                        Text("\(feature) Coming Soon")
-                            .font(PTFont.ptSectionTitle)  // Using PT section title typography
-                            .foregroundColor(PTDesignTokens.Colors.ink)  // Using PT Ink for primary text
-                        
-                        Text(description)
-                            .font(PTFont.ptBodyText)  // Using PT body typography
-                            .foregroundColor(PTDesignTokens.Colors.medium)  // Using consistent medium gray
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, PTDesignTokens.Spacing.xl)
-                    }
-                    
-                    Button("Stay Tuned") {
-                        // Haptic feedback
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                        impactFeedback.impactOccurred()
-                    }
-                    .foregroundColor(.white)
-                    .padding()
-                    .background(PTDesignTokens.Colors.tang)
-                    .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button))
-                }
-            }
-            .navigationTitle(feature)
-            .navigationBarTitleDisplayMode(.large)
-        }
-    }
-}
 
 // MARK: - Previews
 

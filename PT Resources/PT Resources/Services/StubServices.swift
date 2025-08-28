@@ -135,7 +135,7 @@ final class BlogService: ObservableObject {
         // 2. Parse JSON response and map to BlogPost model
         // 3. Cache posts locally
         
-        print("TODO: Implement blog post fetching from PT API: \(Config.APIEndpoint.blogPosts.url)")
+        print("TODO: Implement blog post fetching from PT API: \(Config.APIEndpoint.blogPosts().url)")
         
         // Mock implementation for now
         isLoading = true
@@ -143,7 +143,7 @@ final class BlogService: ObservableObject {
         
         try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
         
-        posts = BlogPost.mockPosts
+        posts = BlogPost.mockBlogPosts
     }
     
     func refreshFeed() async throws {
@@ -151,42 +151,7 @@ final class BlogService: ObservableObject {
     }
 }
 
-struct BlogPost: Identifiable, Codable {
-    let id: String
-    let title: String
-    let content: String
-    let excerpt: String
-    let author: String
-    let publishedDate: Date
-    let url: String
-    let imageURL: String?
-    let categories: [String]
-    
-    static let mockPosts = [
-        BlogPost(
-            id: "post-1",
-            title: "The Importance of Biblical Exposition",
-            content: "<p>Biblical exposition is the foundation of faithful preaching...</p>",
-            excerpt: "Understanding why careful exposition of Scripture is essential for church teaching.",
-            author: "John Smith",
-            publishedDate: Date().addingTimeInterval(-86400 * 3), // 3 days ago
-            url: "https://proctrust.org.uk/blog/biblical-exposition",
-            imageURL: "https://example.com/blog/exposition.jpg",
-            categories: ["Preaching", "Bible Study"]
-        ),
-        BlogPost(
-            id: "post-2",
-            title: "Training the Next Generation",
-            content: "<p>The Proclamation Trust's commitment to training young preachers...</p>",
-            excerpt: "How we're equipping the next generation of Bible teachers.",
-            author: "Jane Doe",
-            publishedDate: Date().addingTimeInterval(-86400 * 10), // 10 days ago
-            url: "https://proctrust.org.uk/blog/training-generation",
-            imageURL: "https://example.com/blog/training.jpg",
-            categories: ["Training", "Education"]
-        )
-    ]
-}
+
 
 enum BlogError: LocalizedError {
     case invalidFeedURL

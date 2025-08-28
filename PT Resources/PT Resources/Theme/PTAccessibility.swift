@@ -28,7 +28,7 @@ enum PTAccessibility {
     static let homeTab = "home_tab"
     static let talksTab = "talks_tab"
     static let downloadsTab = "downloads_tab"
-    static let moreTab = "more_tab"
+    static let blogTab = "blog_tab"
 }
 
 // MARK: - Accessibility Helpers

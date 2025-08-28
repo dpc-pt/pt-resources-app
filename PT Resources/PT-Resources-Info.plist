@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Fonts/Agenda-One-Bold.ttf</string>
+		<string>Fonts/Agenda-One-Medium.ttf</string>
+		<string>Fonts/OptimaLTPro-BlackItalic.otf</string>
+		<string>Fonts/OptimaLTPro-Bold.otf</string>
+		<string>Fonts/OptimaLTPro-BoldItalic.otf</string>
+		<string>Fonts/OptimaLTPro-Roman.otf</string>
+		<string>Fonts/OptimaLTPro-Italic.otf</string>
+		<string>Fonts/OptimaLTPro-Medium.otf</string>
+		<string>Fonts/OptimaLTPro-MediumItalic.otf</string>
+		<string>Fonts/Fields-Display-Black.otf</string>
+		<string>Fonts/fields-display-medium.otf</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>fetch</string>
+		<string>remote-notification</string>
+		<string>processing</string>
+	</array>
+</dict>
+</plist>
