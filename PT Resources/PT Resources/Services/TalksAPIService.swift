@@ -41,12 +41,11 @@ final class TalksAPIService: TalksAPIServiceProtocol, ObservableObject {
         }
         
         let endpoint = Config.APIEndpoint.resources(
-            query: filters.query.isEmpty ? nil : filters.query,
-            speaker: filters.speaker,
-            series: filters.series,
+            filters: filters,
             page: page,
             limit: 12
         )
+        
         
         guard let url = URL(string: endpoint.url) else {
             throw APIError.invalidURL

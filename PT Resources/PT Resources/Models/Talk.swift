@@ -23,6 +23,9 @@ struct Talk: Codable, Identifiable, Hashable {
     let fileSize: Int64?
     let category: String?
     let scriptureReference: String?
+    let conferenceId: String?
+    let speakerIds: [String]?
+    let bookIds: [String]?
     
     enum CodingKeys: String, CodingKey {
         case id, title, description, speaker, series, category
@@ -33,6 +36,9 @@ struct Talk: Codable, Identifiable, Hashable {
         case videoURL = "videoUrl"  
         case imageURL = "imageUrl"
         case fileSize
+        case conferenceId
+        case speakerIds
+        case bookIds
     }
     
     // Custom decoder to handle API response format
@@ -67,6 +73,11 @@ struct Talk: Codable, Identifiable, Hashable {
         
         // Duration not provided in API response, default to 0
         duration = try container.decodeIfPresent(Int.self, forKey: .duration) ?? 0
+        
+        // Additional fields from the actual API response
+        conferenceId = try container.decodeIfPresent(String.self, forKey: .conferenceId)
+        speakerIds = try container.decodeIfPresent([String].self, forKey: .speakerIds)
+        bookIds = try container.decodeIfPresent([String].self, forKey: .bookIds)
     }
     
     // Standard init for mock data and internal use
@@ -84,7 +95,10 @@ struct Talk: Codable, Identifiable, Hashable {
         imageURL: String? = nil,
         fileSize: Int64? = nil,
         category: String? = nil,
-        scriptureReference: String? = nil
+        scriptureReference: String? = nil,
+        conferenceId: String? = nil,
+        speakerIds: [String]? = nil,
+        bookIds: [String]? = nil
     ) {
         self.id = id
         self.title = title
@@ -100,6 +114,9 @@ struct Talk: Codable, Identifiable, Hashable {
         self.fileSize = fileSize
         self.category = category
         self.scriptureReference = scriptureReference
+        self.conferenceId = conferenceId
+        self.speakerIds = speakerIds
+        self.bookIds = bookIds
     }
     
     // Computed properties
@@ -213,7 +230,18 @@ struct DownloadResponse: Codable {
 struct TalkSearchFilters: Codable {
     var query: String = ""
     var speaker: String? = nil
+    var speakerIds: [String] = []
     var series: String? = nil
+    var conference: String? = nil
+    var conferenceIds: [String] = []
+    var conferenceType: String? = nil
+    var conferenceTypes: [String] = []
+    var bibleBook: String? = nil
+    var bibleBookIds: [String] = []
+    var year: String? = nil
+    var years: [String] = []
+    var collection: String? = nil
+    var collections: [String] = []
     var dateFrom: Date? = nil
     var dateTo: Date? = nil
     var hasTranscript: Bool? = nil
@@ -222,11 +250,92 @@ struct TalkSearchFilters: Codable {
     var isEmpty: Bool {
         return query.isEmpty && 
                speaker == nil && 
+               speakerIds.isEmpty &&
                series == nil && 
+               conference == nil &&
+               conferenceIds.isEmpty &&
+               conferenceType == nil &&
+               conferenceTypes.isEmpty &&
+               bibleBook == nil &&
+               bibleBookIds.isEmpty &&
+               year == nil &&
+               years.isEmpty &&
+               collection == nil &&
+               collections.isEmpty &&
                dateFrom == nil && 
                dateTo == nil && 
                hasTranscript == nil && 
                isDownloaded == nil
+    }
+    
+    // Helper methods for managing filter arrays
+    mutating func addSpeaker(_ speakerId: String) {
+        if !speakerIds.contains(speakerId) {
+            speakerIds.append(speakerId)
+        }
+    }
+    
+    mutating func removeSpeaker(_ speakerId: String) {
+        speakerIds.removeAll { $0 == speakerId }
+    }
+    
+    mutating func addConference(_ conferenceId: String) {
+        if !conferenceIds.contains(conferenceId) {
+            conferenceIds.append(conferenceId)
+        }
+    }
+    
+    mutating func removeConference(_ conferenceId: String) {
+        conferenceIds.removeAll { $0 == conferenceId }
+    }
+    
+    mutating func addBibleBook(_ bookId: String) {
+        if !bibleBookIds.contains(bookId) {
+            bibleBookIds.append(bookId)
+        }
+    }
+    
+    mutating func removeBibleBook(_ bookId: String) {
+        bibleBookIds.removeAll { $0 == bookId }
+    }
+    
+    mutating func addYear(_ year: String) {
+        if !years.contains(year) {
+            years.append(year)
+        }
+    }
+    
+    mutating func removeYear(_ year: String) {
+        years.removeAll { $0 == year }
+    }
+    
+    mutating func addCollection(_ collection: String) {
+        if !collections.contains(collection) {
+            collections.append(collection)
+        }
+    }
+    
+    mutating func removeCollection(_ collection: String) {
+        collections.removeAll { $0 == collection }
+    }
+    
+    mutating func addConferenceType(_ type: String) {
+        if !conferenceTypes.contains(type) {
+            conferenceTypes.append(type)
+        }
+    }
+    
+    mutating func removeConferenceType(_ type: String) {
+        conferenceTypes.removeAll { $0 == type }
+    }
+    
+    // MARK: - Factory Methods
+    
+    /// Create filters for a specific conference
+    static func forConference(_ conferenceId: String) -> TalkSearchFilters {
+        var filters = TalkSearchFilters()
+        filters.addConference(conferenceId)
+        return filters
     }
 }
 

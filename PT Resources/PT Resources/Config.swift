@@ -214,7 +214,7 @@ extension Config {
 extension Config {
     
     enum APIEndpoint {
-        case resources(query: String? = nil, speaker: String? = nil, series: String? = nil, page: Int = 1, limit: Int = 12)
+        case resources(filters: TalkSearchFilters = TalkSearchFilters(), page: Int = 1, limit: Int = 12)
         case resourceDetail(id: String)
         case resourceDownload(id: String)
         case blogPosts(limit: Int = 100, offset: Int = 0)
@@ -228,22 +228,61 @@ extension Config {
         
         var url: String {
             switch self {
-            case .resources(let query, let speaker, let series, let page, let limit):
+            case .resources(let filters, let page, let limit):
                 var components = URLComponents(string: proclamationAPIBaseURL)!
                 var queryItems: [URLQueryItem] = [
                     URLQueryItem(name: "page", value: "\(page)"),
                     URLQueryItem(name: "limit", value: "\(limit)")
                 ]
                 
-                if let query = query, !query.isEmpty {
-                    queryItems.append(URLQueryItem(name: "q", value: query))
+                // Basic search query
+                if !filters.query.isEmpty {
+                    queryItems.append(URLQueryItem(name: "search", value: filters.query))
                 }
-                if let speaker = speaker, !speaker.isEmpty {
+                
+                // Legacy speaker support
+                if let speaker = filters.speaker, !speaker.isEmpty {
                     queryItems.append(URLQueryItem(name: "speaker", value: speaker))
                 }
-                if let series = series, !series.isEmpty {
-                    queryItems.append(URLQueryItem(name: "series", value: series))
+                
+                // Note: API doesn't support series filtering directly
+                // if let series = filters.series, !series.isEmpty {
+                //     queryItems.append(URLQueryItem(name: "series", value: series))
+                // }
+                
+                // Speaker ID filter (API supports single speaker_id only)
+                if let speakerId = filters.speakerIds.first {
+                    queryItems.append(URLQueryItem(name: "speaker_id", value: speakerId))
                 }
+                
+                // Conference ID filter (API supports single conference_id only)
+                if let conferenceId = filters.conferenceIds.first {
+                    queryItems.append(URLQueryItem(name: "conference_id", value: conferenceId))
+                }
+                
+                // Conference Type filter (API supports single conference_type only)
+                if let conferenceType = filters.conferenceTypes.first {
+                    queryItems.append(URLQueryItem(name: "conference_type", value: conferenceType))
+                }
+                
+                // Bible Book filter (API supports single book_id only)
+                if let bookId = filters.bibleBookIds.first {
+                    queryItems.append(URLQueryItem(name: "book_id", value: bookId))
+                }
+                
+                // Year filter (API supports single year_id only)
+                if let year = filters.years.first {
+                    queryItems.append(URLQueryItem(name: "year_id", value: year))
+                }
+                
+                // Collection filter (API supports single collection_id only)
+                if let collection = filters.collections.first {
+                    queryItems.append(URLQueryItem(name: "collection_id", value: collection))
+                }
+                
+                // Note: API doesn't support date range filters - these will be handled client-side
+                // if let dateFrom = filters.dateFrom { ... }
+                // if let dateTo = filters.dateTo { ... }
                 
                 components.queryItems = queryItems.isEmpty ? nil : queryItems
                 return components.url?.absoluteString ?? proclamationAPIBaseURL

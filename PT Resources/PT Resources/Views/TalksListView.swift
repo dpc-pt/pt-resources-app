@@ -21,6 +21,7 @@ struct TalksListView: View {
     @ObservedObject private var playerService = PlayerService.shared
     @StateObject private var downloadService: DownloadService
     @StateObject private var networkMonitor = NetworkMonitor()
+    @StateObject private var filtersAPIService: FiltersAPIService
     
     @State private var showingFilters = false
     @State private var showingSortOptions = false
@@ -29,8 +30,9 @@ struct TalksListView: View {
     @State private var downloadedTalks: [DownloadedTalk] = []
     @State private var isLoadingDownloadedTalks = false
     
-    init(apiService: TalksAPIServiceProtocol = TalksAPIService()) {
-        self._viewModel = StateObject(wrappedValue: TalksViewModel(apiService: apiService))
+    init(apiService: TalksAPIServiceProtocol = TalksAPIService(), filtersAPIService: FiltersAPIService = FiltersAPIService(), initialFilters: TalkSearchFilters? = nil) {
+        self._filtersAPIService = StateObject(wrappedValue: filtersAPIService)
+        self._viewModel = StateObject(wrappedValue: TalksViewModel(apiService: apiService, filtersAPIService: filtersAPIService, initialFilters: initialFilters))
         self._downloadService = StateObject(wrappedValue: DownloadService(apiService: apiService))
     }
     
@@ -56,6 +58,16 @@ struct TalksListView: View {
                             activeFiltersCount: activeFiltersCount,
                             currentSortOption: viewModel.sortOption
                         )
+                        
+                        // Quick Filters
+                        if !viewModel.isLoading || !viewModel.talks.isEmpty {
+                            QuickFiltersView(
+                                quickFilters: filtersAPIService.getQuickFilters(),
+                                onFilterTap: { quickFilter in
+                                    viewModel.applyQuickFilter(quickFilter)
+                                }
+                            )
+                        }
                     }
                     .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
                     .padding(.bottom, PTDesignTokens.Spacing.sm)
@@ -121,8 +133,9 @@ struct TalksListView: View {
             .navigationBarHidden(true)
         }
         .sheet(isPresented: $showingFilters) {
-            FilterSheetView(
+            EnhancedFilterView(
                 filters: viewModel.selectedFilters,
+                filtersAPIService: filtersAPIService,
                 onFiltersChanged: { newFilters in
                     viewModel.applyFilters(newFilters)
                 }
@@ -348,32 +361,6 @@ private extension TalksListView {
 }
 
 // MARK: - Supporting Views
-
-struct SearchBar: View {
-    @Binding var text: String
-    let onSearchButtonClicked: () -> Void
-    
-    var body: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
-            
-            TextField("Search talks...", text: $text)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .onSubmit {
-                    onSearchButtonClicked()
-                }
-            
-            if !text.isEmpty {
-                Button("Clear") {
-                    text = ""
-                }
-                .foregroundColor(PTDesignTokens.Colors.kleinBlue)
-            }
-        }
-        .padding()
-    }
-}
 
 struct FilterSortBar: View {
     @Binding var showingFilters: Bool

@@ -103,7 +103,7 @@ struct HomeView: View {
             get: { selectedConferenceId.map { ConferenceNavigationItem(conferenceId: $0) } },
             set: { _ in selectedConferenceId = nil }
         )) { item in
-            TalksListView() // TODO: Filter by conference ID
+            TalksListView(initialFilters: TalkSearchFilters.forConference(item.conferenceId))
         }
         .sheet(item: $selectedBlogPost) { blogPost in
             BlogDetailView(blogPost: blogPost)
