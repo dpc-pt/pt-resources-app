@@ -33,42 +33,6 @@ class PTFontDebugger {
             ("OptimaLTPro-Roman", "Optima LT Pro Roman")
         ]
         
-        print("\n📋 PT Font Status:")
-        for (postScriptName, displayName) in ptFonts {
-            if let font = UIFont(name: postScriptName, size: 17) {
-                print("✅ \(displayName) (\(postScriptName))")
-                print("   - Family: \(font.familyName)")
-                print("   - Size: \(font.pointSize)")
-            } else {
-                print("❌ \(displayName) (\(postScriptName)) - NOT AVAILABLE")
-            }
-        }
-        
-        // List all available font families
-        print("\n📚 All Available Font Families:")
-        for family in UIFont.familyNames.sorted() {
-            print("   • \(family)")
-            for name in UIFont.fontNames(forFamilyName: family).sorted() {
-                print("     - \(name)")
-            }
-        }
-        
-        // Check bundle for font files
-        print("\n📦 Bundle Font Files:")
-        if let resourcePath = Bundle.main.resourcePath {
-            let fileManager = FileManager.default
-            do {
-                let files = try fileManager.contentsOfDirectory(atPath: resourcePath)
-                let fontFiles = files.filter { $0.hasSuffix(".ttf") || $0.hasSuffix(".otf") }
-                for fontFile in fontFiles.sorted() {
-                    print("   • \(fontFile)")
-                }
-            } catch {
-                print("   ❌ Error reading bundle: \(error)")
-            }
-        }
-        
-        print("\n========================")
     }
     
     /// Test font rendering with sample text

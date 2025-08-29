@@ -21,18 +21,18 @@ struct BlogDetailView: View {
         NavigationStack {
             ZStack {
                 PTDesignTokens.Colors.background.ignoresSafeArea()
+                    .ptCornerPattern(position: .topRight, size: .small, hasLogo: false)
+                    .ptCornerPattern(position: .bottomLeft, size: .medium, hasLogo: false)
 
                 VStack(spacing: 0) {
                     // Header with featured image
                     if let imageURL = blogPost.image, !imageURL.isEmpty {
                         PTAsyncImage(url: URL(string: imageURL),
                                    targetSize: CGSize(width: UIScreen.main.bounds.width, height: 200)) {
-                            Rectangle()
-                                .fill(LinearGradient(
-                                    colors: [PTDesignTokens.Colors.tang.opacity(0.2), PTDesignTokens.Colors.kleinBlue.opacity(0.2)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ))
+                            PTBrandingService.shared.createBrandedBackground(
+                                for: .general,
+                                hasLogo: false
+                            )
                         }
                         .frame(height: 200)
                         .clipped()

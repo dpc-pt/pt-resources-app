@@ -7,6 +7,8 @@
 
 import Foundation
 
+
+
 /// Main talk model representing a sermon/lecture
 struct Talk: Codable, Identifiable, Hashable {
     let id: String
@@ -124,6 +126,52 @@ struct Talk: Codable, Identifiable, Hashable {
         let minutes = duration / 60
         let seconds = duration % 60
         return String(format: "%d:%02d", minutes, seconds)
+    }
+    
+    // Media availability
+    var hasAudio: Bool {
+        return audioURL != nil && !audioURL!.isEmpty
+    }
+    
+    var hasVideo: Bool {
+        return processedVideoURL != nil
+    }
+    
+    var availableMediaTypes: [MediaType] {
+        var types: [MediaType] = []
+        if hasAudio { types.append(.audio) }
+        if hasVideo { types.append(.video) }
+        return types
+    }
+    
+    var hasMultipleMediaTypes: Bool {
+        return availableMediaTypes.count > 1
+    }
+    
+    var primaryMediaType: MediaType? {
+        if hasVideo { return .video }
+        if hasAudio { return .audio }
+        return nil
+    }
+    
+    // MARK: - URL Processing
+    
+    /// Returns a properly formatted video URL, handling Vimeo IDs
+    var processedVideoURL: URL? {
+        guard let videoURL = videoURL, !videoURL.isEmpty else { return nil }
+        
+        // If it's already a full URL, return it
+        if videoURL.hasPrefix("http") {
+            return URL(string: videoURL)
+        }
+        
+        // If it's just a number (Vimeo ID), construct the full URL
+        if videoURL.allSatisfy({ $0.isNumber }) {
+            return URL(string: "https://player.vimeo.com/video/\(videoURL)")
+        }
+        
+        // If it's a relative URL, construct the full URL
+        return URL(string: "https://www.proctrust.org.uk\(videoURL)")
     }
     
     var formattedDate: String {
@@ -376,6 +424,7 @@ extension Talk {
             dateRecorded: Date().addingTimeInterval(-86400 * 30), // 30 days ago
             duration: 2340, // 39 minutes
             audioURL: "https://example.com/audio/mock-1.mp3",
+            videoURL: "https://example.com/video/mock-1.mp4",
             imageURL: "https://example.com/images/john-series.jpg",
             fileSize: 45_000_000 // 45 MB
         ),
@@ -389,6 +438,7 @@ extension Talk {
             dateRecorded: Date().addingTimeInterval(-86400 * 23), // 23 days ago
             duration: 1980, // 33 minutes
             audioURL: "https://example.com/audio/mock-2.mp3",
+            videoURL: "https://example.com/video/mock-2.mp4",
             imageURL: "https://example.com/images/john-series.jpg",
             fileSize: 38_000_000 // 38 MB
         ),

@@ -36,6 +36,8 @@ struct HomeView: View {
         NavigationStack {
             ZStack {
                 PTDesignTokens.Colors.background.ignoresSafeArea()
+                    .ptCornerPattern(position: .topRight, size: .large, hasLogo: false)
+                    .ptCornerPattern(position: .bottomLeft, size: .medium, hasLogo: false)
                 
                 if isLoading && latestContent == nil {
                     PTWelcomeLoadingView()
@@ -61,6 +63,11 @@ struct HomeView: View {
                                         selectedBlogPost = blogPost.toBlogPost()
                                     })
                                     .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+                                    .ptSectionBackground(
+                                        baseColor: PTDesignTokens.Colors.surface.opacity(0.3),
+                                        hasLogo: false,
+                                        patternOpacity: 0.03
+                                    )
                                 }
 
                                 // Latest Conference
@@ -202,6 +209,11 @@ struct PTQuickActionsView: View {
                 }
             }
             .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+            .ptSectionBackground(
+                baseColor: Color.clear,
+                hasLogo: false,
+                patternOpacity: 0.02
+            )
         }
     }
 }
@@ -312,21 +324,18 @@ struct PTFeaturedBlogCard: View {
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                 } placeholder: {
-                    Rectangle()
-                        .fill(
-                            LinearGradient(
-                                colors: [PTDesignTokens.Colors.tang.opacity(0.1), PTDesignTokens.Colors.kleinBlue.opacity(0.1)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                    ZStack {
+                        PTBrandingService.shared.createBrandedBackground(
+                            for: .general,
+                            hasLogo: true
                         )
-                        .overlay(
-                            Image("pt-resources")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 120, height: 40)
-                                .opacity(0.6)
-                        )
+                        
+                        Image("pt-resources")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 120, height: 40)
+                            .opacity(0.6)
+                    }
                 }
                 .frame(height: 200)
                 .clipped()
@@ -404,24 +413,18 @@ struct PTConferenceCard: View {
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                 } placeholder: {
-                    Rectangle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    isLatest ? PTDesignTokens.Colors.kleinBlue.opacity(0.1) : PTDesignTokens.Colors.lawn.opacity(0.1),
-                                    isLatest ? PTDesignTokens.Colors.kleinBlue.opacity(0.1) : PTDesignTokens.Colors.tang.opacity(0.1)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                    ZStack {
+                        PTBrandingService.shared.createBrandedBackground(
+                            for: .general,
+                            hasLogo: true
                         )
-                        .overlay(
-                            Image("pt-resources")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 80, height: 26)
-                                .opacity(isLatest ? 0.6 : 0.5)
-                        )
+                        
+                        Image("pt-resources")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 80, height: 26)
+                            .opacity(isLatest ? 0.6 : 0.5)
+                    }
                 }
                 .frame(height: 140)
                 .clipped()

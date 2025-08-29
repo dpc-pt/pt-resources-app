@@ -40,11 +40,8 @@ final class PlayerService: NSObject, ObservableObject {
 
     private var persistenceController: PersistenceController
     private var cancellables = Set<AnyCancellable>()
-    private var isAudioSessionConfigured = false
     private var backgroundTaskIdentifier: UIBackgroundTaskIdentifier = .invalid
 
-    // Artwork cache to improve performance
-    private var artworkCache: [String: MPMediaItemArtwork] = [:]
 
     // Sleep timer
     @Published var sleepTimerMinutes: Int?
@@ -101,69 +98,42 @@ final class PlayerService: NSObject, ObservableObject {
             return
         }
 
-        // Setup audio session before loading player
-        setupAudioSessionIfNeeded()
-
         // Setup player and load metadata first
         setupPlayer(with: audioURL, startTime: startTime)
         updateNowPlayingInfo()
-
-        // Load chapters
-        loadChapters(for: talk.id)
     }
-
+    
+    /// Load a ResourceDetail for audio playback (converts to Talk-compatible format)
     func loadResource(_ resource: ResourceDetail, startTime: TimeInterval = 0) {
-        cleanup()
-
-        // Convert ResourceDetail to Talk for internal use
-        // Parse date from string (format: "1 January 2016")
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "d MMMM yyyy"
-        let parsedDate = dateFormatter.date(from: resource.date) ?? Date()
-
+        // Convert ResourceDetail to Talk format for compatibility
         let talk = Talk(
             id: resource.id,
             title: resource.title,
             description: resource.description,
             speaker: resource.speaker,
-            series: resource.category, // Use category as series
+            series: resource.conference,
             biblePassage: resource.scriptureReference,
-            dateRecorded: parsedDate,
-            duration: 0, // Duration will be set when player loads
+            dateRecorded: resource.formattedDate ?? Date(),
+            duration: 0, // Will be determined from audio file
             audioURL: resource.audioUrl,
+            videoURL: resource.videoUrl,
             imageURL: resource.imageUrl
         )
-
-        self.currentTalk = talk
-        self.currentTime = startTime
-
-        // Determine audio URL (local or remote)
-        let audioURL: URL
-        if let localPath = getLocalAudioPath(for: resource.id), FileManager.default.fileExists(atPath: localPath) {
-            audioURL = URL(fileURLWithPath: localPath)
-        } else if let remoteAudioURL = resource.audioURL {
-            audioURL = remoteAudioURL
-        } else {
-            print("No audio URL available for resource: \(resource.id)")
-            return
-        }
-
-        // Setup audio session before loading player
-        setupAudioSessionIfNeeded()
-
-        // Setup player and load metadata first
-        setupPlayer(with: audioURL, startTime: startTime)
-        updateNowPlayingInfo()
-
-        // Load chapters
-        loadChapters(for: resource.id)
+        
+        loadTalk(talk, startTime: startTime)
     }
     
     func play() {
         guard let player = player else { return }
 
-        // Ensure audio session is configured before playing
-        setupAudioSessionIfNeeded()
+        // Configure audio session using the enhanced service only
+        EnhancedAudioSessionService.shared.configureForMediaPlayback()
+        
+        // Prepare haptic feedback
+        HapticFeedbackService.shared.prepareForMediaInteraction()
+        
+        // Generate play haptic feedback
+        HapticFeedbackService.shared.playButtonPress()
 
         // Start background task for playback
         startBackgroundTask()
@@ -175,10 +145,15 @@ final class PlayerService: NSObject, ObservableObject {
 
         // Save playback state
         savePlaybackState()
+        
+        PTLogger.general.info("Playback started with enhanced experience")
     }
 
     func pause() {
         guard let player = player else { return }
+        
+        // Generate pause haptic feedback
+        HapticFeedbackService.shared.pauseButtonPress()
 
         player.pause()
         playbackState = .paused
@@ -189,6 +164,8 @@ final class PlayerService: NSObject, ObservableObject {
 
         // Save playback state
         savePlaybackState()
+        
+        PTLogger.general.info("Playback paused")
     }
     
     func stop() {
@@ -217,16 +194,23 @@ final class PlayerService: NSObject, ObservableObject {
     
     func skipForward() {
         let newTime = min(currentTime + Config.skipInterval, duration)
+        HapticFeedbackService.shared.skipAction()
         seek(to: newTime)
+        PTLogger.general.debug("Skipped forward to \(newTime)")
     }
     
     func skipBackward() {
         let newTime = max(currentTime - Config.skipInterval, 0)
+        HapticFeedbackService.shared.skipAction()
         seek(to: newTime)
+        PTLogger.general.debug("Skipped backward to \(newTime)")
     }
     
     func setPlaybackSpeed(_ speed: Float) {
         guard speed >= 0.5 && speed <= 3.0 else { return }
+        
+        // Generate speed change haptic feedback
+        HapticFeedbackService.shared.speedChange()
         
         playbackSpeed = speed
         
@@ -237,10 +221,14 @@ final class PlayerService: NSObject, ObservableObject {
         
         updateNowPlayingInfo()
         savePlaybackState()
+        
+        PTLogger.general.info("Playback speed changed to \(speed)x")
     }
     
     func jumpToChapter(_ chapter: Chapter) {
+        HapticFeedbackService.shared.chapterTransition()
         seek(to: chapter.startTime)
+        PTLogger.general.info("Jumped to chapter: \(chapter.title)")
     }
     
     func setSleepTimer(minutes: Int) {
@@ -299,49 +287,6 @@ final class PlayerService: NSObject, ObservableObject {
     
     // MARK: - Private Methods
 
-    private func setupAudioSessionIfNeeded() {
-        guard !isAudioSessionConfigured else { return }
-
-        do {
-            let audioSession = AVAudioSession.sharedInstance()
-
-            // Configure audio session for background playback
-            try audioSession.setCategory(.playback,
-                                        mode: .spokenAudio,
-                                        options: [.allowAirPlay, .allowBluetooth])
-
-            // Set preferred buffer duration for smooth playback
-            try audioSession.setPreferredIOBufferDuration(0.005)
-
-            // Activate the audio session
-            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
-            isAudioSessionConfigured = true
-
-            print("Audio session configured successfully for background playback")
-
-        } catch let error as NSError {
-            print("Failed to setup audio session: \(error)")
-            print("Error domain: \(error.domain), code: \(error.code)")
-
-            // Log additional context for common error codes
-            if error.domain == NSOSStatusErrorDomain {
-                switch error.code {
-                case -50:
-                    print("Audio session error -50: Invalid parameter. Check that background audio capability is enabled in Xcode project settings.")
-                case -12985:
-                    print("Audio session error -12985: Session is not active. This may occur if another app is using the audio session.")
-                case -12986:
-                    print("Audio session error -12986: Hardware not available. Audio hardware may be in use by another application.")
-                default:
-                    print("Audio session error code \(error.code) - check AVFoundation documentation for details")
-                }
-            }
-
-            // Don't set isAudioSessionConfigured to true on failure
-        } catch {
-            print("Unexpected error setting up audio session: \(error)")
-        }
-    }
 
     func startBackgroundTask() {
         // End any existing background task first
@@ -383,8 +328,6 @@ final class PlayerService: NSObject, ObservableObject {
             }
         } catch {
             print("Failed to reactivate audio session: \(error)")
-            // Force reconfiguration on next play
-            isAudioSessionConfigured = false
         }
     }
     
@@ -548,124 +491,24 @@ final class PlayerService: NSObject, ObservableObject {
             return
         }
 
-        var nowPlayingInfo: [String: Any] = [
-            MPMediaItemPropertyTitle: talk.title,
-            MPMediaItemPropertyArtist: talk.speaker,
-            MPMediaItemPropertyPlaybackDuration: duration,
-            MPNowPlayingInfoPropertyElapsedPlaybackTime: currentTime,
-            MPNowPlayingInfoPropertyPlaybackRate: playbackState == .playing ? playbackSpeed : 0.0
-        ]
-
-        if let series = talk.series {
-            nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = series
-        }
-
-        // Load and set artwork for lock screen/dynamic island
-        if let imageURL = talk.imageURL {
-            loadArtwork(from: imageURL) { artwork in
-                if let artwork = artwork {
-                    nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
-                }
-                MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-            }
-        } else {
-            // Use default artwork if no image URL is available
-            let defaultArtwork = createDefaultArtwork()
-            nowPlayingInfo[MPMediaItemPropertyArtwork] = defaultArtwork
-            MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-        }
-    }
-
-    private func loadArtwork(from imageURL: String, completion: @escaping (MPMediaItemArtwork?) -> Void) {
-        // Check cache first
-        if let cachedArtwork = artworkCache[imageURL] {
-            completion(cachedArtwork)
-            return
-        }
-
-        guard let url = URL(string: imageURL) else {
-            completion(nil)
-            return
-        }
-
-        // Use URLSession to load the image
-        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-            guard let self = self,
-                  let data = data,
-                  let image = UIImage(data: data),
-                  error == nil else {
-                Task { @MainActor in
-                    completion(nil)
-                }
-                return
-            }
-
-            Task { @MainActor in
-                // Create MPMediaItemArtwork from the loaded image
-                let artwork = MPMediaItemArtwork(boundsSize: image.size) { size in
-                    // Resize image to fit the requested size while maintaining aspect ratio
-                    let aspectRatio = image.size.width / image.size.height
-                    let newSize: CGSize
-
-                    if size.width / size.height > aspectRatio {
-                        newSize = CGSize(width: size.height * aspectRatio, height: size.height)
-                    } else {
-                        newSize = CGSize(width: size.width, height: size.width / aspectRatio)
-                    }
-
-                    return self.resizeImage(image, to: newSize)
-                }
-
-                // Cache the artwork for future use
-                self.artworkCache[imageURL] = artwork
-
-                completion(artwork)
-            }
-        }.resume()
-    }
-
-    private func createDefaultArtwork() -> MPMediaItemArtwork {
-        // Create a default artwork with the PT logo
-        let boundsSize = CGSize(width: 300, height: 300)
-
-        return MPMediaItemArtwork(boundsSize: boundsSize) { size in
-            // Create a simple colored background with PT logo overlay
-            let renderer = UIGraphicsImageRenderer(size: size)
-            return renderer.image { context in
-                // Background color (PT brand color)
-                UIColor(hex: "#07324c").setFill()
-                context.fill(CGRect(origin: .zero, size: size))
-
-                // Add PT logo text in the center
-                let paragraphStyle = NSMutableParagraphStyle()
-                paragraphStyle.alignment = .center
-
-                let attributes: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: size.width * 0.15, weight: .bold),
-                    .foregroundColor: UIColor.white,
-                    .paragraphStyle: paragraphStyle
-                ]
-
-                let text = "PT"
-                let textSize = text.size(withAttributes: attributes)
-                let textRect = CGRect(
-                    x: (size.width - textSize.width) / 2,
-                    y: (size.height - textSize.height) / 2,
-                    width: textSize.width,
-                    height: textSize.height
+        // Generate rich artwork asynchronously
+        Task {
+            let artwork = await MediaArtworkService.shared.generateArtwork(for: talk)
+            
+            await MainActor.run {
+                MediaArtworkService.shared.updateNowPlayingInfo(
+                    title: talk.title,
+                    artist: talk.speaker,
+                    album: talk.series,
+                    artwork: artwork,
+                    duration: duration,
+                    currentTime: currentTime,
+                    playbackRate: playbackState == .playing ? playbackSpeed : 0.0
                 )
-
-                text.draw(in: textRect, withAttributes: attributes)
             }
         }
     }
 
-    private func resizeImage(_ image: UIImage, to newSize: CGSize) -> UIImage {
-        let renderer = UIGraphicsImageRenderer(size: newSize)
-        return renderer.image { context in
-            image.draw(in: CGRect(origin: .zero, size: newSize))
-        }
-    }
     
     private func updateCurrentChapter() {
         let chapterIndex = chapters.firstIndex { chapter in
@@ -800,19 +643,6 @@ final class PlayerService: NSObject, ObservableObject {
 
         // End background task
         endBackgroundTask()
-        
-        // Deactivate audio session only when completely stopping
-        if isAudioSessionConfigured {
-            do {
-                try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-                isAudioSessionConfigured = false
-                print("Deactivated audio session")
-            } catch {
-                print("Failed to deactivate audio session: \(error)")
-                // Still reset the flag
-                isAudioSessionConfigured = false
-            }
-        }
 
         cancellables.removeAll()
     }

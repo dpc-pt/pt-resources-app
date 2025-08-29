@@ -11,6 +11,7 @@ struct ResourceDetailView: View {
     let resourceId: String
     @StateObject private var resourceService = ResourceDetailService()
     @ObservedObject private var playerService = PlayerService.shared
+    @ObservedObject private var videoPlayerManager = VideoPlayerManager.shared
     @StateObject private var downloadService = DownloadService(apiService: TalksAPIService())
     
     @State private var resource: ResourceDetail?
@@ -29,6 +30,23 @@ struct ResourceDetailView: View {
                 } else if let resource = resource {
                     ScrollView {
                         VStack(spacing: PTSpacing.lg) {
+                            // Video loading overlay
+                            if videoPlayerManager.isVideoLoading {
+                                PTVideoLoadingView()
+                                    .frame(height: 200)
+                            }
+                            
+                            // Video error overlay
+                            if let videoError = videoPlayerManager.videoError {
+                                PTVideoErrorBanner(error: videoError) {
+                                    // Retry video loading
+                                    if let videoURL = resource.videoURL {
+                                        videoPlayerManager.presentVideoPlayer(for: resource)
+                                    }
+                                }
+                                .padding(.horizontal, PTSpacing.md)
+                            }
+                            
                             // Hero section
                             heroSection(resource: resource)
                             
@@ -156,12 +174,12 @@ struct ResourceDetailView: View {
         HStack(spacing: PTSpacing.md) {
             // Play button
             Button(action: {
-                if resource.audioURL != nil {
+                if let videoURL = resource.videoURL {
+                    // Play video using video player manager
+                    videoPlayerManager.presentVideoPlayer(for: resource)
+                } else if resource.audioURL != nil {
+                    // Play audio using existing media player
                     showingMediaPlayer = true
-                    // TODO: Start audio playback
-                } else if resource.videoURL != nil {
-                    showingMediaPlayer = true
-                    // TODO: Start video playback
                 }
             }) {
                 HStack(spacing: PTSpacing.sm) {

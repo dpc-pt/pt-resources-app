@@ -40,6 +40,8 @@ struct TalksListView: View {
         NavigationStack {
             ZStack {
                 PTDesignTokens.Colors.background.ignoresSafeArea()
+                    .ptCornerPattern(position: .topLeft, size: .medium, hasLogo: false)
+                    .ptCornerPattern(position: .bottomRight, size: .large, hasLogo: false)
                 
                 VStack(spacing: 0) {
                     // Authentic PT Brand Header

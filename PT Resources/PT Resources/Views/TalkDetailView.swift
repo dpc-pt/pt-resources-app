@@ -24,6 +24,9 @@ struct TalkDetailView: View {
     @State private var isDownloading = false
     @State private var downloadProgress: Float = 0.0
     @State private var isTalkDownloaded = false
+    @State private var selectedMediaType: MediaType = .audio
+    @State private var videoError: String?
+    @State private var showingVideoError = false
     
     var body: some View {
         NavigationStack {
@@ -31,6 +34,13 @@ struct TalkDetailView: View {
                 VStack(spacing: 0) {
                     // Hero Section with Talk Art & Info
                     heroSection
+                    
+                    // Media Type Toggle (if multiple types available)
+                    if talk.hasMultipleMediaTypes {
+                        mediaTypeToggleSection
+                            .padding(.horizontal, PTDesignTokens.Spacing.md)
+                            .padding(.bottom, PTDesignTokens.Spacing.md)
+                    }
                     
                     // Media Player Controls
                     mediaPlayerSection
@@ -54,12 +64,21 @@ struct TalkDetailView: View {
         .onAppear {
             loadBiblePassage()
             checkDownloadStatus()
+            setInitialMediaType()
         }
         .sheet(isPresented: $showingTranscript) {
             transcriptSheet
         }
         .sheet(isPresented: $showingBiblePassage) {
             biblePassageSheet
+        }
+        .alert("Video Error", isPresented: $showingVideoError) {
+            Button("OK") {
+                videoError = nil
+                showingVideoError = false
+            }
+        } message: {
+            Text(videoError ?? "An unknown error occurred")
         }
     }
     
@@ -209,95 +228,168 @@ struct TalkDetailView: View {
     
     
     
+    // MARK: - Media Type Toggle Section
+    
+    private var mediaTypeToggleSection: some View {
+        VStack(spacing: PTDesignTokens.Spacing.sm) {
+            Text("Media Type")
+                .font(PTFont.ptCardSubtitle)
+                .foregroundColor(PTDesignTokens.Colors.ink)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            HStack(spacing: PTDesignTokens.Spacing.sm) {
+                ForEach(talk.availableMediaTypes, id: \.self) { mediaType in
+                    Button(action: {
+                        selectedMediaType = mediaType
+                    }) {
+                        HStack(spacing: PTDesignTokens.Spacing.sm) {
+                            Image(systemName: mediaType.icon)
+                                .font(.system(size: 16))
+                            
+                            Text(mediaType.displayName)
+                                .font(PTFont.ptButtonText)
+                        }
+                        .foregroundColor(selectedMediaType == mediaType ? .white : PTDesignTokens.Colors.ink)
+                        .padding(.horizontal, PTDesignTokens.Spacing.md)
+                        .padding(.vertical, PTDesignTokens.Spacing.sm)
+                        .background(
+                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                                .fill(selectedMediaType == mediaType ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.veryLight)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                                        .stroke(selectedMediaType == mediaType ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.light, lineWidth: 1)
+                                )
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(PTDesignTokens.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.lg)
+                .fill(PTDesignTokens.Colors.surface)
+                .shadow(color: PTDesignTokens.Colors.ink.opacity(0.1), radius: 4, x: 0, y: 2)
+        )
+    }
+    
     // MARK: - Media Player Section
     
     private var mediaPlayerSection: some View {
         VStack(spacing: PTDesignTokens.Spacing.lg) {
-            // Progress bar
-            VStack(spacing: PTDesignTokens.Spacing.sm) {
-                ProgressView(value: playerService.currentTime, total: playerService.duration)
-                    .progressViewStyle(PTMediaProgressStyle())
-                    .frame(height: 6)
+            // Media type indicator
+            HStack {
+                Image(systemName: selectedMediaType.icon)
+                    .font(.system(size: 16))
+                    .foregroundColor(PTDesignTokens.Colors.kleinBlue)
                 
-                HStack {
-                    Text(timeString(from: playerService.currentTime))
-                        .font(PTFont.ptCaptionText)
-                        .foregroundColor(PTDesignTokens.Colors.medium)
-                        .monospacedDigit()
+                Text("\(selectedMediaType.displayName) Player")
+                    .font(PTFont.ptCardSubtitle)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
+                
+                Spacer()
+            }
+            
+            // Progress bar (only for audio)
+            if selectedMediaType == .audio {
+                VStack(spacing: PTDesignTokens.Spacing.sm) {
+                    ProgressView(value: playerService.currentTime, total: playerService.duration)
+                        .progressViewStyle(PTMediaProgressStyle())
+                        .frame(height: 6)
                     
-                    Spacer()
-                    
-                    Text(timeString(from: playerService.duration))
-                        .font(PTFont.ptCaptionText)
-                        .foregroundColor(PTDesignTokens.Colors.medium)
-                        .monospacedDigit()
+                    HStack {
+                        Text(timeString(from: playerService.currentTime))
+                            .font(PTFont.ptCaptionText)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
+                            .monospacedDigit()
+                        
+                        Spacer()
+                        
+                        Text(timeString(from: playerService.duration))
+                            .font(PTFont.ptCaptionText)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
+                            .monospacedDigit()
+                    }
                 }
             }
             
             // Playback controls
             HStack(spacing: PTDesignTokens.Spacing.xxl) {
-                // Skip backward (10s)
-                Button(action: { playerService.skipBackward() }) {
-                    Image(systemName: "gobackward.10")
-                        .font(.system(size: 24))
-                        .foregroundColor(PTDesignTokens.Colors.ink)
-                        .padding(PTDesignTokens.Spacing.sm)
-                        .background(
-                            Circle()
-                                .fill(PTDesignTokens.Colors.veryLight)
-                        )
+                // Skip backward (10s) - only for audio
+                if selectedMediaType == .audio {
+                    Button(action: { playerService.skipBackward() }) {
+                        Image(systemName: "gobackward.10")
+                            .font(.system(size: 24))
+                            .foregroundColor(PTDesignTokens.Colors.ink)
+                            .padding(PTDesignTokens.Spacing.sm)
+                            .background(
+                                Circle()
+                                    .fill(PTDesignTokens.Colors.veryLight)
+                            )
+                    }
                 }
                 
                 // Play/Pause
                 Button(action: togglePlayback) {
-                    Image(systemName: playerService.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 32))
-                        .foregroundColor(.white)
-                        .padding(PTDesignTokens.Spacing.lg)
-                        .background(
-                            Circle()
-                                .fill(PTDesignTokens.Colors.tang)
-                                .shadow(color: PTDesignTokens.Colors.tang.opacity(0.3), radius: 8, x: 0, y: 4)
-                        )
+                    Group {
+                        if selectedMediaType == .audio {
+                            Image(systemName: playerService.isPlaying ? "pause.fill" : "play.fill")
+                        } else {
+                            Image(systemName: "play.fill")
+                        }
+                    }
+                    .font(.system(size: 32))
+                    .foregroundColor(.white)
+                    .padding(PTDesignTokens.Spacing.lg)
+                    .background(
+                        Circle()
+                            .fill(PTDesignTokens.Colors.tang)
+                            .shadow(color: PTDesignTokens.Colors.tang.opacity(0.3), radius: 8, x: 0, y: 4)
+                    )
                 }
-                .scaleEffect(playerService.isPlaying ? 1.05 : 1.0)
-                .animation(.easeInOut(duration: 0.2), value: playerService.isPlaying)
+                .scaleEffect(selectedMediaType == .audio && playerService.isPlaying ? 1.05 : 1.0)
+                .animation(.easeInOut(duration: 0.2), value: selectedMediaType == .audio ? playerService.isPlaying : false)
                 
-                // Skip forward (30s)
-                Button(action: { playerService.skipForward() }) {
-                    Image(systemName: "goforward.30")
-                        .font(.system(size: 24))
-                        .foregroundColor(PTDesignTokens.Colors.ink)
-                        .padding(PTDesignTokens.Spacing.sm)
-                        .background(
-                            Circle()
-                                .fill(PTDesignTokens.Colors.veryLight)
-                        )
+                // Skip forward (30s) - only for audio
+                if selectedMediaType == .audio {
+                    Button(action: { playerService.skipForward() }) {
+                        Image(systemName: "goforward.30")
+                            .font(.system(size: 24))
+                            .foregroundColor(PTDesignTokens.Colors.ink)
+                            .padding(PTDesignTokens.Spacing.sm)
+                            .background(
+                                Circle()
+                                    .fill(PTDesignTokens.Colors.veryLight)
+                            )
+                    }
                 }
             }
             
-            // Speed control
-            HStack {
-                Text("Playback Speed")
-                    .font(PTFont.ptCardSubtitle)
-                    .foregroundColor(PTDesignTokens.Colors.ink)
-                
-                Spacer()
-                
-                Button(action: { playerService.adjustPlaybackSpeed() }) {
-                    Text("\(playerService.playbackSpeed, specifier: "%.1f")×")
-                        .font(PTFont.ptButtonText)
-                        .foregroundColor(PTDesignTokens.Colors.kleinBlue)
-                        .padding(.horizontal, PTDesignTokens.Spacing.md)
-                        .padding(.vertical, PTDesignTokens.Spacing.sm)
-                        .background(
-                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
-                                .fill(PTDesignTokens.Colors.kleinBlue.opacity(0.1))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
-                                        .stroke(PTDesignTokens.Colors.kleinBlue, lineWidth: 1)
-                                )
-                        )
+            // Speed control (only for audio)
+            if selectedMediaType == .audio {
+                HStack {
+                    Text("Playback Speed")
+                        .font(PTFont.ptCardSubtitle)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+                    
+                    Spacer()
+                    
+                    Button(action: { playerService.adjustPlaybackSpeed() }) {
+                        Text("\(playerService.playbackSpeed, specifier: "%.1f")×")
+                            .font(PTFont.ptButtonText)
+                            .foregroundColor(PTDesignTokens.Colors.kleinBlue)
+                            .padding(.horizontal, PTDesignTokens.Spacing.md)
+                            .padding(.vertical, PTDesignTokens.Spacing.sm)
+                            .background(
+                                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                                    .fill(PTDesignTokens.Colors.kleinBlue.opacity(0.1))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                                            .stroke(PTDesignTokens.Colors.kleinBlue, lineWidth: 1)
+                                    )
+                            )
+                    }
                 }
             }
         }
@@ -662,15 +754,58 @@ struct TalkDetailView: View {
     // MARK: - Helper Methods
     
     private func togglePlayback() {
-        if playerService.currentTalk?.id == talk.id {
-            if playerService.isPlaying {
-                playerService.pause()
+        switch selectedMediaType {
+        case .audio:
+            // Handle audio playback
+            if playerService.currentTalk?.id == talk.id {
+                if playerService.isPlaying {
+                    playerService.pause()
+                } else {
+                    playerService.play()
+                }
             } else {
+                playerService.loadTalk(talk)
                 playerService.play()
             }
-        } else {
-            playerService.loadTalk(talk)
-            playerService.play()
+            
+        case .video:
+            // Handle video playback
+            guard let url = talk.processedVideoURL else {
+                // Show error or fallback to audio
+                print("Video URL not available")
+                return
+            }
+            
+            // For Vimeo videos, always try WebView first to avoid domain restriction issues
+            if let videoID = talk.videoURL, videoID.allSatisfy({ $0.isNumber }) {
+                // Use WebView directly for Vimeo videos to avoid domain restriction issues
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let window = windowScene.windows.first,
+                   let rootViewController = window.rootViewController {
+                    VideoPlayerManager.shared.presentVideoWithWebViewFallback(for: videoID, title: talk.title, from: rootViewController)
+                }
+            } else {
+                // For non-Vimeo videos, try AVPlayer first
+                Task {
+                    let isAccessible = await VideoPlayerManager.shared.isVideoAccessible(url)
+                    
+                    await MainActor.run {
+                        if isAccessible {
+                            // Present video player with AVPlayer
+                            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                               let window = windowScene.windows.first,
+                               let rootViewController = window.rootViewController {
+                                VideoPlayerManager.shared.presentVideoPlayer(for: url, title: talk.title, from: rootViewController)
+                            }
+                        } else {
+                            // Show error message and fallback to audio
+                            videoError = "This video is not publicly accessible. Switching to audio mode."
+                            showingVideoError = true
+                            selectedMediaType = .audio
+                        }
+                    }
+                }
+            }
         }
     }
     
@@ -753,6 +888,15 @@ struct TalkDetailView: View {
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let window = windowScene.windows.first {
             window.rootViewController?.present(activityVC, animated: true)
+        }
+    }
+    
+    private func setInitialMediaType() {
+        // Set initial media type based on availability
+        if talk.hasVideo {
+            selectedMediaType = .video
+        } else if talk.hasAudio {
+            selectedMediaType = .audio
         }
     }
     

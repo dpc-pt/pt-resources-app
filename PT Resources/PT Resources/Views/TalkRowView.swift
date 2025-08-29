@@ -32,21 +32,35 @@ struct TalkRowView: View {
                 // Artwork/Thumbnail with PT styling and caching
                 PTAsyncImage(url: URL(string: talk.imageURL ?? ""),
                            targetSize: CGSize(width: 72, height: 72)) {
-                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image)
-                        .fill(LinearGradient(
-                            colors: [PTDesignTokens.Colors.tang.opacity(0.1), PTDesignTokens.Colors.kleinBlue.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                        .overlay(
-                            PTLogo(size: 24, showText: false)
+                    ZStack {
+                        PTBrandingService.shared.createBrandedBackground(
+                            for: talk.videoURL != nil && !talk.videoURL!.isEmpty ? .video : .audio,
+                            hasLogo: true
                         )
+                        
+                        PTLogo(size: 24, showText: false)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image))
                 }
                 .frame(width: 72, height: 72)
                 .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image))
                 .overlay(
                     RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image)
                         .stroke(PTDesignTokens.Colors.border, lineWidth: 0.5)
+                )
+                .overlay(
+                    // Video indicator overlay
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer()
+                            PTVideoIndicatorBadge(
+                                hasVideo: talk.videoURL != nil && !talk.videoURL!.isEmpty,
+                                duration: talk.duration > 0 ? TimeInterval(talk.duration) : nil
+                            )
+                        }
+                    }
+                    .padding(4)
                 )
                 
                 // Talk Information

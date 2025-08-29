@@ -939,6 +939,20 @@ enum DownloadStatus: String, CaseIterable {
 enum MediaType: String, CaseIterable {
     case audio = "audio"
     case video = "video"
+    
+    var displayName: String {
+        switch self {
+        case .audio: return "Audio"
+        case .video: return "Video"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .audio: return "speaker.wave.3"
+        case .video: return "video"
+        }
+    }
 }
 
 enum DownloadError: LocalizedError {
