@@ -70,13 +70,37 @@ struct DownloadedTalkRowView: View {
                         
                         Spacer()
                         
-                        // Downloaded badge
-                        HStack(spacing: 2) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.caption2)
-                                .foregroundColor(PTDesignTokens.Colors.success)
+                        // Enhanced Downloaded badge with quality indicator
+                        HStack(spacing: 4) {
+                            // Audio quality badge
+                            HStack(spacing: 2) {
+                                Image(systemName: "waveform")
+                                    .font(.system(size: 8, weight: .medium))
+                                    .foregroundColor(PTDesignTokens.Colors.tang)
+                                
+                                Text("MP3")
+                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                    .foregroundColor(PTDesignTokens.Colors.tang)
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(PTDesignTokens.Colors.tang.opacity(0.15))
+                            )
                             
-                            Text("Downloaded")
+                            // Offline ready indicator
+                            ZStack {
+                                Circle()
+                                    .fill(PTDesignTokens.Colors.success.opacity(0.2))
+                                    .frame(width: 16, height: 16)
+                                
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .foregroundColor(PTDesignTokens.Colors.success)
+                            }
+                            
+                            Text("Ready")
                                 .font(PTFont.ptCaptionText)
                                 .foregroundColor(PTDesignTokens.Colors.success)
                         }

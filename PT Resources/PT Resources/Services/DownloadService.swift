@@ -155,12 +155,9 @@ final class DownloadService: NSObject, ObservableObject {
                let url = downloadTask.originalRequest?.url?.absoluteString,
                activeDownloads.contains(where: { $0.downloadURL == url && $0.talkID == talkID }) {
                 
-                downloadTask.cancel { [weak self] resumeData in
-                    Task { @MainActor in
-                        if let resumeData = resumeData {
-                            await self?.saveResumeData(resumeData, for: talkID)
-                        }
-                    }
+                Task {
+                    let resumeData = await downloadTask.cancelByProducingResumeData()
+                    await self.saveResumeData(resumeData, for: talkID)
                 }
                 break
             }
@@ -234,12 +231,9 @@ final class DownloadService: NSObject, ObservableObject {
                let url = downloadTask.originalRequest?.url?.absoluteString,
                activeDownloads.contains(where: { $0.downloadURL == url && $0.talkID == talkID }) {
                 
-                downloadTask.cancel { [weak self] resumeData in
-                    Task { @MainActor in
-                        if let resumeData = resumeData {
-                            await self?.saveResumeData(resumeData, for: talkID)
-                        }
-                    }
+                Task {
+                    let resumeData = await downloadTask.cancelByProducingResumeData()
+                    await self.saveResumeData(resumeData, for: talkID)
                 }
                 break
             }
@@ -316,6 +310,9 @@ final class DownloadService: NSObject, ObservableObject {
     }
     
     func getDownloadedTalksWithMetadata() async throws -> [DownloadedTalk] {
+        // First, scan filesystem to ensure we don't miss any downloaded files
+        await scanAndReconcileDownloadedFiles()
+        
         return try await persistenceController.performBackgroundTask { context in
             let request: NSFetchRequest<TalkEntity> = TalkEntity.fetchRequest()
             request.predicate = NSPredicate(format: "isDownloaded == YES")
@@ -337,6 +334,9 @@ final class DownloadService: NSObject, ObservableObject {
                 let fileExists = FileManager.default.fileExists(atPath: localPath)
                 if !fileExists {
                     PTLogger.general.error("Downloaded talk \(id) file does not exist at path: \(localPath)")
+                    // Mark as not downloaded if file doesn't exist
+                    entity.isDownloaded = false
+                    entity.localAudioURL = nil
                     return nil
                 }
                 
@@ -355,6 +355,209 @@ final class DownloadService: NSObject, ObservableObject {
                 )
             }
         }
+    }
+    
+    // MARK: - Filesystem Scanning
+    
+    func scanAndReconcileDownloadedFiles() async {
+        PTLogger.general.info("🔍 Scanning filesystem for downloaded audio files...")
+        
+        let audioDirectory = getAudioDirectory()
+        
+        guard fileManager.fileExists(atPath: audioDirectory.path) else {
+            PTLogger.general.info("📁 Audio directory does not exist, nothing to scan")
+            return
+        }
+        
+        do {
+            let audioFiles = try fileManager.contentsOfDirectory(at: audioDirectory, includingPropertiesForKeys: [.fileSizeKey, .creationDateKey, .contentModificationDateKey], options: .skipsHiddenFiles)
+            
+            PTLogger.general.info("📁 Found \(audioFiles.count) audio files in directory")
+            
+            // Process files in batches to avoid memory pressure
+            let batchSize = 10
+            for batch in audioFiles.chunked(into: batchSize) {
+                await processBatch(batch)
+                // Yield to prevent blocking the main queue
+                await Task.yield()
+            }
+        } catch {
+            PTLogger.general.error("❌ Failed to scan audio directory: \(error.localizedDescription)")
+        }
+    }
+    
+    private func processBatch(_ audioFiles: [URL]) async {
+        for audioFile in audioFiles {
+            do {
+                let fileName = audioFile.deletingPathExtension().lastPathComponent
+                
+                // Extract talk ID from filename (assuming format: {talkID}.mp3)
+                let talkID = fileName
+                
+                PTLogger.general.info("📄 Processing audio file: \(fileName) -> Talk ID: \(talkID)")
+                
+                // Check if this file is already properly tracked in Core Data
+                let isTracked = try await persistenceController.performBackgroundTask { context in
+                    let request: NSFetchRequest<TalkEntity> = TalkEntity.fetchRequest()
+                    request.predicate = NSPredicate(format: "id == %@ AND isDownloaded == YES AND localAudioURL != nil", talkID)
+                    
+                    let count = try context.count(for: request)
+                    return count > 0
+                }
+                
+                if !isTracked {
+                    PTLogger.general.info("📂 File \(fileName) not tracked in Core Data, attempting to create entry")
+                    
+                    // Try to get file information
+                    let resourceValues = try audioFile.resourceValues(forKeys: [.fileSizeKey, .creationDateKey, .contentModificationDateKey])
+                    let fileSize = Int64(resourceValues.fileSize ?? 0)
+                    let createdAt = resourceValues.creationDate ?? Date()
+                    
+                    // Try to get talk metadata from API or create minimal entry
+                    await createOrUpdateTalkEntity(
+                        talkID: talkID,
+                        localAudioURL: audioFile.path,
+                        fileSize: fileSize,
+                        createdAt: createdAt
+                    )
+                }
+            } catch {
+                PTLogger.general.error("❌ Failed to process audio file \(audioFile.lastPathComponent): \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private func createOrUpdateTalkEntity(talkID: String, localAudioURL: String, fileSize: Int64, createdAt: Date) async {
+        do {
+            // First, try to fetch talk metadata from API if we're online
+            var talkMetadata: Talk? = nil
+            
+            // Only try API if we have network connectivity (simple check)
+            let canReachAPI = await testAPIConnectivity()
+            if canReachAPI {
+                talkMetadata = try? await apiService.fetchTalkDetail(id: talkID)
+                PTLogger.general.info("📡 Fetched metadata for talk \(talkID) from API")
+            } else {
+                PTLogger.general.info("📴 Offline - creating minimal metadata for talk \(talkID)")
+            }
+            
+            // Create or update Core Data entity
+            try await persistenceController.performBackgroundTask { context in
+                let request: NSFetchRequest<TalkEntity> = TalkEntity.fetchRequest()
+                request.predicate = NSPredicate(format: "id == %@", talkID)
+                
+                let entity: TalkEntity
+                if let existingEntity = try context.fetch(request).first {
+                    entity = existingEntity
+                    PTLogger.general.info("📝 Updating existing entity for talk \(talkID)")
+                } else {
+                    entity = TalkEntity(context: context)
+                    entity.id = talkID
+                    entity.createdAt = createdAt
+                    PTLogger.general.info("➕ Creating new entity for talk \(talkID)")
+                }
+                
+                // Update with API metadata if available, otherwise use minimal data
+                if let talk = talkMetadata {
+                    entity.title = talk.title
+                    entity.speaker = talk.speaker
+                    entity.series = talk.series
+                    entity.duration = Int32(talk.duration)
+                    entity.desc = talk.description
+                    entity.audioURL = talk.audioURL
+                    entity.imageURL = talk.imageURL
+                    entity.dateRecorded = talk.dateRecorded
+                    entity.biblePassage = talk.biblePassage
+                } else {
+                    // Enhanced metadata for offline files with better estimates
+                    if entity.title == nil || entity.title?.isEmpty == true {
+                        entity.title = "Downloaded Talk"
+                        // Try to extract meaningful info from talkID if it follows a pattern
+                        if let titleFromID = self.extractTitleFromID(talkID) {
+                            entity.title = titleFromID
+                        }
+                    }
+                    if entity.speaker == nil || entity.speaker?.isEmpty == true {
+                        entity.speaker = "Unknown Speaker"
+                    }
+                    if entity.duration == 0 {
+                        // Better duration estimation based on audio file analysis
+                        let estimatedDuration = self.estimateAudioDuration(fileSize: fileSize, filePath: localAudioURL)
+                        entity.duration = Int32(estimatedDuration)
+                    }
+                }
+                
+                // Set download-specific properties
+                entity.isDownloaded = true
+                entity.localAudioURL = localAudioURL
+                entity.fileSize = fileSize
+                entity.lastAccessedAt = Date()
+                entity.updatedAt = Date()
+                
+                try context.save()
+                PTLogger.general.info("✅ Successfully saved entity for talk \(talkID)")
+            }
+            
+        } catch {
+            PTLogger.general.error("❌ Failed to create/update entity for talk \(talkID): \(error)")
+        }
+    }
+    
+    private func testAPIConnectivity() async -> Bool {
+        do {
+            let url = URL(string: "https://www.proctrust.org.uk/api/resources/talks")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "HEAD"
+            request.timeoutInterval = 5.0
+            
+            let (_, response) = try await URLSession.shared.data(for: request)
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                return httpResponse.statusCode == 200
+            }
+            return false
+        } catch {
+            return false
+        }
+    }
+    
+    // MARK: - Metadata Enhancement Helpers
+    
+    private func extractTitleFromID(_ talkID: String) -> String? {
+        // Try to extract meaningful titles from common ID patterns
+        // Examples: "talk-123-sermon-title" -> "Sermon Title"
+        //           "2023-john-smith-gospel" -> "Gospel (John Smith, 2023)"
+        
+        let components = talkID.replacingOccurrences(of: "-", with: " ")
+                               .replacingOccurrences(of: "_", with: " ")
+                               .split(separator: " ")
+                               .map { $0.capitalized }
+        
+        if components.count >= 2 {
+            // Filter out numeric-only components and common prefixes
+            let meaningfulComponents = components.filter { component in
+                !component.allSatisfy { $0.isNumber } && 
+                !["Talk", "Audio", "Mp3", "File"].contains(component)
+            }
+            
+            if !meaningfulComponents.isEmpty {
+                return meaningfulComponents.joined(separator: " ")
+            }
+        }
+        
+        return nil
+    }
+    
+    private func estimateAudioDuration(fileSize: Int64, filePath: String) -> Int {
+        // More sophisticated duration estimation
+        // MP3 files typically have bitrates between 128-320 kbps
+        // Average estimate: 192 kbps = 24 KB/s = 1440 KB/min
+        
+        let averageBytesPerSecond: Int64 = 24000 // 192 kbps = 24 KB/s
+        let estimatedSeconds = max(30, fileSize / averageBytesPerSecond) // Minimum 30 seconds
+        
+        // Cap at reasonable maximum (4 hours = 14400 seconds)
+        return min(14400, Int(estimatedSeconds))
     }
     
     func getTotalStorageUsed() async -> Int64 {
@@ -525,7 +728,8 @@ final class DownloadService: NSObject, ObservableObject {
         }
     }
     
-    private func saveResumeData(_ resumeData: Data, for talkID: String) async {
+    private func saveResumeData(_ resumeData: Data?, for talkID: String) async {
+        guard let resumeData = resumeData else { return }
         try? await persistenceController.performBackgroundTask { context in
             let request: NSFetchRequest<DownloadTaskEntity> = DownloadTaskEntity.fetchRequest()
             request.predicate = NSPredicate(format: "talkID == %@", talkID)
@@ -706,75 +910,71 @@ extension DownloadService: URLSessionDownloadDelegate {
     
     @MainActor
     private func handleDownloadCompletion(talkID: String, localURL: URL, downloadURL: String) async {
-        do {
-            // Validate the downloaded file (no size expectation - just check it exists and is reasonable)
-            guard validateDownloadedFile(at: localURL, expectedSize: nil) else {
-                PTLogger.general.error("Downloaded file validation failed for talk: \(talkID)")
-                
-                // Remove invalid file
-                try? fileManager.removeItem(at: localURL)
-                
-                // Update download task status to failed
-                if let index = activeDownloads.firstIndex(where: { $0.talkID == talkID }) {
-                    activeDownloads[index].status = .failed
-                }
-                
-                return
+        // Validate the downloaded file (no size expectation - just check it exists and is reasonable)
+        guard validateDownloadedFile(at: localURL, expectedSize: nil) else {
+            PTLogger.general.error("Downloaded file validation failed for talk: \(talkID)")
+            
+            // Remove invalid file
+            try? fileManager.removeItem(at: localURL)
+            
+            // Update download task status to failed
+            if let index = activeDownloads.firstIndex(where: { $0.talkID == talkID }) {
+                activeDownloads[index].status = .failed
             }
             
-            // Update Core Data
-            do {
-                try await persistenceController.performBackgroundTask { context in
-                    // Update talk entity
-                    let talkRequest: NSFetchRequest<TalkEntity> = TalkEntity.fetchRequest()
-                    talkRequest.predicate = NSPredicate(format: "id == %@", talkID)
-                    
-                    let talkEntities = try context.fetch(talkRequest)
-                    PTLogger.general.info("Found \(talkEntities.count) talk entities with ID \(talkID)")
-                    
-                    if let talkEntity = talkEntities.first {
-                        PTLogger.general.info("Updating talk entity: \(talkEntity.title ?? "Unknown") - setting isDownloaded=true, localAudioURL=\(localURL.path)")
-                        talkEntity.isDownloaded = true
-                        talkEntity.localAudioURL = localURL.path
-                        talkEntity.lastAccessedAt = Date()
-                        if let attributes = try? FileManager.default.attributesOfItem(atPath: localURL.path),
-                           let size = attributes[.size] as? Int64 {
-                            talkEntity.fileSize = size
-                        }
-                    } else {
-                        PTLogger.general.error("No talk entity found with ID \(talkID) - creating new one")
-                        // This shouldn't normally happen, but we'll create a minimal entity
-                        let newTalkEntity = TalkEntity(context: context)
-                        newTalkEntity.id = talkID
-                        newTalkEntity.title = "Downloaded Talk" // Placeholder - should be populated from Talk object
-                        newTalkEntity.speaker = "Unknown Speaker" // Placeholder
-                        newTalkEntity.duration = 0 // Will be updated when played
-                        newTalkEntity.isDownloaded = true
-                        newTalkEntity.localAudioURL = localURL.path
-                        newTalkEntity.lastAccessedAt = Date()
-                        newTalkEntity.createdAt = Date()
-                        if let attributes = try? FileManager.default.attributesOfItem(atPath: localURL.path),
-                           let size = attributes[.size] as? Int64 {
-                            newTalkEntity.fileSize = size
-                        }
+            return
+        }
+        
+        // Update Core Data
+        do {
+            try await persistenceController.performBackgroundTask { context in
+                // Update talk entity
+                let talkRequest: NSFetchRequest<TalkEntity> = TalkEntity.fetchRequest()
+                talkRequest.predicate = NSPredicate(format: "id == %@", talkID)
+                
+                let talkEntities = try context.fetch(talkRequest)
+                PTLogger.general.info("Found \(talkEntities.count) talk entities with ID \(talkID)")
+                
+                if let talkEntity = talkEntities.first {
+                    PTLogger.general.info("Updating talk entity: \(talkEntity.title ?? "Unknown") - setting isDownloaded=true, localAudioURL=\(localURL.path)")
+                    talkEntity.isDownloaded = true
+                    talkEntity.localAudioURL = localURL.path
+                    talkEntity.lastAccessedAt = Date()
+                    if let attributes = try? FileManager.default.attributesOfItem(atPath: localURL.path),
+                       let size = attributes[.size] as? Int64 {
+                        talkEntity.fileSize = size
                     }
-                    
-                    // Update download task entity
-                    let downloadRequest: NSFetchRequest<DownloadTaskEntity> = DownloadTaskEntity.fetchRequest()
-                    downloadRequest.predicate = NSPredicate(format: "talkID == %@", talkID)
-                    
-                    if let entity = try context.fetch(downloadRequest).first {
-                        entity.status = DownloadStatus.completed.rawValue
-                        entity.completedAt = Date()
-                        entity.progress = 1.0
+                } else {
+                    PTLogger.general.error("No talk entity found with ID \(talkID) - creating new one")
+                    // This shouldn't normally happen, but we'll create a minimal entity
+                    let newTalkEntity = TalkEntity(context: context)
+                    newTalkEntity.id = talkID
+                    newTalkEntity.title = "Downloaded Talk" // Placeholder - should be populated from Talk object
+                    newTalkEntity.speaker = "Unknown Speaker" // Placeholder
+                    newTalkEntity.duration = 0 // Will be updated when played
+                    newTalkEntity.isDownloaded = true
+                    newTalkEntity.localAudioURL = localURL.path
+                    newTalkEntity.lastAccessedAt = Date()
+                    newTalkEntity.createdAt = Date()
+                    if let attributes = try? FileManager.default.attributesOfItem(atPath: localURL.path),
+                       let size = attributes[.size] as? Int64 {
+                        newTalkEntity.fileSize = size
                     }
-                    
-                    // Force save the context
-                    try context.save()
-                    PTLogger.general.info("Successfully saved Core Data changes for talk \(talkID)")
                 }
-            } catch {
-                PTLogger.general.error("Failed to save Core Data changes for talk \(talkID): \(error)")
+                
+                // Update download task entity
+                let downloadRequest: NSFetchRequest<DownloadTaskEntity> = DownloadTaskEntity.fetchRequest()
+                downloadRequest.predicate = NSPredicate(format: "talkID == %@", talkID)
+                
+                if let entity = try context.fetch(downloadRequest).first {
+                    entity.status = DownloadStatus.completed.rawValue
+                    entity.completedAt = Date()
+                    entity.progress = 1.0
+                }
+                
+                // Force save the context
+                try context.save()
+                PTLogger.general.info("Successfully saved Core Data changes for talk \(talkID)")
             }
             
             // Update UI state - mark as completed and clear progress
@@ -792,7 +992,7 @@ extension DownloadService: URLSessionDownloadDelegate {
             NotificationCenter.default.post(name: .downloadCompleted, object: nil, userInfo: ["talkID": talkID])
             
         } catch {
-            PTLogger.general.error("Failed to handle download completion: \(error)")
+            PTLogger.general.error("Failed to save Core Data changes for talk \(talkID): \(error)")
             
             // Update error status
             if let index = activeDownloads.firstIndex(where: { $0.talkID == talkID }) {
@@ -973,6 +1173,16 @@ enum DownloadError: LocalizedError {
         case .noDownloadableContent: return "No downloadable audio or video content found"
         case .fileNotFound: return "Downloaded file not found"
         case .fileMoveFailed: return "Failed to move downloaded file"
+        }
+    }
+}
+
+// MARK: - Array Extension for Batching
+
+extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        return stride(from: 0, to: count, by: size).map {
+            Array(self[$0..<Swift.min($0 + size, count)])
         }
     }
 }

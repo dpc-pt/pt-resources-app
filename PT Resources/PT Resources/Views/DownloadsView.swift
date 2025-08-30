@@ -17,6 +17,11 @@ struct DownloadsView: View {
     @State private var isLoading = false
     @State private var showingStorageInfo = false
     @State private var totalStorageUsed: Int64 = 0
+    @State private var sortOption: SortOption = .dateDownloaded
+    @State private var showingSortOptions = false
+    @State private var lastRefreshTime = Date()
+    @State private var errorMessage: String?
+    @State private var showingError = false
     
     init(apiService: TalksAPIServiceProtocol = TalksAPIService()) {
         self._downloadService = StateObject(wrappedValue: DownloadService(apiService: apiService))
@@ -53,20 +58,55 @@ struct DownloadsView: View {
             .navigationBarHidden(true)
         }
         .onAppear {
-            loadDownloadedTalks()
-            calculateStorageUsage()
+            Task {
+                await loadDownloadedTalks()
+                await calculateStorageUsage()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .downloadCompleted)) { _ in
-            loadDownloadedTalks()
-            calculateStorageUsage()
+            Task {
+                await refreshDownloads()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .downloadDeleted)) { _ in
-            loadDownloadedTalks()
-            calculateStorageUsage()
+            Task {
+                await refreshDownloads()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .downloadFailed)) { _ in
-            // Optionally refresh to ensure consistency
-            loadDownloadedTalks()
+            Task {
+                await loadDownloadedTalks()
+            }
+        }
+        .confirmationDialog("Sort Downloads", isPresented: $showingSortOptions) {
+            ForEach(SortOption.allCases, id: \.self) { option in
+                Button(option.displayName) {
+                    sortOption = option
+                }
+            }
+        } message: {
+            Text("Choose how to sort your downloaded talks")
+        }
+        .sheet(isPresented: $showingStorageInfo) {
+            StorageInfoSheet(
+                totalStorageUsed: totalStorageUsed,
+                downloadedTalks: downloadedTalks,
+                onCleanup: {
+                    Task {
+                        await cleanupOldDownloads()
+                        showingStorageInfo = false
+                    }
+                }
+            )
+        }
+        .alert("Error", isPresented: $showingError) {
+            Button("OK") {
+                errorMessage = nil
+            }
+        } message: {
+            if let errorMessage = errorMessage {
+                Text(errorMessage)
+            }
         }
     }
     
@@ -81,15 +121,46 @@ struct DownloadsView: View {
                         .font(PTFont.ptSectionTitle)
                         .foregroundColor(PTDesignTokens.Colors.ink)
                     
-                    Text("\(downloadedTalks.count) talks downloaded")
-                        .font(PTFont.ptCaptionText)
-                        .foregroundColor(PTDesignTokens.Colors.medium)
+                    HStack(spacing: PTDesignTokens.Spacing.xs) {
+                        Text("\(downloadedTalks.count) talks downloaded")
+                            .font(PTFont.ptCaptionText)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
+                        
+                        if !networkMonitor.isConnected {
+                            Image(systemName: "wifi.slash")
+                                .font(.caption2)
+                                .foregroundColor(PTDesignTokens.Colors.turmeric)
+                        }
+                    }
                 }
                 
                 Spacer()
                 
-                // Offline mode toggle
-                Button(action: { networkMonitor.toggleOfflineMode() }) {
+                HStack(spacing: PTDesignTokens.Spacing.sm) {
+                    // Sort Options
+                    if !downloadedTalks.isEmpty {
+                        Button(action: { showingSortOptions = true }) {
+                            HStack(spacing: PTDesignTokens.Spacing.xs) {
+                                Image(systemName: "line.3.horizontal.decrease")
+                                    .font(.caption)
+                                
+                                Text(sortOption.displayName)
+                                    .font(PTFont.ptCaptionText)
+                            }
+                            .foregroundColor(PTDesignTokens.Colors.medium)
+                            .padding(.horizontal, PTDesignTokens.Spacing.sm)
+                            .padding(.vertical, PTDesignTokens.Spacing.xs)
+                            .background(
+                                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.sm)
+                                    .fill(PTDesignTokens.Colors.light.opacity(0.3))
+                            )
+                        }
+                        .accessibilityLabel("Sort downloads by \(sortOption.displayName)")
+                        .accessibilityHint("Double tap to change how downloads are sorted")
+                    }
+                    
+                    // Offline mode toggle
+                    Button(action: { networkMonitor.toggleOfflineMode() }) {
                     HStack(spacing: PTDesignTokens.Spacing.xs) {
                         Image(systemName: networkMonitor.isOfflineMode ? "wifi.slash" : "wifi")
                             .font(.caption)
@@ -104,6 +175,9 @@ struct DownloadsView: View {
                         RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.sm)
                             .fill(networkMonitor.isOfflineMode ? PTDesignTokens.Colors.tang.opacity(0.1) : PTDesignTokens.Colors.light.opacity(0.3))
                     )
+                }
+                .accessibilityLabel(networkMonitor.isOfflineMode ? "Currently offline" : "Currently online")
+                .accessibilityHint("Double tap to toggle offline mode")
                 }
             }
             .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
@@ -134,6 +208,8 @@ struct DownloadsView: View {
                         )
                 )
             }
+            .accessibilityLabel("Storage usage: \(ByteCountFormatter.string(fromByteCount: totalStorageUsed, countStyle: .file))")
+            .accessibilityHint("Double tap to view storage details and cleanup options")
             .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
         }
         .padding(.top, PTDesignTokens.Spacing.md)
@@ -144,7 +220,7 @@ struct DownloadsView: View {
     private var downloadsList: some View {
         ScrollView {
             LazyVStack(spacing: PTDesignTokens.Spacing.md) {
-                ForEach(downloadedTalks) { downloadedTalk in
+                ForEach(sortedDownloadedTalks) { downloadedTalk in
                     DownloadedTalkRowView(
                         downloadedTalk: downloadedTalk,
                         onPlayTap: { playDownloadedTalk(downloadedTalk) },
@@ -157,8 +233,7 @@ struct DownloadsView: View {
             .padding(.bottom, PTDesignTokens.Spacing.xl)
         }
         .refreshable {
-            loadDownloadedTalks()
-            calculateStorageUsage()
+            await refreshDownloads()
         }
     }
     
@@ -200,32 +275,6 @@ struct DownloadsView: View {
     
     // MARK: - Private Methods
     
-    private func loadDownloadedTalks() {
-        Task {
-            isLoading = true
-            do {
-                let talks = try await downloadService.getDownloadedTalksWithMetadata()
-                await MainActor.run {
-                    self.downloadedTalks = talks
-                    self.isLoading = false
-                }
-            } catch {
-                await MainActor.run {
-                    self.isLoading = false
-                }
-                print("Failed to load downloaded talks: \(error)")
-            }
-        }
-    }
-    
-    private func calculateStorageUsage() {
-        Task {
-            let storage = await downloadService.getTotalStorageUsed()
-            await MainActor.run {
-                self.totalStorageUsed = storage
-            }
-        }
-    }
     
     private func playDownloadedTalk(_ downloadedTalk: DownloadedTalk) {
         // Create a Talk object from DownloadedTalk for playback
@@ -252,11 +301,104 @@ struct DownloadsView: View {
                 try await downloadService.deleteDownload(for: downloadedTalk.id)
                 await MainActor.run {
                     downloadedTalks.removeAll { $0.id == downloadedTalk.id }
-                    calculateStorageUsage()
                 }
+                await calculateStorageUsage()
             } catch {
-                print("Failed to delete downloaded talk: \(error)")
+                PTLogger.general.error("Failed to delete downloaded talk: \(error.localizedDescription)")
+                await MainActor.run {
+                    self.errorMessage = "Unable to delete talk. Please try again."
+                    self.showingError = true
+                }
             }
+        }
+    }
+    
+    // MARK: - Computed Properties
+    
+    private var sortedDownloadedTalks: [DownloadedTalk] {
+        switch sortOption {
+        case .title:
+            return downloadedTalks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        case .speaker:
+            return downloadedTalks.sorted { $0.speaker.localizedCaseInsensitiveCompare($1.speaker) == .orderedAscending }
+        case .dateDownloaded:
+            return downloadedTalks.sorted { $0.createdAt > $1.createdAt }
+        case .lastPlayed:
+            return downloadedTalks.sorted { $0.lastAccessedAt > $1.lastAccessedAt }
+        case .fileSize:
+            return downloadedTalks.sorted { $0.fileSize > $1.fileSize }
+        case .duration:
+            return downloadedTalks.sorted { $0.duration > $1.duration }
+        }
+    }
+    
+    // MARK: - Enhanced Methods
+    
+    private func refreshDownloads() async {
+        await loadDownloadedTalks()
+        await calculateStorageUsage()
+        lastRefreshTime = Date()
+    }
+    
+    private func loadDownloadedTalks() async {
+        isLoading = true
+        do {
+            let talks = try await downloadService.getDownloadedTalksWithMetadata()
+            await MainActor.run {
+                self.downloadedTalks = talks
+                self.isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                self.isLoading = false
+                self.errorMessage = "Unable to load downloaded talks. Please try again."
+                self.showingError = true
+            }
+            PTLogger.general.error("Failed to load downloaded talks: \(error.localizedDescription)")
+        }
+    }
+    
+    private func calculateStorageUsage() async {
+        let storage = await downloadService.getTotalStorageUsed()
+        await MainActor.run {
+            self.totalStorageUsed = storage
+        }
+    }
+    
+    private func cleanupOldDownloads() async {
+        do {
+            try await downloadService.cleanupExpiredDownloads()
+            await refreshDownloads()
+        } catch {
+            PTLogger.general.error("Failed to cleanup old downloads: \(error)")
+        }
+    }
+    
+    private func formatRelativeTime(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+}
+
+// MARK: - Sort Options
+
+enum SortOption: String, CaseIterable {
+    case dateDownloaded = "dateDownloaded"
+    case title = "title"
+    case speaker = "speaker"
+    case lastPlayed = "lastPlayed"
+    case fileSize = "fileSize"
+    case duration = "duration"
+    
+    var displayName: String {
+        switch self {
+        case .dateDownloaded: return "Date Downloaded"
+        case .title: return "Title"
+        case .speaker: return "Speaker"
+        case .lastPlayed: return "Last Played"
+        case .fileSize: return "File Size"
+        case .duration: return "Duration"
         }
     }
 }
