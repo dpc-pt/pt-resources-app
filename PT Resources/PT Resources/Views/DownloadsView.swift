@@ -218,20 +218,27 @@ struct DownloadsView: View {
     // MARK: - Downloads List
     
     private var downloadsList: some View {
-        ScrollView {
-            LazyVStack(spacing: PTDesignTokens.Spacing.md) {
-                ForEach(sortedDownloadedTalks) { downloadedTalk in
-                    DownloadedTalkRowView(
-                        downloadedTalk: downloadedTalk,
-                        onPlayTap: { playDownloadedTalk(downloadedTalk) },
-                        onDeleteTap: { deleteDownloadedTalk(downloadedTalk) }
-                    )
-                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+        List {
+            ForEach(sortedDownloadedTalks) { downloadedTalk in
+                DownloadedTalkRowView(
+                    downloadedTalk: downloadedTalk,
+                    onPlayTap: { playDownloadedTalk(downloadedTalk) },
+                    onDeleteTap: { deleteDownloadedTalk(downloadedTalk) }
+                )
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button("Delete") {
+                        deleteDownloadedTalk(downloadedTalk)
+                    }
+                    .tint(.red)
                 }
             }
-            .padding(.top, PTDesignTokens.Spacing.sm)
-            .padding(.bottom, PTDesignTokens.Spacing.xl)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(PTDesignTokens.Colors.background)
         .refreshable {
             await refreshDownloads()
         }

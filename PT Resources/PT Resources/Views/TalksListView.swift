@@ -22,6 +22,7 @@ struct TalksListView: View {
     @StateObject private var downloadService: DownloadService
     @StateObject private var networkMonitor = NetworkMonitor()
     @StateObject private var filtersAPIService: FiltersAPIService
+    private let apiService: TalksAPIServiceProtocol
     
     @State private var showingFilters = false
     @State private var showingSortOptions = false
@@ -29,8 +30,11 @@ struct TalksListView: View {
     @State private var selectedResourceId: String?
     @State private var downloadedTalks: [DownloadedTalk] = []
     @State private var isLoadingDownloadedTalks = false
+    @State private var showDownloads = false
+    @State private var showingDownloadsSheet = false
     
     init(apiService: TalksAPIServiceProtocol = TalksAPIService(), filtersAPIService: FiltersAPIService = FiltersAPIService(), initialFilters: TalkSearchFilters? = nil) {
+        self.apiService = apiService
         self._filtersAPIService = StateObject(wrappedValue: filtersAPIService)
         self._viewModel = StateObject(wrappedValue: TalksViewModel(apiService: apiService, filtersAPIService: filtersAPIService, initialFilters: initialFilters))
         self._downloadService = StateObject(wrappedValue: DownloadService(apiService: apiService))
@@ -44,8 +48,8 @@ struct TalksListView: View {
                     .ptCornerPattern(position: .bottomRight, size: .large, hasLogo: false)
                 
                 VStack(spacing: 0) {
-                    // Authentic PT Brand Header
-                    PTBrandHeader("Resources", subtitle: "Sermons and talks from Proclamation Trust")
+                    // Header with Downloads Button
+                    resourcesHeader
                     
                     VStack(spacing: PTDesignTokens.Spacing.md) {
                         // Search Bar with PT styling
@@ -74,7 +78,7 @@ struct TalksListView: View {
                     .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
                     .padding(.bottom, PTDesignTokens.Spacing.sm)
                 
-                    // Talks List with PT styling
+                    // Main Content
                     if networkMonitor.shouldShowOfflineContent {
                         // Show downloaded talks in offline mode
                         offlineTalksList
@@ -86,40 +90,20 @@ struct TalksListView: View {
                             .frame(maxHeight: .infinity)
                     } else {
                         ScrollView {
-                            LazyVStack(spacing: PTDesignTokens.Spacing.md) {
-                                ForEach(viewModel.filteredTalks) { talk in
-                                    TalkRowView(
-                                        talk: talk,
-                                        isDownloaded: isTalkDownloaded(talk.id),
-                                        downloadProgress: downloadService.downloadProgress[talk.id],
-                                        onTalkTap: { selectedTalk = talk },
-                                        onPlayTap: { playTalk(talk) },
-                                        onDownloadTap: { downloadTalk(talk) }
-                                    )
-                                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
-                                    
-                                    // Load more when near the end
-                                    if talk == viewModel.filteredTalks.last && viewModel.hasMorePages {
-                                        HStack {
-                                            PTLogo(size: 16, showText: false)
-                                                .rotationEffect(.degrees(360))
-                                                .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: true)
-                                            Text("Loading more...")
-                                                .font(PTFont.ptCaptionText)
-                                                .foregroundColor(PTDesignTokens.Colors.medium)
-                                        }
-                                        .padding()
-                                        .onAppear {
-                                            viewModel.loadMoreTalks()
-                                        }
-                                    }
+                            LazyVStack(spacing: 0) {
+                                // Downloads Section (when available)
+                                if !downloadedTalks.isEmpty {
+                                    downloadsSection
                                 }
+                                
+                                // All Talks Section
+                                allTalksSection
                             }
-                            .padding(.top, PTDesignTokens.Spacing.sm)
                             .padding(.bottom, PTDesignTokens.Spacing.xl)
                         }
                         .refreshable {
                             viewModel.refreshTalks()
+                            loadDownloadedTalks()
                         }
                     }
                 
@@ -160,6 +144,9 @@ struct TalksListView: View {
         )) { item in
             ResourceDetailView(resourceId: item.resourceId)
         }
+        .sheet(isPresented: $showingDownloadsSheet) {
+            DownloadsView(apiService: apiService)
+        }
         .alert("Error", isPresented: .constant(viewModel.error != nil)) {
             Button("OK") {
                 viewModel.error = nil
@@ -170,6 +157,15 @@ struct TalksListView: View {
             }
         } message: {
             Text(viewModel.error?.localizedDescription ?? "An error occurred")
+        }
+        .onAppear {
+            loadDownloadedTalks()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .downloadCompleted)) { _ in
+            loadDownloadedTalks()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .downloadDeleted)) { _ in
+            loadDownloadedTalks()
         }
     }
     
@@ -183,6 +179,198 @@ struct TalksListView: View {
         if viewModel.selectedFilters.dateFrom != nil { count += 1 }
         if viewModel.selectedFilters.dateTo != nil { count += 1 }
         return count
+    }
+    
+    private var resourcesHeader: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
+                Text("Resources")
+                    .font(PTFont.ptSectionTitle)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
+                
+                Text("Sermons and talks from Proclamation Trust")
+                    .font(PTFont.ptCaptionText)
+                    .foregroundColor(PTDesignTokens.Colors.medium)
+            }
+            
+            Spacer()
+            
+            Button(action: { showingDownloadsSheet = true }) {
+                HStack(spacing: PTDesignTokens.Spacing.xs) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.title3)
+                    
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("Downloads")
+                            .font(PTFont.ptCaptionText)
+                            .fontWeight(.medium)
+                        
+                        if !downloadedTalks.isEmpty {
+                            Text("\(downloadedTalks.count)")
+                                .font(PTFont.ptCaptionText)
+                                .foregroundColor(PTDesignTokens.Colors.medium)
+                        }
+                    }
+                }
+                .foregroundColor(PTDesignTokens.Colors.tang)
+                .padding(.horizontal, PTDesignTokens.Spacing.sm)
+                .padding(.vertical, PTDesignTokens.Spacing.xs)
+                .background(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                        .fill(PTDesignTokens.Colors.tang.opacity(0.1))
+                )
+            }
+            .accessibilityLabel("View Downloads")
+            .accessibilityHint("Opens downloaded talks view with \(downloadedTalks.count) downloads")
+        }
+        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+        .padding(.top, PTDesignTokens.Spacing.lg)
+        .padding(.bottom, PTDesignTokens.Spacing.md)
+        .background(PTDesignTokens.Colors.background)
+    }
+    
+    private var downloadsSection: some View {
+        VStack(spacing: 0) {
+            // Downloads Header
+            HStack {
+                HStack(spacing: PTDesignTokens.Spacing.xs) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .foregroundColor(PTDesignTokens.Colors.tang)
+                        .font(.title3)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Downloads")
+                            .font(PTFont.ptSectionTitle)
+                            .foregroundColor(PTDesignTokens.Colors.ink)
+                        
+                        Text("\(downloadedTalks.count) talks available offline")
+                            .font(PTFont.ptCaptionText)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
+                    }
+                }
+                
+                Spacer()
+                
+                Button(action: { 
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        showDownloads.toggle()
+                    }
+                }) {
+                    HStack(spacing: PTDesignTokens.Spacing.xs) {
+                        Text(showDownloads ? "Hide" : "Show")
+                            .font(PTFont.ptCaptionText)
+                        
+                        Image(systemName: showDownloads ? "chevron.up" : "chevron.down")
+                            .font(.caption)
+                    }
+                    .foregroundColor(PTDesignTokens.Colors.kleinBlue)
+                }
+            }
+            .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+            .padding(.vertical, PTDesignTokens.Spacing.md)
+            .background(
+                Rectangle()
+                    .fill(PTDesignTokens.Colors.surface)
+                    .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+            )
+            
+            // Downloads List (collapsible)
+            if showDownloads {
+                VStack(spacing: 0) {
+                    ForEach(Array(downloadedTalks.prefix(5))) { downloadedTalk in
+                        DownloadedTalkRowView(
+                            downloadedTalk: downloadedTalk,
+                            onPlayTap: { playDownloadedTalk(downloadedTalk) },
+                            onDeleteTap: { deleteDownloadedTalk(downloadedTalk) }
+                        )
+                        .contextMenu {
+                            Button("Delete", role: .destructive) {
+                                deleteDownloadedTalk(downloadedTalk)
+                            }
+                        }
+                    }
+                    
+                    // Show more button if there are more than 5 downloads
+                    if downloadedTalks.count > 5 {
+                        Button(action: { 
+                            // Could navigate to full downloads view or expand
+                        }) {
+                            HStack {
+                                Text("View all \(downloadedTalks.count) downloads")
+                                    .font(PTFont.ptButtonText)
+                                    .foregroundColor(PTDesignTokens.Colors.kleinBlue)
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(PTDesignTokens.Colors.kleinBlue)
+                            }
+                            .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+                            .padding(.vertical, PTDesignTokens.Spacing.md)
+                            .background(PTDesignTokens.Colors.light.opacity(0.1))
+                        }
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+    
+    private var allTalksSection: some View {
+        VStack(spacing: 0) {
+            // All Talks Header
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("All Talks")
+                        .font(PTFont.ptSectionTitle)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+                    
+                    if !viewModel.filteredTalks.isEmpty {
+                        Text("\(viewModel.filteredTalks.count) talks")
+                            .font(PTFont.ptCaptionText)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
+                    }
+                }
+                
+                Spacer()
+            }
+            .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+            .padding(.vertical, PTDesignTokens.Spacing.md)
+            .background(PTDesignTokens.Colors.background)
+            
+            // Talks List
+            LazyVStack(spacing: PTDesignTokens.Spacing.md) {
+                ForEach(viewModel.filteredTalks) { talk in
+                    TalkRowView(
+                        talk: talk,
+                        isDownloaded: isTalkDownloaded(talk.id),
+                        downloadProgress: downloadService.downloadProgress[talk.id],
+                        onTalkTap: { selectedTalk = talk },
+                        onPlayTap: { playTalk(talk) },
+                        onDownloadTap: { downloadTalk(talk) }
+                    )
+                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+                    
+                    // Load more when near the end
+                    if talk == viewModel.filteredTalks.last && viewModel.hasMorePages {
+                        HStack {
+                            PTLogo(size: 16, showText: false)
+                                .rotationEffect(.degrees(360))
+                                .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: true)
+                            Text("Loading more...")
+                                .font(PTFont.ptCaptionText)
+                                .foregroundColor(PTDesignTokens.Colors.medium)
+                        }
+                        .padding()
+                        .onAppear {
+                            viewModel.loadMoreTalks()
+                        }
+                    }
+                }
+            }
+            .padding(.top, PTDesignTokens.Spacing.sm)
+        }
     }
     
     // MARK: - Private Methods

@@ -13,7 +13,6 @@ struct DownloadedTalkRowView: View {
     let onDeleteTap: () -> Void
     
     @State private var isPressed = false
-    @State private var showingDeleteAlert = false
     
     var body: some View {
         HStack(spacing: PTDesignTokens.Spacing.md) {
@@ -106,43 +105,42 @@ struct DownloadedTalkRowView: View {
                         }
                     }
                     
-                    // Last accessed
-                    Text("Last played \(downloadedTalk.formattedLastAccessed)")
-                        .font(PTFont.ptCaptionText)
-                        .foregroundColor(PTDesignTokens.Colors.medium)
+                    // Additional metadata row
+                    HStack(spacing: PTDesignTokens.Spacing.xs) {
+                        Text("Downloaded \(formatRelativeTime(downloadedTalk.createdAt))")
+                            .font(PTFont.ptCaptionText)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
+                        
+                        Text("•")
+                            .font(PTFont.ptCaptionText)
+                            .foregroundColor(PTDesignTokens.Colors.light)
+                        
+                        Text("Last played \(downloadedTalk.formattedLastAccessed)")
+                            .font(PTFont.ptCaptionText)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
+                    }
                 }
             }
             
             Spacer()
             
-            // Action Buttons
-            HStack(spacing: PTDesignTokens.Spacing.sm) {
-                // Play Button
-                Button(action: onPlayTap) {
-                    Image(systemName: "play.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(PTDesignTokens.Colors.tang)
-                }
-                .accessibilityPlayButton(isPlaying: false)
-                
-                // Delete Button
-                Button(action: { showingDeleteAlert = true }) {
-                    Image(systemName: "trash.circle")
-                        .font(.title3)
-                        .foregroundColor(PTDesignTokens.Colors.error)
-                }
-                .accessibilityDeleteButton()
+            // Play Button
+            Button(action: onPlayTap) {
+                Image(systemName: "play.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(PTDesignTokens.Colors.tang)
             }
+            .accessibilityPlayButton(isPlaying: false)
         }
-        .padding(.horizontal, PTDesignTokens.Spacing.md)
-        .padding(.vertical, PTDesignTokens.Spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                .fill(PTDesignTokens.Colors.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                        .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
-                )
+        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+        .padding(.vertical, PTDesignTokens.Spacing.md)
+        .background(PTDesignTokens.Colors.surface)
+        .overlay(
+            Rectangle()
+                .fill(PTDesignTokens.Colors.light.opacity(0.1))
+                .frame(height: 0.5)
+                .offset(y: 0)
+            , alignment: .bottom
         )
         .scaleEffect(isPressed ? 0.98 : 1.0)
         .accessibilityDownloadedTalkRow(downloadedTalk)
@@ -151,14 +149,14 @@ struct DownloadedTalkRowView: View {
                 isPressed = pressing
             }
         }, perform: {})
-        .alert("Delete Downloaded Talk", isPresented: $showingDeleteAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Delete", role: .destructive) {
-                onDeleteTap()
-            }
-        } message: {
-            Text("Are you sure you want to delete '\(downloadedTalk.title)'? This will free up \(downloadedTalk.formattedFileSize) of storage space.")
-        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func formatRelativeTime(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
 
