@@ -149,8 +149,8 @@ struct Talk: Codable, Identifiable, Hashable {
     }
     
     var primaryMediaType: MediaType? {
-        if hasVideo { return .video }
         if hasAudio { return .audio }
+        if hasVideo { return .video }
         return nil
     }
     

@@ -8,15 +8,23 @@
 import Foundation
 
 /// Transcription segment with timestamp
-struct TranscriptSegment: Codable, Identifiable, Hashable {
-    let id: String
-    let startTime: TimeInterval
-    let endTime: TimeInterval
-    let text: String
-    let confidence: Double?
+public struct TranscriptSegment: Codable, Identifiable, Hashable {
+    public let id: String
+    public let startTime: TimeInterval
+    public let endTime: TimeInterval
+    public let text: String
+    public let confidence: Double?
     
-    var duration: TimeInterval {
+    public var duration: TimeInterval {
         endTime - startTime
+    }
+    
+    public init(id: String, startTime: TimeInterval, endTime: TimeInterval, text: String, confidence: Double? = nil) {
+        self.id = id
+        self.startTime = startTime
+        self.endTime = endTime
+        self.text = text
+        self.confidence = confidence
     }
     
     var formattedStartTime: String {

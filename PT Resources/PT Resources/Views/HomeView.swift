@@ -144,8 +144,8 @@ struct HomeView: View {
 
 struct PTWelcomeHeader: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.sm) {
-            VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
+        VStack(spacing: PTDesignTokens.Spacing.sm) {
+            VStack(spacing: PTDesignTokens.Spacing.xs) {
                 Text("Welcome")
                     .font(PTFont.ptDisplayLarge)
                     .foregroundColor(PTDesignTokens.Colors.ink)

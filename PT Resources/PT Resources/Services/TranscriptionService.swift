@@ -8,6 +8,44 @@
 import Foundation
 import CoreData
 import Combine
+import WhisperKit
+
+extension Notification.Name {
+    static let transcriptionCompleted = Notification.Name("transcriptionCompleted")
+    static let transcriptionProgress = Notification.Name("transcriptionProgress")
+    static let transcriptionSegmentAdded = Notification.Name("transcriptionSegmentAdded")
+}
+
+// Streaming transcript model for real-time updates
+public struct StreamingTranscript {
+    let talkID: String
+    var segments: [TranscriptSegment]
+    var currentText: String
+    var progress: Float
+    var isCompleted: Bool
+    
+    public init(talkID: String) {
+        self.talkID = talkID
+        self.segments = []
+        self.currentText = ""
+        self.progress = 0.0
+        self.isCompleted = false
+    }
+    
+    public mutating func addSegment(_ segment: TranscriptSegment) {
+        segments.append(segment)
+        currentText = segments.map { $0.text }.joined(separator: " ")
+    }
+    
+    public mutating func updateProgress(_ newProgress: Float) {
+        progress = newProgress
+    }
+    
+    public mutating func complete() {
+        isCompleted = true
+        progress = 1.0
+    }
+}
 
 @MainActor
 final class TranscriptionService: ObservableObject {
@@ -27,6 +65,13 @@ final class TranscriptionService: ObservableObject {
     private var pollingTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
     
+    private var whisperKit: WhisperKit?
+    private let fileManager = FileManager.default
+    private var isInitializingWhisperKit = false
+    
+    // Streaming transcription state
+    @Published var streamingTranscripts: [String: StreamingTranscript] = [:]
+    
     // MARK: - Initialization
     
     init(session: URLSession = .shared, persistenceController: PersistenceController = .shared) {
@@ -43,6 +88,11 @@ final class TranscriptionService: ObservableObject {
         
         loadTranscriptionQueue()
         startPolling()
+        
+        // Initialize WhisperKit asynchronously
+        Task {
+            await initializeWhisperKit()
+        }
     }
     
     deinit {
@@ -52,78 +102,50 @@ final class TranscriptionService: ObservableObject {
     
     // MARK: - Public Methods
     
-    func requestTranscription(for talk: Talk, priority: TranscriptionPriority = .normal) async throws {
-        
-        // Check if transcription already exists or is in progress
+    func transcribeLocalAudio(for talk: Talk, priority: TranscriptionPriority = .normal) async throws {
+        // Check if transcription already exists
         if await hasTranscript(for: talk.id) {
             print("Transcript already exists for talk: \(talk.id)")
             return
         }
         
+        // Check if already in progress
         if transcriptionQueue.contains(where: { $0.talkID == talk.id }) {
             print("Transcription already queued for talk: \(talk.id)")
             return
         }
         
-        // Use mock service if configured
-        if Config.useMockServices {
-            return await mockRequestTranscription(for: talk, priority: priority)
+        // Get local audio file path
+        let audioURL = getLocalAudioURL(for: talk.id)
+        guard fileManager.fileExists(atPath: audioURL.path) else {
+            throw TranscriptionError.audioFileNotFound
         }
         
-        // Create transcription request
-        let request = CreateTranscriptionRequest(
-            audioURL: talk.audioURL ?? "",
+        // Add to queue as processing
+        let queueItem = TranscriptionQueueItem(
             talkID: talk.id,
-            language: "en", // TODO: Make configurable
-            priority: priority
+            jobID: "local-\(UUID().uuidString)",
+            priority: priority,
+            status: .processing
         )
         
-        guard let url = URL(string: Config.APIEndpoint.createTranscription(audioURL: talk.audioURL ?? "", talkID: talk.id).url) else {
-            throw TranscriptionError.invalidURL
-        }
+        transcriptionQueue.append(queueItem)
+        sortTranscriptionQueue()
         
-        var urlRequest = URLRequest(url: url)
-        urlRequest.httpMethod = "POST"
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.setValue("Bearer \(Config.transcriptionAPIKey)", forHTTPHeaderField: "Authorization")
-        urlRequest.httpBody = try encoder.encode(request)
+        // Save to Core Data
+        try await saveTranscriptionJob(jobID: queueItem.jobID!, talkID: talk.id, status: .processing)
         
-        do {
-            let (data, response) = try await session.data(for: urlRequest)
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw TranscriptionError.invalidResponse
-            }
-            
-            guard httpResponse.statusCode == 201 || httpResponse.statusCode == 200 else {
-                throw TranscriptionError.httpError(httpResponse.statusCode)
-            }
-            
-            let transcriptionResponse = try decoder.decode(CreateTranscriptionResponse.self, from: data)
-            
-            // Add to queue
-            let queueItem = TranscriptionQueueItem(
-                talkID: talk.id,
-                jobID: transcriptionResponse.jobID,
-                priority: priority,
-                status: transcriptionResponse.status
-            )
-            
-            transcriptionQueue.append(queueItem)
-            sortTranscriptionQueue()
-            
-            // Save to Core Data
-            try await saveTranscriptionJob(jobID: transcriptionResponse.jobID, talkID: talk.id, status: transcriptionResponse.status)
-            
-            print("Transcription requested for talk: \(talk.title)")
-            
-        } catch {
-            if error is TranscriptionError {
-                throw error
-            } else {
-                throw TranscriptionError.networkError(error)
-            }
+        print("Starting local transcription for talk: \(talk.title)")
+        
+        // Perform transcription in background task
+        Task.detached { [weak self] in
+            await self?.performLocalTranscription(for: talk, audioURL: audioURL, queueItem: queueItem)
         }
+    }
+    
+    func requestTranscription(for talk: Talk, priority: TranscriptionPriority = .normal) async throws {
+        // Redirect to local transcription - this is now the only supported method
+        try await transcribeLocalAudio(for: talk, priority: priority)
     }
     
     func cancelTranscription(for talkID: String) async throws {
@@ -276,6 +298,11 @@ final class TranscriptionService: ObservableObject {
         for item in inProgressItems {
             guard let jobID = item.jobID else { continue }
             
+            // Skip polling for local transcriptions (they handle their own completion)
+            if jobID.hasPrefix("local-") {
+                continue
+            }
+            
             do {
                 if Config.useMockServices {
                     await mockPollTranscriptionStatus(item: item)
@@ -392,6 +419,246 @@ final class TranscriptionService: ObservableObject {
         // This would typically be a DELETE or POST request to cancel the job
         print("Cancelling transcription job: \(jobID)")
     }
+    
+    private func initializeWhisperKit() async {
+        guard !isInitializingWhisperKit && whisperKit == nil else { return }
+        
+        isInitializingWhisperKit = true
+        defer { isInitializingWhisperKit = false }
+        
+        do {
+            print("Initializing WhisperKit...")
+            whisperKit = try await WhisperKit()
+            print("WhisperKit initialized successfully")
+        } catch {
+            print("Failed to initialize WhisperKit: \(error)")
+        }
+    }
+    
+    private func ensureWhisperKitReady() async -> Bool {
+        // If WhisperKit is already initialized, return immediately
+        if whisperKit != nil {
+            print("WhisperKit already initialized, proceeding...")
+            return true
+        }
+        
+        // If already initializing, wait for it to complete
+        if isInitializingWhisperKit {
+            print("WhisperKit is initializing, waiting...")
+            // Wait for initialization to complete (max 30 seconds)
+            for i in 0..<60 {
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                if whisperKit != nil {
+                    print("WhisperKit initialization completed after waiting")
+                    return true
+                }
+                if !isInitializingWhisperKit {
+                    print("WhisperKit initialization failed during wait")
+                    break
+                }
+                if i % 10 == 0 && i > 0 {
+                    print("Still waiting for WhisperKit initialization... (\(i/2) seconds)")
+                }
+            }
+            return whisperKit != nil
+        }
+        
+        // Otherwise, initialize now
+        print("Starting WhisperKit initialization...")
+        await initializeWhisperKit()
+        let success = whisperKit != nil
+        print("WhisperKit initialization result: \(success ? "success" : "failed")")
+        return success
+    }
+    
+    private func getLocalAudioURL(for talkID: String) -> URL {
+        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let audioDirectory = documentsURL.appendingPathComponent("audio")
+        return audioDirectory.appendingPathComponent("\(talkID).mp3")
+    }
+    
+    private func performLocalTranscription(for talk: Talk, audioURL: URL, queueItem: TranscriptionQueueItem) async {
+        // Ensure WhisperKit is ready before proceeding
+        let isReady = await ensureWhisperKitReady()
+        guard isReady, let whisperKit = whisperKit else {
+            print("WhisperKit failed to initialize or is not available")
+            await handleTranscriptionFailure(for: queueItem)
+            return
+        }
+        
+        do {
+            print("Starting streaming transcription for: \(audioURL.path)")
+            
+            // Initialize streaming transcript
+            await MainActor.run {
+                streamingTranscripts[talk.id] = StreamingTranscript(talkID: talk.id)
+            }
+            
+            // Update queue status
+            await MainActor.run {
+                if let index = transcriptionQueue.firstIndex(where: { $0.talkID == queueItem.talkID }) {
+                    transcriptionQueue[index] = TranscriptionQueueItem(
+                        talkID: queueItem.talkID,
+                        jobID: queueItem.jobID,
+                        priority: queueItem.priority,
+                        status: .processing,
+                        progress: 0.1
+                    )
+                }
+            }
+            
+            // Start progress simulation in background
+            Task.detached { [weak self] in
+                for progress in stride(from: 0.1, through: 0.9, by: 0.1) {
+                    try? await Task.sleep(nanoseconds: UInt64(2 * 1_000_000_000)) // 2 seconds
+                    
+                    await MainActor.run {
+                        guard let self = self else { return }
+                        
+                        // Update progress
+                        self.streamingTranscripts[talk.id]?.updateProgress(Float(progress))
+                        
+                        // Update queue progress
+                        if let index = self.transcriptionQueue.firstIndex(where: { $0.talkID == queueItem.talkID }) {
+                            self.transcriptionQueue[index] = TranscriptionQueueItem(
+                                talkID: queueItem.talkID,
+                                jobID: queueItem.jobID,
+                                priority: queueItem.priority,
+                                status: .processing,
+                                progress: Double(progress)
+                            )
+                        }
+                        
+                        // Notify UI of progress
+                        NotificationCenter.default.post(
+                            name: .transcriptionProgress,
+                            object: nil,
+                            userInfo: ["talkID": talk.id, "progress": Float(progress)]
+                        )
+                    }
+                }
+            }
+            
+            // Perform actual transcription
+            let results = try await whisperKit.transcribe(audioPath: audioURL.path)
+            
+            guard let firstResult = results.first else {
+                throw TranscriptionError.transcriptionFailed
+            }
+            
+            // Simulate streaming segments by adding them one by one with delays
+            for (index, segment) in firstResult.segments.enumerated() {
+                let transcriptSegment = TranscriptSegment(
+                    id: UUID().uuidString,
+                    startTime: TimeInterval(segment.start),
+                    endTime: TimeInterval(segment.end),
+                    text: cleanTranscriptText(segment.text),
+                    confidence: 0.95
+                )
+                
+                // Add segment to streaming transcript
+                await MainActor.run {
+                    streamingTranscripts[talk.id]?.addSegment(transcriptSegment)
+                    
+                    // Notify UI of new segment
+                    NotificationCenter.default.post(
+                        name: .transcriptionSegmentAdded,
+                        object: nil,
+                        userInfo: [
+                            "talkID": talk.id,
+                            "segment": transcriptSegment,
+                            "streamingTranscript": streamingTranscripts[talk.id] as Any
+                        ]
+                    )
+                }
+                
+                print("Added segment \(index + 1)/\(firstResult.segments.count): \(transcriptSegment.text)")
+                
+                // Add small delay to simulate streaming (but not too slow)
+                if index < firstResult.segments.count - 1 {
+                    try? await Task.sleep(nanoseconds: UInt64(0.5 * 1_000_000_000)) // 0.5 seconds
+                }
+            }
+            
+            // Create final transcript from result
+            let segments = firstResult.segments.map { segment in
+                TranscriptSegment(
+                    id: UUID().uuidString,
+                    startTime: TimeInterval(segment.start),
+                    endTime: TimeInterval(segment.end),
+                    text: cleanTranscriptText(segment.text),
+                    confidence: 0.95
+                )
+            }
+            
+            let transcript = Transcript(
+                id: "local-transcript-\(talk.id)",
+                talkID: talk.id,
+                text: cleanTranscriptText(firstResult.text),
+                segments: segments,
+                language: "en",
+                status: .completed,
+                createdAt: Date(),
+                completedAt: Date()
+            )
+            
+            // Complete streaming transcript
+            await MainActor.run {
+                streamingTranscripts[talk.id]?.complete()
+            }
+            
+            // Save completed transcript
+            try await saveCompletedTranscript(transcript)
+            
+            // Remove from queue
+            await MainActor.run {
+                if let index = transcriptionQueue.firstIndex(where: { $0.talkID == queueItem.talkID }) {
+                    transcriptionQueue.remove(at: index)
+                }
+            }
+            
+            // Notify UI that transcription completed
+            await MainActor.run {
+                NotificationCenter.default.post(
+                    name: .transcriptionCompleted,
+                    object: nil,
+                    userInfo: ["talkID": talk.id, "transcript": transcript]
+                )
+                
+                // Clean up streaming state
+                streamingTranscripts.removeValue(forKey: talk.id)
+            }
+            
+            print("Streaming transcription completed for talk: \(talk.title)")
+            
+        } catch {
+            print("Streaming transcription failed for talk \(talk.title): \(error)")
+            await MainActor.run {
+                streamingTranscripts.removeValue(forKey: talk.id)
+            }
+            await handleTranscriptionFailure(for: queueItem)
+        }
+    }
+    
+    private func handleTranscriptionFailure(for queueItem: TranscriptionQueueItem) async {
+        await MainActor.run {
+            if let index = transcriptionQueue.firstIndex(where: { $0.talkID == queueItem.talkID }) {
+                transcriptionQueue[index] = TranscriptionQueueItem(
+                    talkID: queueItem.talkID,
+                    jobID: queueItem.jobID,
+                    priority: queueItem.priority,
+                    status: .failed
+                )
+            }
+        }
+        
+        // Update Core Data
+        do {
+            try await updateTranscriptionStatus(jobID: queueItem.jobID!, status: .failed)
+        } catch {
+            print("Failed to update transcription status in Core Data: \(error)")
+        }
+    }
 }
 
 // MARK: - Mock Implementation
@@ -472,6 +739,24 @@ extension TranscriptionService {
             }
         }
     }
+    
+    // MARK: - Private Helper Methods
+    
+    private func cleanTranscriptText(_ text: String) -> String {
+        var cleanedText = text
+        
+        // Remove WhisperKit time tags and control markers like <|startoftranscript|>, <|en|>, <|transcribe|>, <|0.00|>
+        cleanedText = cleanedText.replacingOccurrences(of: #"<\|[^|]*\|>"#, with: "", options: .regularExpression)
+        
+        // Remove any remaining angle bracket tags
+        cleanedText = cleanedText.replacingOccurrences(of: #"<[^>]*>"#, with: "", options: .regularExpression)
+        
+        // Clean up multiple spaces and trim
+        cleanedText = cleanedText.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+        cleanedText = cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        return cleanedText
+    }
 }
 
 // MARK: - Error Types
@@ -485,6 +770,8 @@ enum TranscriptionError: LocalizedError {
     case rateLimited
     case quotaExceeded
     case unsupportedLanguage
+    case audioFileNotFound
+    case transcriptionFailed
     
     var errorDescription: String? {
         switch self {
@@ -515,6 +802,10 @@ enum TranscriptionError: LocalizedError {
             return "Transcription quota exceeded"
         case .unsupportedLanguage:
             return "Unsupported language for transcription"
+        case .audioFileNotFound:
+            return "Local audio file not found for transcription"
+        case .transcriptionFailed:
+            return "WhisperKit transcription failed"
         }
     }
 }

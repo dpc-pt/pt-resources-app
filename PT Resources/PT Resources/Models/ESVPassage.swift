@@ -32,11 +32,28 @@ struct ESVPassage: Codable, Identifiable {
     }
 }
 
-/// ESV API response model
+/// ESV API response model for text endpoint
 struct ESVResponse: Codable {
     let query: String
     let canonical: String
     let parsed: [[String]]
+    let passages: [String]
+    let copyright: String?
+    
+    func toESVPassage() -> ESVPassage {
+        return ESVPassage(
+            reference: canonical,
+            passages: passages,
+            copyright: copyright
+        )
+    }
+}
+
+/// ESV API response model for HTML endpoint
+struct ESVHTMLResponse: Codable {
+    let query: String
+    let canonical: String
+    let parsed: [[Int]]  // API returns numbers, not strings
     let passages: [String]
     let copyright: String?
     

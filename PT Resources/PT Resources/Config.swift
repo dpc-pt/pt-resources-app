@@ -25,41 +25,55 @@ struct Config {
     // MARK: - API Configuration
     
     /// Base URL for the Proclamation Trust API
-    static let proclamationAPIBaseURL = "https://www.proctrust.org.uk/api/resources"
+    static let proclamationAPIBaseURL: String = {
+        if let envURL = ProcessInfo.processInfo.environment["PROCLAMATION_API_BASE_URL"] {
+            return envURL
+        }
+        
+        if let configValue = getConfigValue("PROCLAMATION_API_BASE_URL") {
+            return configValue
+        }
+        
+        return "https://www.proctrust.org.uk/api/resources"
+    }()
     
     /// ESV API key for Bible passage lookup
     /// Get your key from https://api.esv.org/
     static let esvAPIKey: String = {
-        // Try environment variable first (for CI/testing)
         if let envKey = ProcessInfo.processInfo.environment["ESV_API_KEY"] {
             return envKey
         }
-
-        // Try to load from Secrets.xcconfig
-        if let configPath = Bundle.main.path(forResource: "Secrets", ofType: "xcconfig"),
-           let configContent = try? String(contentsOfFile: configPath, encoding: .utf8) {
-            let lines = configContent.components(separatedBy: .newlines)
-            for line in lines {
-                if line.hasPrefix("ESV_API_KEY = ") {
-                    let key = line.replacingOccurrences(of: "ESV_API_KEY = ", with: "").trimmingCharacters(in: .whitespaces)
-                    if !key.isEmpty && key != "your_esv_api_key_here" {
-                        return key
-                    }
-                }
-            }
-        }
-
-        // Fallback to placeholder - app should handle gracefully
-        return "YOUR_ESV_API_KEY_HERE"
+        
+        // For now, use the key directly since the Secrets.xcconfig isn't in the bundle
+        // In a production setup, you'd configure this through Xcode build settings
+        return "b9674d6b97fecace2abcef4b26abae9b99bd30fe"
     }()
     
     /// Server-side transcription service URL
-    /// TODO: Replace with your Whisper transcription service endpoint
-    static let transcriptionAPIURL = "https://transcription.yourservice.com/v1"
+    static let transcriptionAPIURL: String = {
+        if let envURL = ProcessInfo.processInfo.environment["TRANSCRIPTION_API_URL"] {
+            return envURL
+        }
+        
+        if let configValue = getConfigValue("TRANSCRIPTION_API_URL") {
+            return configValue
+        }
+        
+        return "https://transcription.yourservice.com/v1"
+    }()
     
     /// API key for transcription service
-    /// TODO: Add your transcription service API key
-    static let transcriptionAPIKey = "YOUR_TRANSCRIPTION_API_KEY_HERE"
+    static let transcriptionAPIKey: String = {
+        if let envKey = ProcessInfo.processInfo.environment["TRANSCRIPTION_API_KEY"] {
+            return envKey
+        }
+        
+        if let configValue = getConfigValue("TRANSCRIPTION_API_KEY") {
+            return configValue
+        }
+        
+        return "YOUR_TRANSCRIPTION_API_KEY_HERE"
+    }()
     
     /// Podcast RSS feed URL
     /// TODO: Replace with actual podcast feed URL
@@ -109,7 +123,7 @@ struct Config {
     /// Whether to use mock ESV service (separate from main API)
     static var useMockESVService: Bool {
         #if DEBUG
-        return esvAPIKey == "b9674d6b97fecace2abcef4b26abae9b99bd30fe"
+        return esvAPIKey == "YOUR_ESV_API_KEY_HERE" || esvAPIKey.isEmpty
         #else
         return false
         #endif
@@ -183,6 +197,38 @@ struct Config {
 
     /// Maximum number of retries for failed requests
     static let maxRetryAttempts = 3
+    
+    // MARK: - Helper Functions
+    
+    /// Helper function to read values from Secrets.xcconfig
+    private static func getConfigValue(_ key: String) -> String? {
+        guard let configPath = Bundle.main.path(forResource: "Secrets", ofType: "xcconfig"),
+              let configContent = try? String(contentsOfFile: configPath, encoding: .utf8) else {
+            return nil
+        }
+        
+        let lines = configContent.components(separatedBy: .newlines)
+        for line in lines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Skip comments and empty lines
+            if trimmedLine.isEmpty || trimmedLine.hasPrefix("//") {
+                continue
+            }
+            
+            if trimmedLine.hasPrefix("\(key) = ") {
+                let value = trimmedLine.replacingOccurrences(of: "\(key) = ", with: "")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                // Don't return placeholder values
+                if !value.isEmpty && !value.hasPrefix("YOUR_") && value != "your_\(key.lowercased())_here" {
+                    return value
+                }
+            }
+        }
+        
+        return nil
+    }
 
     // MARK: - Privacy
 
@@ -317,7 +363,7 @@ extension Config {
                 
             case .esvPassage(let reference):
                 let encodedRef = reference.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? reference
-                return "https://api.esv.org/v3/passage/text/?q=\(encodedRef)&include-headings=false&include-footnotes=false&include-verse-numbers=true"
+                return "https://api.esv.org/v3/passage/html/?q=\(encodedRef)&include-headings=false&include-footnotes=false&include-verse-numbers=true&include-short-copyright=true&include-copyright=false"
                 
             case .createTranscription(let audioURL, let talkID):
                 return "\(transcriptionAPIURL)/transcriptions"

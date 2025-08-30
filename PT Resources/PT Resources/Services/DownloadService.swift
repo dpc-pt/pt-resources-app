@@ -567,19 +567,13 @@ final class DownloadService: NSObject, ObservableObject {
         let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
         let videoDirectory = documentsURL.appendingPathComponent("video")
         
-        PTLogger.general.info("📁 Video directory path: \(videoDirectory.path)")
-        
         // Create directory if it doesn't exist
         if !fileManager.fileExists(atPath: videoDirectory.path) {
             do {
                 try fileManager.createDirectory(at: videoDirectory, withIntermediateDirectories: true, attributes: nil)
-                PTLogger.general.info("📁 Created video directory successfully")
             } catch {
                 PTLogger.general.error("📁 Failed to create video directory: \(error)")
-            }
-        } else {
-            PTLogger.general.info("📁 Video directory already exists")
-        }
+            }}
         
         return videoDirectory
     }

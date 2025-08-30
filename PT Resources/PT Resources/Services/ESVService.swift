@@ -46,7 +46,6 @@ class ESVService: ObservableObject {
         // Check Core Data cache
         if let cachedPassage = try await getCachedPassage(reference: normalizedRef),
            !cachedPassage.isExpired {
-            
             // Update memory cache
             cache.setObject(cachedPassage, forKey: normalizedRef as NSString)
             return cachedPassage.passage
@@ -119,7 +118,7 @@ class ESVService: ObservableObject {
         
         let request = ESVPassageRequest(reference: reference)
         
-        guard var urlComponents = URLComponents(string: "https://api.esv.org/v3/passage/text/") else {
+        guard var urlComponents = URLComponents(string: "https://api.esv.org/v3/passage/html/") else {
             throw ESVError.invalidURL
         }
         
@@ -142,8 +141,12 @@ class ESVService: ObservableObject {
             
             switch httpResponse.statusCode {
             case 200:
-                let esvResponse = try decoder.decode(ESVResponse.self, from: data)
-                return esvResponse.toESVPassage()
+                do {
+                    let esvResponse = try decoder.decode(ESVHTMLResponse.self, from: data)
+                    return esvResponse.toESVPassage()
+                } catch {
+                    throw ESVError.decodingError(error)
+                }
                 
             case 400:
                 throw ESVError.invalidReference

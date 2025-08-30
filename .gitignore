@@ -61,6 +61,9 @@ Thumbs.db
 .env.local
 .env.*.local
 
+# Secrets and API keys
+Secrets.xcconfig
+
 # Swift Package Manager
 Package.resolved
 
