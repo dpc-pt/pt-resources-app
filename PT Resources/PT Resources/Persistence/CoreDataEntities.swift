@@ -34,6 +34,8 @@ extension TalkEntity {
     @NSManaged public var localAudioURL: String?
     @NSManaged public var localVideoURL: String?
     @NSManaged public var imageURL: String?
+    @NSManaged public var conferenceImageURL: String?
+    @NSManaged public var defaultImageURL: String?
     @NSManaged public var isDownloaded: Bool
     @NSManaged public var isFavorite: Bool
     @NSManaged public var fileSize: Int64
@@ -48,6 +50,21 @@ extension TalkEntity {
     @NSManaged public var seriesEntity: SeriesEntity?
     @NSManaged public var speakerEntity: SpeakerEntity?
     @NSManaged public var transcript: TranscriptEntity?
+    
+    // Computed property for artwork URL with fallback priority
+    var artworkURL: String? {
+        // Priority: imageURL -> conferenceImageURL -> defaultImageURL
+        if let imageURL = imageURL, !imageURL.isEmpty {
+            return imageURL
+        }
+        if let conferenceImageURL = conferenceImageURL, !conferenceImageURL.isEmpty {
+            return conferenceImageURL
+        }
+        if let defaultImageURL = defaultImageURL, !defaultImageURL.isEmpty {
+            return defaultImageURL
+        }
+        return nil
+    }
 
 }
 

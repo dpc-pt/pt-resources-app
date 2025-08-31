@@ -120,19 +120,10 @@ struct TalkDetailView: View {
         GeometryReader { geometry in
             ZStack {
                 // Background image or default
-                Group {
-                    if let imageURL = talk.imageURL, let url = URL(string: imageURL) {
-                        AsyncImage(url: url) { image in
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            defaultArtworkView
-                        }
-                    } else {
-                        defaultArtworkView
-                    }
+                PTAsyncImage(url: talk.artworkURL.flatMap(URL.init)) {
+                    defaultArtworkView
                 }
+                .aspectRatio(contentMode: .fill)
                 .clipped()
                 
                 // Dark overlay for text readability

@@ -22,6 +22,8 @@ struct Talk: Codable, Identifiable, Hashable {
     let audioURL: String?
     let videoURL: String?
     let imageURL: String?
+    let conferenceImageURL: String?
+    let defaultImageURL: String?
     let fileSize: Int64?
     let category: String?
     let scriptureReference: String?
@@ -37,6 +39,8 @@ struct Talk: Codable, Identifiable, Hashable {
         case audioURL = "audioUrl"
         case videoURL = "videoUrl"  
         case imageURL = "imageUrl"
+        case conferenceImageURL = "conferenceImageUrl"  // Matches actual API response
+        case defaultImageURL = "defaultImageUrl"
         case fileSize
         case conferenceId
         case speakerIds
@@ -57,6 +61,8 @@ struct Talk: Codable, Identifiable, Hashable {
         videoURL = try container.decodeIfPresent(String.self, forKey: .videoURL)
         
         imageURL = try container.decodeIfPresent(String.self, forKey: .imageURL)
+        conferenceImageURL = try container.decodeIfPresent(String.self, forKey: .conferenceImageURL)
+        defaultImageURL = try container.decodeIfPresent(String.self, forKey: .defaultImageURL)
         fileSize = try container.decodeIfPresent(Int64.self, forKey: .fileSize)
         category = try container.decodeIfPresent(String.self, forKey: .category)
         
@@ -95,6 +101,8 @@ struct Talk: Codable, Identifiable, Hashable {
         audioURL: String? = nil,
         videoURL: String? = nil,
         imageURL: String? = nil,
+        conferenceImageURL: String? = nil,
+        defaultImageURL: String? = nil,
         fileSize: Int64? = nil,
         category: String? = nil,
         scriptureReference: String? = nil,
@@ -113,6 +121,8 @@ struct Talk: Codable, Identifiable, Hashable {
         self.audioURL = audioURL
         self.videoURL = videoURL
         self.imageURL = imageURL
+        self.conferenceImageURL = conferenceImageURL
+        self.defaultImageURL = defaultImageURL
         self.fileSize = fileSize
         self.category = category
         self.scriptureReference = scriptureReference
@@ -188,6 +198,37 @@ struct Talk: Codable, Identifiable, Hashable {
     
     var shareURL: String {
         "\(Config.universalLinkDomain)/talks/\(id)"
+    }
+    
+    // Computed property for artwork URL with fallback priority
+    var artworkURL: String? {
+        // Priority: imageURL -> conferenceImageURL -> defaultImageURL
+        if let imageURL = imageURL, !imageURL.isEmpty {
+            return constructFullURL(from: imageURL)
+        }
+        if let conferenceImageURL = conferenceImageURL, !conferenceImageURL.isEmpty {
+            return constructFullURL(from: conferenceImageURL)
+        }
+        if let defaultImageURL = defaultImageURL, !defaultImageURL.isEmpty {
+            return constructFullURL(from: defaultImageURL)
+        }
+        
+        // Return nil if no artwork is available - let the UI handle the fallback
+        return nil
+    }
+    
+    // Helper to construct full URLs from relative paths
+    private func constructFullURL(from urlString: String) -> String {
+        // If already a full URL, return as-is
+        if urlString.hasPrefix("http://") || urlString.hasPrefix("https://") {
+            return urlString
+        }
+        // If it starts with "/", it's a relative URL from the root
+        if urlString.hasPrefix("/") {
+            return "https://www.proctrust.org.uk\(urlString)"
+        }
+        // Otherwise, assume it needs the full base URL
+        return "https://www.proctrust.org.uk/\(urlString)"
     }
 }
 
@@ -426,6 +467,8 @@ extension Talk {
             audioURL: "https://example.com/audio/mock-1.mp3",
             videoURL: "https://example.com/video/mock-1.mp4",
             imageURL: "https://example.com/images/john-series.jpg",
+            conferenceImageURL: "https://example.com/images/conference-john.jpg",
+            defaultImageURL: "/images/brand/logos/pt-resources.svg",
             fileSize: 45_000_000 // 45 MB
         ),
         Talk(
@@ -440,6 +483,8 @@ extension Talk {
             audioURL: "https://example.com/audio/mock-2.mp3",
             videoURL: "https://example.com/video/mock-2.mp4",
             imageURL: "https://example.com/images/john-series.jpg",
+            conferenceImageURL: "https://example.com/images/conference-john.jpg",
+            defaultImageURL: "/images/brand/logos/pt-resources.svg",
             fileSize: 38_000_000 // 38 MB
         ),
         Talk(
@@ -453,6 +498,8 @@ extension Talk {
             duration: 2520, // 42 minutes
             audioURL: "https://example.com/audio/mock-3.mp3",
             imageURL: "https://example.com/images/john-series.jpg",
+            conferenceImageURL: "https://example.com/images/conference-john.jpg",
+            defaultImageURL: "/images/brand/logos/pt-resources.svg",
             fileSize: 48_000_000 // 48 MB
         )
     ]

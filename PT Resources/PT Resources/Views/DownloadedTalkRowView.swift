@@ -16,22 +16,27 @@ struct DownloadedTalkRowView: View {
     
     var body: some View {
         HStack(spacing: PTDesignTokens.Spacing.md) {
-            // Artwork/Thumbnail with PT styling
-            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image)
-                .fill(LinearGradient(
-                    colors: [PTDesignTokens.Colors.tang.opacity(0.1), PTDesignTokens.Colors.kleinBlue.opacity(0.1)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
-                .overlay(
-                    PTLogo(size: 24, showText: false)
-                )
-                .frame(width: 72, height: 72)
-                .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image))
-                .overlay(
+            // Artwork/Thumbnail with PT styling and caching using priority order
+            PTAsyncImage(url: downloadedTalk.artworkURL.flatMap(URL.init),
+                       targetSize: CGSize(width: 72, height: 72)) {
+                ZStack {
                     RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image)
-                        .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
-                )
+                        .fill(LinearGradient(
+                            colors: [PTDesignTokens.Colors.tang.opacity(0.1), PTDesignTokens.Colors.kleinBlue.opacity(0.1)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                    
+                    PTLogo(size: 24, showText: false)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image))
+            }
+            .frame(width: 72, height: 72)
+            .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image))
+            .overlay(
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image)
+                    .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
+            )
             
             // Talk Information
             VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
@@ -174,7 +179,10 @@ struct DownloadedTalkRowView_Previews: PreviewProvider {
                 fileSize: 25_000_000, // 25 MB
                 localAudioURL: "/path/to/audio.mp3",
                 lastAccessedAt: Date().addingTimeInterval(-3600), // 1 hour ago
-                createdAt: Date().addingTimeInterval(-86400) // 1 day ago
+                createdAt: Date().addingTimeInterval(-86400), // 1 day ago
+                imageURL: "/images/brand/logos/pt-resources.svg",
+                conferenceImageURL: nil,
+                defaultImageURL: nil
             ),
             onPlayTap: {},
             onDeleteTap: {}

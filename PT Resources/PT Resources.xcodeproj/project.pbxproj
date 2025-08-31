@@ -411,7 +411,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "PT-Resources-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = PT;
+				INFOPLIST_KEY_CFBundleDisplayName = "PT Resources";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "This app streams audio content and downloads talks from the Proclamation Trust servers.";
 				INFOPLIST_KEY_NSUserTrackingUsageDescription = "This app does not track users. This permission is requested to comply with iOS requirements.";
@@ -446,7 +446,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "PT-Resources-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = PT;
+				INFOPLIST_KEY_CFBundleDisplayName = "PT Resources";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "This app streams audio content and downloads talks from the Proclamation Trust servers.";
 				INFOPLIST_KEY_NSUserTrackingUsageDescription = "This app does not track users. This permission is requested to comply with iOS requirements.";

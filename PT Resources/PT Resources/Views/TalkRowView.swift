@@ -29,8 +29,8 @@ struct TalkRowView: View {
     var body: some View {
         Button(action: onTalkTap) {
             HStack(spacing: PTDesignTokens.Spacing.md) {
-                // Artwork/Thumbnail with PT styling and caching
-                PTAsyncImage(url: URL(string: talk.imageURL ?? ""),
+                // Artwork/Thumbnail with PT styling and caching using priority order
+                PTAsyncImage(url: talk.artworkURL.flatMap(URL.init),
                            targetSize: CGSize(width: 72, height: 72)) {
                     ZStack {
                         PTBrandingService.shared.createBrandedBackground(

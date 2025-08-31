@@ -29,18 +29,18 @@ struct PTSplashScreen: View {
             .opacity(backgroundGradientOpacity)
             .ignoresSafeArea()
             
-            // Background pattern (subtle)
-            PTBackgroundPattern()
-                .opacity(0.1)
+            // Background pattern using authentic PT icon pattern
+            PTIconPattern()
                 .ignoresSafeArea()
             
             VStack(spacing: 40) {
                 Spacer()
                 
-                // PT Logo
+                // PT Logo with proper padding
                 VStack(spacing: 24) {
-                    // Authentic PT logo icon from SVG
+                    // Authentic PT logo icon from SVG with padding
                     PTLogo(size: 120, showText: true)
+                        .padding(.all, 32) // Padding on all sides
                         .scaleEffect(logoScale)
                         .opacity(logoOpacity)
                 }
@@ -51,6 +51,7 @@ struct PTSplashScreen: View {
                 VStack(spacing: 16) {
                     HStack(spacing: 12) {
                         PTLogo(size: 16, showText: false)
+                            .padding(.all, 4) // Small padding around loading logo
                             .rotationEffect(.degrees(isAnimating ? 360 : 0))
                             .animation(.linear(duration: 2).repeatForever(autoreverses: false), value: isAnimating)
                         
@@ -164,24 +165,20 @@ struct PTLoadingDots: View {
     }
 }
 
-// MARK: - Background Pattern
+// MARK: - PT Icon Pattern Background
 
-struct PTBackgroundPattern: View {
+struct PTIconPattern: View {
     var body: some View {
-        Canvas { context, size in
-            let dotSize: CGFloat = 2
-            let spacing: CGFloat = 20
-            
-            for x in stride(from: 0, through: size.width, by: spacing) {
-                for y in stride(from: 0, through: size.height, by: spacing) {
-                    let opacity = Double.random(in: 0.1...0.3)
-                    context.fill(
-                        Circle()
-                            .path(in: CGRect(x: x, y: y, width: dotSize, height: dotSize)),
-                        with: .color(.white.opacity(opacity))
-                    )
-                }
-            }
+        GeometryReader { geometry in
+            // Single PT icon pattern at bottom right
+            Image("pt-icon-pattern")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 280, height: 280)
+                .position(
+                    x: geometry.size.width * 0.85,
+                    y: geometry.size.height * 0.85
+                )
         }
     }
 }

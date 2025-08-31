@@ -56,10 +56,10 @@ final class MediaArtworkService: ObservableObject {
             isGeneratingArtwork = true
         }
         
-        // Try to load image from URL first
+        // Try to load image from URL using priority order
         var artwork: UIImage?
         
-        if let imageURL = talk.imageURL, let url = URL(string: imageURL) {
+        if let artworkURL = talk.artworkURL, let url = URL(string: artworkURL) {
             artwork = await loadRemoteImage(from: url)
         }
         

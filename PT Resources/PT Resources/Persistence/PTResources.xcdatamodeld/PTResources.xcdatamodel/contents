@@ -71,6 +71,8 @@
         <attribute name="localAudioURL" optional="YES" attributeType="String"/>
         <attribute name="localVideoURL" optional="YES" attributeType="String"/>
         <attribute name="imageURL" optional="YES" attributeType="String"/>
+        <attribute name="conferenceImageURL" optional="YES" attributeType="String"/>
+        <attribute name="defaultImageURL" optional="YES" attributeType="String"/>
         <attribute name="isDownloaded" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
         <attribute name="isFavorite" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
         <attribute name="fileSize" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>

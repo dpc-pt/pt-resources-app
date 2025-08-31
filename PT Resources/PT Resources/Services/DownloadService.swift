@@ -351,7 +351,10 @@ final class DownloadService: NSObject, ObservableObject {
                     fileSize: entity.fileSize,
                     localAudioURL: localPath,
                     lastAccessedAt: entity.lastAccessedAt ?? Date(),
-                    createdAt: entity.createdAt ?? Date()
+                    createdAt: entity.createdAt ?? Date(),
+                    imageURL: entity.imageURL,
+                    conferenceImageURL: entity.conferenceImageURL,
+                    defaultImageURL: entity.defaultImageURL
                 )
             }
         }
@@ -466,6 +469,8 @@ final class DownloadService: NSObject, ObservableObject {
                     entity.desc = talk.description
                     entity.audioURL = talk.audioURL
                     entity.imageURL = talk.imageURL
+                    entity.conferenceImageURL = talk.conferenceImageURL
+                    entity.defaultImageURL = talk.defaultImageURL
                     entity.dateRecorded = talk.dateRecorded
                     entity.biblePassage = talk.biblePassage
                 } else {
@@ -1200,6 +1205,11 @@ struct DownloadedTalk: Identifiable, Equatable {
     let lastAccessedAt: Date
     let createdAt: Date
     
+    // Artwork URLs for priority-based image display
+    let imageURL: String?
+    let conferenceImageURL: String?
+    let defaultImageURL: String?
+    
     var formattedDuration: String {
         let minutes = duration / 60
         let seconds = duration % 60
@@ -1217,5 +1227,36 @@ struct DownloadedTalk: Identifiable, Equatable {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: lastAccessedAt, relativeTo: Date())
+    }
+    
+    // Computed property for artwork URL with fallback priority
+    var artworkURL: String? {
+        // Priority: imageURL -> conferenceImageURL -> defaultImageURL
+        if let imageURL = imageURL, !imageURL.isEmpty {
+            return constructFullURL(from: imageURL)
+        }
+        if let conferenceImageURL = conferenceImageURL, !conferenceImageURL.isEmpty {
+            return constructFullURL(from: conferenceImageURL)
+        }
+        if let defaultImageURL = defaultImageURL, !defaultImageURL.isEmpty {
+            return constructFullURL(from: defaultImageURL)
+        }
+        
+        // Return nil if no artwork is available - let the UI handle the fallback
+        return nil
+    }
+    
+    // Helper to construct full URLs from relative paths
+    private func constructFullURL(from urlString: String) -> String {
+        // If already a full URL, return as-is
+        if urlString.hasPrefix("http://") || urlString.hasPrefix("https://") {
+            return urlString
+        }
+        // If it starts with "/", it's a relative URL from the root
+        if urlString.hasPrefix("/") {
+            return "https://www.proctrust.org.uk\(urlString)"
+        }
+        // Otherwise, assume it needs the full base URL
+        return "https://www.proctrust.org.uk/\(urlString)"
     }
 }

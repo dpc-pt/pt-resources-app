@@ -32,7 +32,7 @@ struct MiniPlayerView: View {
             Button(action: { showingFullPlayer = true }) {
                 HStack(spacing: PTDesignTokens.Spacing.md) {
                     // Artwork with PT styling and caching
-                    PTAsyncImage(url: URL(string: playerService.currentTalk?.imageURL ?? ""),
+                    PTAsyncImage(url: URL(string: playerService.currentTalk?.artworkURL ?? ""),
                                targetSize: CGSize(width: 44, height: 44)) {
                         RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.sm)
                             .fill(LinearGradient(

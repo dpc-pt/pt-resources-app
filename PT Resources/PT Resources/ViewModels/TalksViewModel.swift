@@ -32,7 +32,6 @@ final class TalksViewModel: ObservableObject {
     @Published var filteredTalks: [Talk] = []
     @Published var searchText = ""
     @Published var selectedFilters = TalkSearchFilters()
-    @Published var sortOption: TalkSortOption = .dateNewest
     @Published var isLoading = false
     @Published var error: APIError?
     @Published var hasMorePages = true
@@ -123,12 +122,6 @@ final class TalksViewModel: ObservableObject {
         }
     }
     
-    func changeSortOption(_ newSortOption: TalkSortOption) {
-        sortOption = newSortOption
-        Task {
-            await fetchTalks(page: 1, resetList: true)
-        }
-    }
     
     func loadFilterOptions() {
         Task {
@@ -197,8 +190,7 @@ final class TalksViewModel: ObservableObject {
         do {
             let response = try await apiService.fetchTalks(
                 filters: selectedFilters,
-                page: page,
-                sortBy: sortOption
+                page: page
             )
             
             if resetList {
@@ -215,8 +207,8 @@ final class TalksViewModel: ObservableObject {
             // Cache talks locally
             await cacheTalks(response.talks)
 
-            // Prefetch images for better performance
-            let imageURLs = response.talks.compactMap { URL(string: $0.imageURL ?? "") }
+            // Prefetch images for better performance using artworkURL priority
+            let imageURLs = response.talks.compactMap { URL(string: $0.artworkURL ?? "") }
             ImageCacheService.shared.prefetchImages(urls: imageURLs)
             
         } catch let apiError as APIError {
@@ -259,6 +251,8 @@ final class TalksViewModel: ObservableObject {
                 entity.audioURL = talk.audioURL
                 entity.videoURL = talk.videoURL
                 entity.imageURL = talk.imageURL
+                entity.conferenceImageURL = talk.conferenceImageURL
+                entity.defaultImageURL = talk.defaultImageURL
                 entity.fileSize = talk.fileSize ?? 0
                 entity.updatedAt = Date()
                 
@@ -274,23 +268,8 @@ final class TalksViewModel: ObservableObject {
             let cachedTalks = try await persistenceController.performBackgroundTask { context in
                 let request: NSFetchRequest<TalkEntity> = TalkEntity.fetchRequest()
                 
-                // Apply sorting
-                switch self.sortOption {
-                case .dateNewest:
-                    request.sortDescriptors = [NSSortDescriptor(keyPath: \TalkEntity.dateRecorded, ascending: false)]
-                case .dateOldest:
-                    request.sortDescriptors = [NSSortDescriptor(keyPath: \TalkEntity.dateRecorded, ascending: true)]
-                case .titleAZ:
-                    request.sortDescriptors = [NSSortDescriptor(keyPath: \TalkEntity.title, ascending: true)]
-                case .titleZA:
-                    request.sortDescriptors = [NSSortDescriptor(keyPath: \TalkEntity.title, ascending: false)]
-                case .speaker:
-                    request.sortDescriptors = [NSSortDescriptor(keyPath: \TalkEntity.speaker, ascending: true)]
-                case .series:
-                    request.sortDescriptors = [NSSortDescriptor(keyPath: \TalkEntity.series, ascending: true)]
-                case .duration:
-                    request.sortDescriptors = [NSSortDescriptor(keyPath: \TalkEntity.duration, ascending: false)]
-                }
+                // Default sorting: newest first
+                request.sortDescriptors = [NSSortDescriptor(keyPath: \TalkEntity.dateRecorded, ascending: false)]
                 
                 // Apply search filter if present
                 if !self.selectedFilters.query.isEmpty {
@@ -329,6 +308,8 @@ final class TalksViewModel: ObservableObject {
                         audioURL: entity.audioURL,
                         videoURL: entity.videoURL,
                         imageURL: entity.imageURL,
+                        conferenceImageURL: entity.conferenceImageURL,
+                        defaultImageURL: entity.defaultImageURL,
                         fileSize: entity.fileSize > 0 ? entity.fileSize : nil
                     )
                 }
@@ -358,8 +339,10 @@ final class TalksViewModel: ObservableObject {
     }
     
     /// Apply client-side filtering to the talks array
+    /// Note: Sorting is handled server-side via API; this method only applies filtering
     private func applyClientSideFiltering() {
-        filteredTalks = talks.filter { talk in
+        // Filter the talks (server-side sorting is already applied)
+        let filtered = talks.filter { talk in
             // Search text filter
             if !selectedFilters.query.isEmpty {
                 let searchTerms = selectedFilters.query.lowercased()
@@ -482,5 +465,10 @@ final class TalksViewModel: ObservableObject {
             
             return true
         }
+        
+        // For server data, sorting is already applied by the API
+        // Only apply client-side sorting for cached/offline data or when no server data available
+        filteredTalks = filtered
     }
+    
 }

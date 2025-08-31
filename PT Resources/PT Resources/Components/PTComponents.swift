@@ -52,13 +52,11 @@ struct PTSearchBar: View {
     }
 }
 
-// MARK: - Filter Sort Bar
+// MARK: - Filter Bar
 
-struct PTFilterSortBar: View {
+struct PTFilterBar: View {
     @Binding var showingFilters: Bool
-    @Binding var showingSortOptions: Bool
     let activeFiltersCount: Int
-    let currentSortOption: TalkSortOption
     
     var body: some View {
         HStack(spacing: PTDesignTokens.Spacing.md) {
@@ -89,27 +87,6 @@ struct PTFilterSortBar: View {
             }
             
             Spacer()
-            
-            // Sort Button
-            Button(action: { showingSortOptions = true }) {
-                HStack(spacing: PTDesignTokens.Spacing.xs) {
-                    Image(systemName: "arrow.up.arrow.down")
-                        .font(PTFont.ptButtonText)
-                    Text(currentSortOption.displayName)
-                        .font(PTFont.ptButtonText)  // Using PT button typography
-                }
-                .foregroundColor(PTDesignTokens.Colors.ink)  // Using PT Ink for primary text color
-                .padding(.horizontal, PTDesignTokens.Spacing.md)
-                .padding(.vertical, PTDesignTokens.Spacing.sm)
-                .background(
-                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
-                        .fill(PTDesignTokens.Colors.surface)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
-                                .stroke(PTDesignTokens.Colors.medium.opacity(0.3), lineWidth: 1)
-                        )
-                )
-            }
         }
     }
 }
@@ -169,11 +146,9 @@ struct PTComponents_Previews: PreviewProvider {
         VStack(spacing: 32) {
             PTSearchBar(text: .constant("Search text"), onSearchButtonClicked: {})
             
-            PTFilterSortBar(
+            PTFilterBar(
                 showingFilters: .constant(false),
-                showingSortOptions: .constant(false),
-                activeFiltersCount: 2,
-                currentSortOption: .dateNewest
+                activeFiltersCount: 2
             )
             
             PTLoadingView()

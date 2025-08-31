@@ -8,7 +8,7 @@
 import SwiftUI
 import UIKit
 import Combine
-import CommonCrypto
+import CryptoKit
 
 /// Comprehensive image caching service with memory and disk caching
 final class ImageCacheService {
@@ -45,47 +45,95 @@ final class ImageCacheService {
     // MARK: - Public API
 
     /// Load image from cache or download from URL
-    func loadImage(from url: URL, targetSize: CGSize? = nil) async throws -> UIImage {
+    @MainActor func loadImage(from url: URL, targetSize: CGSize? = nil) async throws -> UIImage {
         let cacheKey = cacheKeyForURL(url)
 
         // Check memory cache first
         if let cachedImage = memoryCache.object(forKey: cacheKey as NSString) {
-            PTLogger.general.info("Image loaded from memory cache: \(url.absoluteString)")
+            PTLogger.general.debug("Image loaded from memory cache: \(url.absoluteString)")
             return processImageForSize(cachedImage, targetSize: targetSize)
         }
 
         // Check disk cache
         if let diskImage = loadFromDiskCache(cacheKey: cacheKey) {
-            PTLogger.general.info("Image loaded from disk cache: \(url.absoluteString)")
+            PTLogger.general.debug("Image loaded from disk cache: \(url.absoluteString)")
             // Store in memory cache for faster future access
             storeInMemoryCache(diskImage, key: cacheKey)
             return processImageForSize(diskImage, targetSize: targetSize)
         }
 
-        // Download from network
-        PTLogger.general.info("Downloading image from network: \(url.absoluteString)")
-        let image = try await downloadImage(from: url)
-
-        // Process image if needed
-        let processedImage = processImageForSize(image, targetSize: targetSize)
-
-        // Cache the original image
-        cacheImage(image, for: cacheKey)
-
-        return processedImage
+        // Check network availability before attempting download
+        let networkMonitor = NetworkMonitor()
+        guard networkMonitor.isConnected && !networkMonitor.isOfflineMode else {
+            PTLogger.general.debug("Network unavailable, cannot download image: \(url.absoluteString)")
+            throw ImageCacheError.networkError(NSError(domain: "NetworkUnavailable", code: -1))
+        }
+        
+        // Download from network with timeout and retry logic
+        PTLogger.general.debug("Downloading image from network: \(url.absoluteString)")
+        do {
+            let image = try await downloadImage(from: url)
+            
+            // Process image if needed
+            let processedImage = processImageForSize(image, targetSize: targetSize)
+            
+            // Cache the original image (async to avoid blocking)
+            Task {
+                cacheImage(image, for: cacheKey)
+            }
+            
+            return processedImage
+        } catch {
+            PTLogger.general.warning("Failed to download image from \(url.absoluteString): \(error.localizedDescription)")
+            throw ImageCacheError.networkError(error)
+        }
     }
 
     /// Prefetch images for better performance
-    func prefetchImages(urls: [URL]) {
+    func prefetchImages(urls: [URL], maxConcurrent: Int = 3) {
+        guard !urls.isEmpty else { return }
+        
         Task {
-            for url in urls {
-                do {
-                    _ = try await loadImage(from: url)
-                } catch {
-                    PTLogger.general.error("Failed to prefetch image \(url.absoluteString): \(error.localizedDescription)")
+            // Process with limited concurrency to avoid overwhelming the network
+            await withTaskGroup(of: Void.self) { group in
+                var urlIterator = urls.makeIterator()
+                var activeTasks = 0
+                
+                // Start initial batch
+                while activeTasks < maxConcurrent, let url = urlIterator.next() {
+                    group.addTask { [weak self] in
+                        do {
+                            _ = try await self?.loadImage(from: url, targetSize: CGSize(width: 72, height: 72))
+                        } catch {
+                            PTLogger.general.debug("Failed to prefetch image \(url.absoluteString): \(error.localizedDescription)")
+                        }
+                    }
+                    activeTasks += 1
+                }
+                
+                // Continue with remaining URLs as tasks complete
+                for await _ in group {
+                    if let nextURL = urlIterator.next() {
+                        group.addTask { [weak self] in
+                            do {
+                                _ = try await self?.loadImage(from: nextURL, targetSize: CGSize(width: 72, height: 72))
+                            } catch {
+                                PTLogger.general.debug("Failed to prefetch image \(nextURL.absoluteString): \(error.localizedDescription)")
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+    
+    /// Prefetch images for talk list - optimized for thumbnail sizes
+    func prefetchTalkImages(_ talks: [Talk]) {
+        let imageUrls = talks.compactMap { talk -> URL? in
+            guard let artworkURL = talk.artworkURL, !artworkURL.isEmpty else { return nil }
+            return URL(string: artworkURL)
+        }
+        prefetchImages(urls: imageUrls, maxConcurrent: 2)
     }
 
     /// Clear all caches
@@ -125,18 +173,27 @@ final class ImageCacheService {
     // MARK: - Private Methods
 
     private func cacheKeyForURL(_ url: URL) -> String {
-        return url.absoluteString.md5()
+        return url.absoluteString.sha256()
     }
 
     private func downloadImage(from url: URL) async throws -> UIImage {
-        let (data, response) = try await URLSession.shared.data(from: url)
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 30.0
+        request.setValue("PT Resources/1.0", forHTTPHeaderField: "User-Agent")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw ImageCacheError.invalidResponse
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            PTLogger.general.warning("HTTP \(httpResponse.statusCode) for image URL: \(url.absoluteString)")
             throw ImageCacheError.invalidResponse
         }
 
         guard let image = UIImage(data: data) else {
+            PTLogger.general.error("Failed to decode image data from URL: \(url.absoluteString)")
             throw ImageCacheError.invalidImageData
         }
 
@@ -263,17 +320,13 @@ extension UIImage {
     }
 }
 
-// MARK: - String MD5 Extension
+// MARK: - String SHA256 Extension
 
 extension String {
-    func md5() -> String {
+    func sha256() -> String {
         let data = Data(utf8)
-        let hash = data.withUnsafeBytes { bytes -> [UInt8] in
-            var hash = [UInt8](repeating: 0, count: Int(CC_MD5_DIGEST_LENGTH))
-            CC_MD5(bytes.baseAddress, CC_LONG(data.count), &hash)
-            return hash
-        }
-        return hash.map { String(format: "%02x", $0) }.joined()
+        let hashed = SHA256.hash(data: data)
+        return hashed.compactMap { String(format: "%02x", $0) }.joined()
     }
 }
 
