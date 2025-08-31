@@ -12,7 +12,6 @@ struct TalkRowView: View {
     let isDownloaded: Bool
     let downloadProgress: Float?
     let onTalkTap: () -> Void
-    let onPlayTap: () -> Void
     let onDownloadTap: () -> Void
     
     @State private var isPressed = false
@@ -125,14 +124,6 @@ struct TalkRowView: View {
                 
                 // Action Buttons with PT styling
                 HStack(spacing: PTDesignTokens.Spacing.sm) {
-                    // Play Button
-                    Button(action: onPlayTap) {
-                        Image(systemName: "play.circle.fill")
-                            .font(PTFont.ptSectionTitle)
-                            .foregroundColor(PTDesignTokens.Colors.tang)  // Using PT Tang
-                    }
-                    .accessibilityPlayButton(isPlaying: false) // TODO: Pass actual playing state
-                    
                     // Download Button - only show for talks with audio content
                     if hasDownloadableAudio {
                         Button(action: onDownloadTap) {
@@ -201,7 +192,6 @@ struct TalkRowView_Previews: PreviewProvider {
                 isDownloaded: false,
                 downloadProgress: nil,
                 onTalkTap: {},
-                onPlayTap: {},
                 onDownloadTap: {}
             )
             
@@ -210,7 +200,6 @@ struct TalkRowView_Previews: PreviewProvider {
                 isDownloaded: false,
                 downloadProgress: 0.65,
                 onTalkTap: {},
-                onPlayTap: {},
                 onDownloadTap: {}
             )
             
@@ -219,7 +208,6 @@ struct TalkRowView_Previews: PreviewProvider {
                 isDownloaded: true,
                 downloadProgress: nil,
                 onTalkTap: {},
-                onPlayTap: {},
                 onDownloadTap: {}
             )
         }

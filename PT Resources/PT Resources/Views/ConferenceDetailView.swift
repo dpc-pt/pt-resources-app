@@ -19,10 +19,11 @@ struct ConferenceDetailView: View {
     @State private var conferenceResources: [Talk] = []
     @State private var isLoadingResources = false
     @State private var resourceError: APIError?
-    @State private var selectedTalk: Talk?
+
     @State private var showingDownloadAllAlert = false
     @State private var isDownloadingAll = false
     @State private var downloadAllProgress: [String: Float] = [:]
+    @State private var showingNowPlaying = false
     
     init(conference: ConferenceInfo) {
         self.conference = conference
@@ -61,9 +62,7 @@ struct ConferenceDetailView: View {
                 }
             }
         }
-        .navigationDestination(item: $selectedTalk) { talk in
-            TalkDetailView(talk: talk, downloadService: downloadService)
-        }
+
         .alert("Download All Resources", isPresented: $showingDownloadAllAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Download") {
@@ -74,6 +73,12 @@ struct ConferenceDetailView: View {
         }
         .onAppear {
             loadConferenceResources()
+        }
+        .fullScreenCover(isPresented: $showingNowPlaying) {
+            NowPlayingView()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showNowPlaying)) { _ in
+            showingNowPlaying = true
         }
     }
     
@@ -260,8 +265,7 @@ struct ConferenceDetailView: View {
                             talk: resource,
                             isDownloaded: isTalkDownloaded(resource.id),
                             downloadProgress: downloadService.downloadProgress[resource.id],
-                            onTalkTap: { selectedTalk = resource },
-                            onPlayTap: { playTalk(resource) },
+                            onTalkTap: { playTalk(resource) },
                             onDownloadTap: { downloadTalk(resource) }
                         )
                         .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
@@ -323,6 +327,11 @@ struct ConferenceDetailView: View {
     private func playTalk(_ talk: Talk) {
         playerService.loadTalk(talk)
         playerService.play()
+        // Show the full now playing view
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            // Small delay to ensure the talk is loaded before showing the player
+            NotificationCenter.default.post(name: .showNowPlaying, object: nil)
+        }
     }
     
     private func downloadTalk(_ talk: Talk) {

@@ -156,6 +156,11 @@ final class ConferencesViewModel: ObservableObject {
     /// Apply client-side filtering to the conferences array
     private func applyClientSideFiltering() {
         let filtered = conferences.filter { conference in
+            // Hide conferences with no talks/resources
+            if conference.resourceCount == 0 {
+                return false
+            }
+            
             // Search text filter
             if !selectedFilters.query.isEmpty {
                 let searchTerms = selectedFilters.query.lowercased()

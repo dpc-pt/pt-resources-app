@@ -99,8 +99,8 @@ struct MiniPlayerView: View {
             .padding(.vertical, PTDesignTokens.Spacing.md)
             .background(PTDesignTokens.Colors.surface)
         }
-        .sheet(isPresented: $showingFullPlayer) {
-            FullPlayerView(playerService: playerService)
+        .fullScreenCover(isPresented: $showingFullPlayer) {
+            NowPlayingView()
         }
     }
 }

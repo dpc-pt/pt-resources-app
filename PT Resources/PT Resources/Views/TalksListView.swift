@@ -25,11 +25,12 @@ struct TalksListView: View {
     private let apiService: TalksAPIServiceProtocol
     
     @State private var showingFilters = false
-    @State private var selectedTalk: Talk?
+
     @State private var selectedResourceId: String?
     @State private var downloadedTalks: [DownloadedTalk] = []
     @State private var isLoadingDownloadedTalks = false
     @State private var showingDownloadsSheet = false
+    @State private var showingNowPlaying = false
     
     init(apiService: TalksAPIServiceProtocol = TalksAPIService(), filtersAPIService: FiltersAPIService = FiltersAPIService(), initialFilters: TalkSearchFilters? = nil) {
         self.apiService = apiService
@@ -92,8 +93,7 @@ struct TalksListView: View {
                                         talk: talk,
                                         isDownloaded: isTalkDownloaded(talk.id),
                                         downloadProgress: downloadService.downloadProgress[talk.id],
-                                        onTalkTap: { selectedTalk = talk },
-                                        onPlayTap: { playTalk(talk) },
+                                        onTalkTap: { playTalk(talk) },
                                         onDownloadTap: { downloadTalk(talk) }
                                     )
                                     .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
@@ -149,9 +149,7 @@ struct TalksListView: View {
                 }
             )
         }
-        .sheet(item: $selectedTalk) { talk in
-            TalkDetailView(talk: talk, playerService: playerService, downloadService: downloadService)
-        }
+
         .sheet(item: Binding<ResourceNavigationItem?>(
             get: { selectedResourceId.map { ResourceNavigationItem(resourceId: $0) } },
             set: { _ in selectedResourceId = nil }
@@ -180,6 +178,12 @@ struct TalksListView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .downloadDeleted)) { _ in
             loadDownloadedTalks()
+        }
+        .fullScreenCover(isPresented: $showingNowPlaying) {
+            NowPlayingView()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showNowPlaying)) { _ in
+            showingNowPlaying = true
         }
     }
     
@@ -248,6 +252,11 @@ struct TalksListView: View {
     private func playTalk(_ talk: Talk) {
         playerService.loadTalk(talk)
         playerService.play()
+        // Show the full now playing view
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            // Small delay to ensure the talk is loaded before showing the player
+            NotificationCenter.default.post(name: .showNowPlaying, object: nil)
+        }
     }
     
     private func downloadTalk(_ talk: Talk) {
