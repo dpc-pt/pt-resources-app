@@ -26,6 +26,7 @@ struct HomeView: View {
     @State private var error: APIError?
     @State private var selectedConferenceId: String?
     @State private var selectedBlogPost: BlogPost?
+    @State private var showingSettings = false
     @Binding var selectedTab: Int
 
     init(selectedTab: Binding<Int>) {
@@ -102,6 +103,16 @@ struct HomeView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showingSettings = true }) {
+                        Image(systemName: "gearshape.circle")
+                            .font(.title3)
+                            .foregroundColor(PTDesignTokens.Colors.tang)
+                    }
+                    .accessibilityLabel("Settings")
+                }
+            }
         }
         .task {
             await loadLatestContent()
@@ -114,6 +125,9 @@ struct HomeView: View {
         }
         .sheet(item: $selectedBlogPost) { blogPost in
             BlogDetailView(blogPost: blogPost)
+        }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView()
         }
     }
     
@@ -196,16 +210,16 @@ struct PTQuickActionsView: View {
                     icon: "newspaper",
                     color: PTDesignTokens.Colors.tang
                 ) {
-                    selectedTab = 3 // Blog tab
+                    selectedTab = 2 // Blog tab
                 }
 
                 PTQuickActionButton(
-                    title: "Downloads",
-                    subtitle: "Offline access",
-                    icon: "arrow.down.circle",
+                    title: "Conferences",
+                    subtitle: "Events & workshops",
+                    icon: "calendar.badge.clock",
                     color: PTDesignTokens.Colors.lawn
                 ) {
-                    selectedTab = 2 // Downloads tab
+                    selectedTab = 3 // Conferences tab
                 }
             }
             .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)

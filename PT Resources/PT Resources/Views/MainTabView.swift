@@ -30,23 +30,24 @@ struct MainTabView: View {
                 .tag(1)
                 .accessibilityIdentifier(PTAccessibility.talksTab)
 
+            // Conferences Tab  
+            ConferencesListView()
+                .tabItem {
+                    Image(systemName: "calendar.badge.clock")
+                    Text("Conferences")
+                }
+                .tag(2)
+                .accessibilityIdentifier(PTAccessibility.conferencesTab)
+
             // Blog Tab
             BlogListView()
                 .tabItem {
-                    Image(systemName: "newspaper.fill")
+                    Image(systemName: "quote.bubble")
                     Text("Blog")
                 }
-                .tag(2)
-                .accessibilityIdentifier(PTAccessibility.blogTab)
-
-            // Settings Tab
-            SettingsView()
-                .tabItem {
-                    Image(systemName: "gear.circle.fill")
-                    Text("Settings")
-                }
                 .tag(3)
-                .accessibilityIdentifier("SettingsTab")
+                .accessibilityIdentifier("BlogTab")
+
         }
         .tint(PTDesignTokens.Colors.tang)  // Using PT Tang for selected state
         .onAppear {

@@ -47,6 +47,15 @@ struct Conference: Codable, Identifiable, Hashable {
 struct ConferenceType: Codable, Identifiable, Hashable {
     let id: String
     let name: String
+    let conferenceCount: Int?
+    let resourceCount: Int?
+    
+    init(id: String, name: String, conferenceCount: Int? = nil, resourceCount: Int? = nil) {
+        self.id = id
+        self.name = name
+        self.conferenceCount = conferenceCount
+        self.resourceCount = resourceCount
+    }
 }
 
 struct BibleBook: Codable, Identifiable, Hashable {

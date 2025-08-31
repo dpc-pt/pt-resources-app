@@ -15,6 +15,7 @@ enum PTContentType {
     case video
     case audio
     case general
+    case conference
 }
 
 @MainActor
@@ -132,6 +133,8 @@ final class PTBrandingService: ObservableObject {
             return [ptOrangeSwiftUI, ptOrangeSwiftUI.opacity(0.8)]
         case .general:
             return [ptGraySwiftUI, ptLightGraySwiftUI]
+        case .conference:
+            return [ptRedSwiftUI, ptRedSwiftUI.opacity(0.8)]
         }
     }
     
@@ -144,6 +147,8 @@ final class PTBrandingService: ObservableObject {
             return ptOrange
         case .general:
             return ptGray
+        case .conference:
+            return ptRed  // Use PT Red for conferences to distinguish them
         }
     }
     

@@ -469,7 +469,12 @@ extension Talk {
             imageURL: "https://example.com/images/john-series.jpg",
             conferenceImageURL: "https://example.com/images/conference-john.jpg",
             defaultImageURL: "/images/brand/logos/pt-resources.svg",
-            fileSize: 45_000_000 // 45 MB
+            fileSize: 45_000_000, // 45 MB
+            category: nil,
+            scriptureReference: "John 1:1-18",
+            conferenceId: "mock-conference-1",
+            speakerIds: ["speaker-1"],
+            bookIds: ["book-john"]
         ),
         Talk(
             id: "mock-2",
@@ -485,7 +490,12 @@ extension Talk {
             imageURL: "https://example.com/images/john-series.jpg",
             conferenceImageURL: "https://example.com/images/conference-john.jpg",
             defaultImageURL: "/images/brand/logos/pt-resources.svg",
-            fileSize: 38_000_000 // 38 MB
+            fileSize: 38_000_000, // 38 MB
+            category: nil,
+            scriptureReference: "John 1:14-17",
+            conferenceId: "mock-conference-1",
+            speakerIds: ["speaker-2"],
+            bookIds: ["book-john"]
         ),
         Talk(
             id: "mock-3",
@@ -500,7 +510,12 @@ extension Talk {
             imageURL: "https://example.com/images/john-series.jpg",
             conferenceImageURL: "https://example.com/images/conference-john.jpg",
             defaultImageURL: "/images/brand/logos/pt-resources.svg",
-            fileSize: 48_000_000 // 48 MB
+            fileSize: 48_000_000, // 48 MB
+            category: nil,
+            scriptureReference: "John 1:19-34",
+            conferenceId: "mock-conference-1",
+            speakerIds: ["speaker-1"],
+            bookIds: ["book-john"]
         )
     ]
     

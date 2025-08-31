@@ -299,6 +299,14 @@ final class DownloadService: NSObject, ObservableObject {
         return fileExists && (isMarkedDownloaded ?? false)
     }
     
+    /// Synchronous version for UI rendering - only checks file system
+    nonisolated func isDownloadedSync(_ talkID: String) -> Bool {
+        let audioURL = getLocalMediaURL(for: talkID, mediaType: .audio)
+        let videoURL = getLocalMediaURL(for: talkID, mediaType: .video)
+        return FileManager.default.fileExists(atPath: audioURL.path) || 
+               FileManager.default.fileExists(atPath: videoURL.path)
+    }
+    
     func getDownloadedTalks() async throws -> [String] {
         return try await persistenceController.performBackgroundTask { context in
             let request: NSFetchRequest<TalkEntity> = TalkEntity.fetchRequest()
