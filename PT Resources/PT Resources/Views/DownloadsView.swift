@@ -121,49 +121,54 @@ struct DownloadsView: View {
     
     // MARK: - Header Section
     
-    private var headerSection: some View {
+        private var headerSection: some View {
         VStack(spacing: PTDesignTokens.Spacing.md) {
-            // Title and offline toggle
+            // Header with title, subtitle, and logo
             HStack {
                 VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
                     Text("Downloads")
-                        .font(PTFont.ptSectionTitle)
+                        .font(PTFont.ptDisplaySmall)
                         .foregroundColor(PTDesignTokens.Colors.ink)
-                }
-                
-                Spacer()
-                
-                HStack(spacing: PTDesignTokens.Spacing.sm) {
-                    // Sort Options
-                    if !downloadedTalks.isEmpty {
-                        Button(action: { showingSortOptions = true }) {
-                            HStack(spacing: PTDesignTokens.Spacing.xs) {
-                                Image(systemName: "line.3.horizontal.decrease")
-                                    .font(.caption)
-                                
-                                Text(sortOption.displayName)
-                                    .font(PTFont.ptCaptionText)
-                            }
-                            .foregroundColor(PTDesignTokens.Colors.medium)
-                            .padding(.horizontal, PTDesignTokens.Spacing.sm)
-                            .padding(.vertical, PTDesignTokens.Spacing.xs)
-                            .background(
-                                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.sm)
-                                    .fill(PTDesignTokens.Colors.light.opacity(0.3))
-                            )
-                        }
-                        .accessibilityLabel("Sort downloads by \(sortOption.displayName)")
-                        .accessibilityHint("Double tap to change how downloads are sorted")
-                    }
-                    
 
+                    Text("Listen offline to your saved talks")
+                        .font(PTFont.ptBodyText)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
                 }
+
+                Spacer()
+
+                PTLogo(size: 32, showText: false)
             }
             .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
-            
+            .padding(.vertical, PTDesignTokens.Spacing.md)
 
+            // Sort Options (only show if we have downloads)
+            if !downloadedTalks.isEmpty {
+                HStack {
+                    Button(action: { showingSortOptions = true }) {
+                        HStack(spacing: PTDesignTokens.Spacing.xs) {
+                            Image(systemName: "line.3.horizontal.decrease")
+                                .font(.caption)
+
+                            Text(sortOption.displayName)
+                                .font(PTFont.ptCaptionText)
+                        }
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                        .padding(.horizontal, PTDesignTokens.Spacing.sm)
+                        .padding(.vertical, PTDesignTokens.Spacing.xs)
+                        .background(
+                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.sm)
+                                .fill(PTDesignTokens.Colors.light.opacity(0.3))
+                        )
+                    }
+                    .accessibilityLabel("Sort downloads by \(sortOption.displayName)")
+                    .accessibilityHint("Double tap to change how downloads are sorted")
+
+                    Spacer()
+                }
+                .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+            }
         }
-        .padding(.top, PTDesignTokens.Spacing.md)
     }
     
     // MARK: - Downloads List

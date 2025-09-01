@@ -60,19 +60,10 @@ struct DownloadedTalkRowView: View {
                                 .foregroundColor(PTDesignTokens.Colors.medium)
                         }
 
-                        // Duration and simple download indicator
-                        HStack(spacing: PTDesignTokens.Spacing.xs) {
-                            Text(downloadedTalk.formattedDuration)
-                                .font(PTFont.ptCaptionText)
-                                .foregroundColor(PTDesignTokens.Colors.medium)
-
-                            Spacer()
-
-                            // Simple download indicator
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 12))
-                                .foregroundColor(PTDesignTokens.Colors.success)
-                        }
+                        // Duration
+                        Text(downloadedTalk.formattedDuration)
+                            .font(PTFont.ptCaptionText)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
                     }
                 }
 
