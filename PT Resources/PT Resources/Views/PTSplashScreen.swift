@@ -12,22 +12,14 @@ struct PTSplashScreen: View {
     @State private var logoScale: CGFloat = 0.8
     @State private var logoOpacity: Double = 0.0
     @State private var textOpacity: Double = 0.0
-    @State private var backgroundGradientOpacity: Double = 0.0
+    @State private var backgroundOpacity: Double = 0.0
     
     var body: some View {
         ZStack {
-            // Background gradient
-            LinearGradient(
-                colors: [
-                    PTDesignTokens.Colors.ink,
-                    PTDesignTokens.Colors.ink.opacity(0.9),
-                    PTDesignTokens.Colors.kleinBlue.opacity(0.8)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .opacity(backgroundGradientOpacity)
-            .ignoresSafeArea()
+            // Solid PT Blue Background
+            PTDesignTokens.Colors.kleinBlue
+                .opacity(backgroundOpacity)
+                .ignoresSafeArea()
             
             // Background pattern using authentic PT icon pattern
             PTIconPattern()
@@ -75,7 +67,7 @@ struct PTSplashScreen: View {
     private func startAnimationSequence() {
         // Background appears first
         withAnimation(.easeOut(duration: 0.5)) {
-            backgroundGradientOpacity = 1.0
+            backgroundOpacity = 1.0
         }
         
         // Logo appears and scales up

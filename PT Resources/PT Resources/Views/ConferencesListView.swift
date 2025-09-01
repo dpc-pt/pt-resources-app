@@ -10,8 +10,8 @@ import SwiftUI
 struct ConferencesListView: View {
     
     @StateObject private var viewModel: ConferencesViewModel
-    @State private var selectedConference: ConferenceInfo?
     @State private var showingFilters = false
+    @State private var selectedConference: ConferenceInfo?
     
     init() {
         self._viewModel = StateObject(wrappedValue: ConferencesViewModel())
@@ -72,12 +72,9 @@ struct ConferencesListView: View {
                         ScrollView {
                             LazyVGrid(columns: columns, spacing: PTDesignTokens.Spacing.lg) {
                                 ForEach(viewModel.filteredConferences) { conference in
-                                    PTConferenceListCard(
-                                        conference: conference,
-                                        onTap: {
-                                            selectedConference = conference
-                                        }
-                                    )
+                                    PTConferenceListCard(conference: conference) {
+                                        selectedConference = conference
+                                    }
                                     .padding(.horizontal, PTDesignTokens.Spacing.xs)
                                     .accessibilityIdentifier("ConferenceCard_\(conference.id)")
                                 }
@@ -116,7 +113,9 @@ struct ConferencesListView: View {
             }
         }
         .sheet(item: $selectedConference) { conference in
-            ConferenceDetailView(conference: conference)
+            NavigationStack {
+                ConferenceDetailView(conference: conference)
+            }
         }
         .onAppear {
             viewModel.loadConferences()
@@ -160,8 +159,6 @@ struct ConferencesListView: View {
 struct PTConferenceListCard: View {
     let conference: ConferenceInfo
     let onTap: () -> Void
-    
-    @State private var isPressed = false
     
     var body: some View {
         Button(action: onTap) {
@@ -239,12 +236,12 @@ struct PTConferenceListCard: View {
                 .stroke(PTDesignTokens.Colors.border.opacity(0.5), lineWidth: 0.5)
         )
         .shadow(
-            color: isPressed ? PTDesignTokens.Shadows.cardPressed.color : PTDesignTokens.Shadows.card.color,
-            radius: isPressed ? PTDesignTokens.Shadows.cardPressed.radius : PTDesignTokens.Shadows.card.radius,
-            x: isPressed ? PTDesignTokens.Shadows.cardPressed.x : PTDesignTokens.Shadows.card.x,
-            y: isPressed ? PTDesignTokens.Shadows.cardPressed.y : PTDesignTokens.Shadows.card.y
+            color: PTDesignTokens.Shadows.card.color,
+            radius: PTDesignTokens.Shadows.card.radius,
+            x: PTDesignTokens.Shadows.card.x,
+            y: PTDesignTokens.Shadows.card.y
         )
-        .buttonStyle(.plain)
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

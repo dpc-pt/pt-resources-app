@@ -41,15 +41,12 @@ struct HomeView: View {
                     .ptCornerPattern(position: .bottomLeft, size: .medium, hasLogo: false)
                 
                 if isLoading && latestContent == nil {
-                    PTWelcomeLoadingView()
+                    PTWelcomeLoadingView(onSettingsTap: { showingSettings = true })
                 } else if let latestContent = latestContent {
                     ScrollView {
                         LazyVStack(spacing: PTDesignTokens.Spacing.lg) {
                             // Welcome Header
-                            PTWelcomeHeader()
-
-                            // Quick Actions
-                            PTQuickActionsView(selectedTab: $selectedTab)
+                            PTWelcomeHeader(onSettingsTap: { showingSettings = true })
 
                             // Content Section
                             VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.md) {
@@ -103,16 +100,6 @@ struct HomeView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingSettings = true }) {
-                        Image(systemName: "gearshape.circle")
-                            .font(.title3)
-                            .foregroundColor(PTDesignTokens.Colors.tang)
-                    }
-                    .accessibilityLabel("Settings")
-                }
-            }
         }
         .task {
             await loadLatestContent()
@@ -157,132 +144,42 @@ struct HomeView: View {
 // MARK: - Welcome Header
 
 struct PTWelcomeHeader: View {
+    let onSettingsTap: () -> Void
+
     var body: some View {
-        VStack(spacing: PTDesignTokens.Spacing.sm) {
-            VStack(spacing: PTDesignTokens.Spacing.xs) {
+        HStack {
+            VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
                 Text("Welcome")
-                    .font(PTFont.ptDisplayLarge)
+                    .font(PTFont.ptDisplaySmall)
                     .foregroundColor(PTDesignTokens.Colors.ink)
 
-                Text("to Proclamation Trust")
-                    .font(PTFont.ptSectionTitle)
-                    .foregroundColor(PTDesignTokens.Colors.tang)
+                Text("to the Proclamation Trust")
+                    .font(PTFont.ptBodyText)
+                    .foregroundColor(PTDesignTokens.Colors.medium)
             }
 
-            Text("Here to help you teach the Bible")
-                .font(PTFont.ptBodyText)
-                .foregroundColor(PTDesignTokens.Colors.medium)
-                .lineSpacing(4)
-                .multilineTextAlignment(.leading)
+            Spacer()
+
+            HStack(spacing: PTDesignTokens.Spacing.md) {
+                PTLogo(size: 32, showText: false, useFullLogo: true)
+
+                Button(action: onSettingsTap) {
+                    Image(systemName: "gearshape.circle.fill")
+                        .font(PTFont.ptButtonText)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            Circle()
+                                .fill(Color.white.opacity(0.8))
+                                .shadow(color: PTDesignTokens.Colors.ink.opacity(0.1), radius: 4, x: 0, y: 2)
+                        )
+                        .contentShape(Circle())
+                }
+                .accessibilityLabel("Settings")
+            }
         }
         .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
-        .padding(.top, PTDesignTokens.Spacing.lg)
-        .padding(.bottom, PTDesignTokens.Spacing.md)
-    }
-}
-
-// MARK: - Quick Actions
-
-struct PTQuickActionsView: View {
-    @Binding var selectedTab: Int
-
-    var body: some View {
-        VStack(spacing: PTDesignTokens.Spacing.sm) {
-            Text("Quick Actions")
-                .font(PTFont.ptCardTitle)
-                .foregroundColor(PTDesignTokens.Colors.ink)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
-
-            HStack(spacing: PTDesignTokens.Spacing.sm) {
-                PTQuickActionButton(
-                    title: "Browse Talks",
-                    subtitle: "Sermons & resources",
-                    icon: "headphones",
-                    color: PTDesignTokens.Colors.kleinBlue
-                ) {
-                    selectedTab = 1 // Talks tab
-                }
-
-                PTQuickActionButton(
-                    title: "Read Blog",
-                    subtitle: "Latest updates",
-                    icon: "newspaper",
-                    color: PTDesignTokens.Colors.tang
-                ) {
-                    selectedTab = 2 // Blog tab
-                }
-
-                PTQuickActionButton(
-                    title: "Conferences",
-                    subtitle: "Events & workshops",
-                    icon: "calendar.badge.clock",
-                    color: PTDesignTokens.Colors.lawn
-                ) {
-                    selectedTab = 3 // Conferences tab
-                }
-            }
-            .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
-            .ptSectionBackground(
-                baseColor: Color.clear,
-                hasLogo: false,
-                patternOpacity: 0.02
-            )
-        }
-    }
-}
-
-struct PTQuickActionButton: View {
-    let title: String
-    let subtitle: String
-    let icon: String
-    let color: Color
-    let action: () -> Void
-
-    @State private var isPressed = false
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: PTDesignTokens.Spacing.sm) {
-                ZStack {
-                    Circle()
-                        .fill(color.opacity(0.1))
-                        .frame(width: 48, height: 48)
-
-                    Image(systemName: icon)
-                        .font(PTFont.ptCardTitle)
-                        .foregroundColor(color)
-                }
-
-                VStack(spacing: PTDesignTokens.Spacing.xs) {
-                    Text(title)
-                        .font(PTFont.ptCaptionText)
-                        .foregroundColor(PTDesignTokens.Colors.ink)
-                        .fontWeight(.semibold)
-
-                    Text(subtitle)
-                        .font(PTFont.ptCaptionText)
-                        .foregroundColor(PTDesignTokens.Colors.medium)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, PTDesignTokens.Spacing.sm)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .background(
-            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                .fill(PTDesignTokens.Colors.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                        .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
-                )
-        )
-        .scaleEffect(isPressed ? 0.95 : 1.0)
-        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
-            withAnimation(.easeInOut(duration: 0.1)) {
-                isPressed = pressing
-            }
-        }, perform: {})
+        .padding(.vertical, PTDesignTokens.Spacing.md)
     }
 }
 
@@ -290,23 +187,48 @@ struct PTQuickActionButton: View {
 
 struct PTWelcomeLoadingView: View {
     @State private var isAnimating = false
+    let onSettingsTap: () -> Void
 
     var body: some View {
         VStack(spacing: PTDesignTokens.Spacing.lg) {
             // Welcome text while loading
-            VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.sm) {
-                Text("Welcome")
-                    .font(PTFont.ptDisplayLarge)
-                    .foregroundColor(PTDesignTokens.Colors.ink)
+            HStack {
+                VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
+                    Text("Welcome")
+                        .font(PTFont.ptDisplaySmall)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
 
-                Text("Preparing your resources...")
-                    .font(PTFont.ptBodyText)
-                    .foregroundColor(PTDesignTokens.Colors.medium)
+                    Text("Preparing your resources...")
+                        .font(PTFont.ptBodyText)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                }
+
+                Spacer()
+
+                HStack(spacing: PTDesignTokens.Spacing.md) {
+                    PTLogo(size: 32, showText: false, useFullLogo: true)
+
+                    Button(action: onSettingsTap) {
+                        Image(systemName: "gearshape.circle.fill")
+                            .font(PTFont.ptButtonText)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
+                            .frame(width: 44, height: 44)
+                            .background(
+                                Circle()
+                                    .fill(Color.white.opacity(0.8))
+                                    .shadow(color: PTDesignTokens.Colors.ink.opacity(0.1), radius: 4, x: 0, y: 2)
+                            )
+                            .contentShape(Circle())
+                    }
+                    .accessibilityLabel("Settings")
+                }
             }
+            .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+            .padding(.vertical, PTDesignTokens.Spacing.md)
 
             // Animated loading indicator
             VStack(spacing: PTDesignTokens.Spacing.md) {
-                PTLogo(size: 48, showText: false)
+                PTLogo(size: 48, showText: false, useFullLogo: true)
                     .rotationEffect(.degrees(isAnimating ? 360 : 0))
                     .animation(.linear(duration: 2).repeatForever(autoreverses: false), value: isAnimating)
                     .onAppear {
@@ -428,16 +350,11 @@ struct PTConferenceCard: View {
                         .aspectRatio(contentMode: .fill)
                 } placeholder: {
                     ZStack {
-                        PTBrandingService.shared.createBrandedBackground(
-                            for: .general,
-                            hasLogo: true
-                        )
-                        
-                        Image("pt-resources")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 80, height: 26)
-                            .opacity(isLatest ? 0.6 : 0.5)
+                        // Light background
+                        Color.white
+
+                        PTLogo(size: 140, showText: false, useFullLogo: true)
+                            .opacity(1.0)
                     }
                 }
                 .frame(height: 140)

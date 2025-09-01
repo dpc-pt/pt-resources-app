@@ -15,13 +15,13 @@ struct DownloadsView: View {
     
     @State private var downloadedTalks: [DownloadedTalk] = []
     @State private var isLoading = false
-    @State private var showingStorageInfo = false
-    @State private var totalStorageUsed: Int64 = 0
     @State private var sortOption: SortOption = .dateDownloaded
     @State private var showingSortOptions = false
     @State private var lastRefreshTime = Date()
     @State private var errorMessage: String?
     @State private var showingError = false
+    @State private var selectedDownloadedTalk: DownloadedTalk? = nil
+    @State private var showingTalkDetail = false
     
     init(apiService: TalksAPIServiceProtocol = TalksAPIService()) {
         self._downloadService = StateObject(wrappedValue: DownloadService(apiService: apiService))
@@ -60,7 +60,6 @@ struct DownloadsView: View {
         .onAppear {
             Task {
                 await loadDownloadedTalks()
-                await calculateStorageUsage()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .downloadCompleted)) { _ in
@@ -87,18 +86,7 @@ struct DownloadsView: View {
         } message: {
             Text("Choose how to sort your downloaded talks")
         }
-        .sheet(isPresented: $showingStorageInfo) {
-            StorageInfoSheet(
-                totalStorageUsed: totalStorageUsed,
-                downloadedTalks: downloadedTalks,
-                onCleanup: {
-                    Task {
-                        await cleanupOldDownloads()
-                        showingStorageInfo = false
-                    }
-                }
-            )
-        }
+
         .alert("Error", isPresented: $showingError) {
             Button("OK") {
                 errorMessage = nil
@@ -106,6 +94,27 @@ struct DownloadsView: View {
         } message: {
             if let errorMessage = errorMessage {
                 Text(errorMessage)
+            }
+        }
+        .sheet(isPresented: $showingTalkDetail) {
+            if let downloadedTalk = selectedDownloadedTalk {
+                let talk = Talk(
+                    id: downloadedTalk.id,
+                    title: downloadedTalk.title,
+                    description: nil,
+                    speaker: downloadedTalk.speaker,
+                    series: downloadedTalk.series,
+                    biblePassage: nil,
+                    dateRecorded: downloadedTalk.createdAt,
+                    duration: downloadedTalk.duration,
+                    audioURL: downloadedTalk.localAudioURL,
+                    imageURL: nil
+                )
+
+                TalkDetailView(
+                    talk: talk,
+                    downloadService: downloadService
+                )
             }
         }
     }
@@ -120,18 +129,6 @@ struct DownloadsView: View {
                     Text("Downloads")
                         .font(PTFont.ptSectionTitle)
                         .foregroundColor(PTDesignTokens.Colors.ink)
-                    
-                    HStack(spacing: PTDesignTokens.Spacing.xs) {
-                        Text("\(downloadedTalks.count) talks downloaded")
-                            .font(PTFont.ptCaptionText)
-                            .foregroundColor(PTDesignTokens.Colors.medium)
-                        
-                        if !networkMonitor.isConnected {
-                            Image(systemName: "wifi.slash")
-                                .font(.caption2)
-                                .foregroundColor(PTDesignTokens.Colors.turmeric)
-                        }
-                    }
                 }
                 
                 Spacer()
@@ -159,58 +156,12 @@ struct DownloadsView: View {
                         .accessibilityHint("Double tap to change how downloads are sorted")
                     }
                     
-                    // Offline mode toggle
-                    Button(action: { networkMonitor.toggleOfflineMode() }) {
-                    HStack(spacing: PTDesignTokens.Spacing.xs) {
-                        Image(systemName: networkMonitor.isOfflineMode ? "wifi.slash" : "wifi")
-                            .font(.caption)
-                        
-                        Text(networkMonitor.isOfflineMode ? "Offline" : "Online")
-                            .font(PTFont.ptCaptionText)
-                    }
-                    .foregroundColor(networkMonitor.isOfflineMode ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.medium)
-                    .padding(.horizontal, PTDesignTokens.Spacing.sm)
-                    .padding(.vertical, PTDesignTokens.Spacing.xs)
-                    .background(
-                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.sm)
-                            .fill(networkMonitor.isOfflineMode ? PTDesignTokens.Colors.tang.opacity(0.1) : PTDesignTokens.Colors.light.opacity(0.3))
-                    )
-                }
-                .accessibilityLabel(networkMonitor.isOfflineMode ? "Currently offline" : "Currently online")
-                .accessibilityHint("Double tap to toggle offline mode")
+
                 }
             }
             .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
             
-            // Storage info
-            Button(action: { showingStorageInfo = true }) {
-                HStack {
-                    Image(systemName: "internaldrive")
-                        .font(.caption)
-                    
-                    Text("Storage: \(ByteCountFormatter.string(fromByteCount: totalStorageUsed, countStyle: .file))")
-                        .font(PTFont.ptCaptionText)
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.caption2)
-                }
-                .foregroundColor(PTDesignTokens.Colors.medium)
-                .padding(.horizontal, PTDesignTokens.Spacing.md)
-                .padding(.vertical, PTDesignTokens.Spacing.sm)
-                .background(
-                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.sm)
-                        .fill(PTDesignTokens.Colors.surface)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.sm)
-                                .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
-                        )
-                )
-            }
-            .accessibilityLabel("Storage usage: \(ByteCountFormatter.string(fromByteCount: totalStorageUsed, countStyle: .file))")
-            .accessibilityHint("Double tap to view storage details and cleanup options")
-            .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+
         }
         .padding(.top, PTDesignTokens.Spacing.md)
     }
@@ -223,7 +174,8 @@ struct DownloadsView: View {
                 DownloadedTalkRowView(
                     downloadedTalk: downloadedTalk,
                     onPlayTap: { playDownloadedTalk(downloadedTalk) },
-                    onDeleteTap: { deleteDownloadedTalk(downloadedTalk) }
+                    onDeleteTap: { deleteDownloadedTalk(downloadedTalk) },
+                    onTap: { showTalkDetail(downloadedTalk) }
                 )
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
@@ -264,17 +216,7 @@ struct DownloadsView: View {
                     .padding(.horizontal, PTDesignTokens.Spacing.xl)
             }
             
-            if !networkMonitor.isConnected {
-                VStack(spacing: PTDesignTokens.Spacing.sm) {
-                    Image(systemName: "wifi.slash")
-                        .font(.title2)
-                        .foregroundColor(PTDesignTokens.Colors.turmeric)
-                    
-                    Text("You're currently offline")
-                        .font(PTFont.ptCaptionText)
-                        .foregroundColor(PTDesignTokens.Colors.turmeric)
-                }
-            }
+
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(PTDesignTokens.Spacing.xl)
@@ -309,7 +251,6 @@ struct DownloadsView: View {
                 await MainActor.run {
                     downloadedTalks.removeAll { $0.id == downloadedTalk.id }
                 }
-                await calculateStorageUsage()
             } catch {
                 PTLogger.general.error("Failed to delete downloaded talk: \(error.localizedDescription)")
                 await MainActor.run {
@@ -318,6 +259,11 @@ struct DownloadsView: View {
                 }
             }
         }
+    }
+
+    private func showTalkDetail(_ downloadedTalk: DownloadedTalk) {
+        selectedDownloadedTalk = downloadedTalk
+        showingTalkDetail = true
     }
     
     // MARK: - Computed Properties
@@ -343,7 +289,6 @@ struct DownloadsView: View {
     
     private func refreshDownloads() async {
         await loadDownloadedTalks()
-        await calculateStorageUsage()
         lastRefreshTime = Date()
     }
     
@@ -365,21 +310,9 @@ struct DownloadsView: View {
         }
     }
     
-    private func calculateStorageUsage() async {
-        let storage = await downloadService.getTotalStorageUsed()
-        await MainActor.run {
-            self.totalStorageUsed = storage
-        }
-    }
+
     
-    private func cleanupOldDownloads() async {
-        do {
-            try await downloadService.cleanupExpiredDownloads()
-            await refreshDownloads()
-        } catch {
-            PTLogger.general.error("Failed to cleanup old downloads: \(error)")
-        }
-    }
+
     
     private func formatRelativeTime(_ date: Date) -> String {
         let formatter = RelativeDateTimeFormatter()
@@ -410,89 +343,7 @@ enum SortOption: String, CaseIterable {
     }
 }
 
-// MARK: - Storage Info Sheet
 
-struct StorageInfoSheet: View {
-    let totalStorageUsed: Int64
-    let downloadedTalks: [DownloadedTalk]
-    let onCleanup: () -> Void
-    
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: PTDesignTokens.Spacing.lg) {
-                // Storage summary
-                VStack(spacing: PTDesignTokens.Spacing.md) {
-                    Image(systemName: "internaldrive")
-                        .font(.system(size: 48))
-                        .foregroundColor(PTDesignTokens.Colors.tang)
-                    
-                    Text(ByteCountFormatter.string(fromByteCount: totalStorageUsed, countStyle: .file))
-                        .font(PTFont.ptSectionTitle)
-                        .foregroundColor(PTDesignTokens.Colors.ink)
-                    
-                    Text("Total Storage Used")
-                        .font(PTFont.ptCaptionText)
-                        .foregroundColor(PTDesignTokens.Colors.medium)
-                }
-                
-                // Statistics
-                VStack(spacing: PTDesignTokens.Spacing.md) {
-                    HStack {
-                        Text("Downloaded Talks")
-                            .font(PTFont.ptCardTitle)
-                            .foregroundColor(PTDesignTokens.Colors.ink)
-                        
-                        Spacer()
-                        
-                        Text("\(downloadedTalks.count)")
-                            .font(PTFont.ptCardTitle)
-                            .foregroundColor(PTDesignTokens.Colors.tang)
-                    }
-                    
-                    HStack {
-                        Text("Average Size")
-                            .font(PTFont.ptCardTitle)
-                            .foregroundColor(PTDesignTokens.Colors.ink)
-                        
-                        Spacer()
-                        
-                        Text(downloadedTalks.isEmpty ? "0 MB" : ByteCountFormatter.string(fromByteCount: totalStorageUsed / Int64(downloadedTalks.count), countStyle: .file))
-                            .font(PTFont.ptCardTitle)
-                            .foregroundColor(PTDesignTokens.Colors.tang)
-                    }
-                }
-                .padding(PTDesignTokens.Spacing.md)
-                .background(
-                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                        .fill(PTDesignTokens.Colors.surface)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                                .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
-                        )
-                )
-                
-                Spacer()
-                
-                // Cleanup button
-                Button(action: onCleanup) {
-                    Text("Clean Up Old Downloads")
-                        .font(PTFont.ptButtonText)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, PTDesignTokens.Spacing.md)
-                        .background(
-                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
-                                .fill(PTDesignTokens.Colors.tang)
-                        )
-                }
-                .disabled(downloadedTalks.isEmpty)
-            }
-            .padding(PTDesignTokens.Spacing.lg)
-            .navigationTitle("Storage Info")
-            .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-}
 
 // MARK: - Preview
 

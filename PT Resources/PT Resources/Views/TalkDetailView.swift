@@ -115,137 +115,179 @@ struct TalkDetailView: View {
     }
     
     // MARK: - Hero Section
-    
+
     private var heroSection: some View {
-        GeometryReader { geometry in
+        VStack(spacing: PTDesignTokens.Spacing.xl) {
+            // Navigation Bar
+            HStack {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "chevron.left")
+                        .font(PTFont.ptButtonText)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                                .fill(PTDesignTokens.Colors.surface)
+                                .shadow(color: PTDesignTokens.Colors.ink.opacity(0.1), radius: 4, x: 0, y: 2)
+                        )
+                }
+
+                Spacer()
+
+                HStack(spacing: PTDesignTokens.Spacing.sm) {
+                    // Download button
+                    Button(action: toggleDownload) {
+                        Group {
+                            if isDownloading {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                    .tint(PTDesignTokens.Colors.tang)
+                            } else {
+                                Image(systemName: isTalkDownloaded ? "checkmark.circle.fill" : "arrow.down.circle")
+                                    .font(PTFont.ptButtonText)
+                            }
+                        }
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                                .fill(PTDesignTokens.Colors.surface)
+                                .shadow(color: PTDesignTokens.Colors.ink.opacity(0.1), radius: 4, x: 0, y: 2)
+                        )
+                    }
+
+                    // Share button
+                    Button(action: shareTalk) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(PTFont.ptButtonText)
+                            .foregroundColor(PTDesignTokens.Colors.ink)
+                            .frame(width: 44, height: 44)
+                            .background(
+                                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                                    .fill(PTDesignTokens.Colors.surface)
+                                    .shadow(color: PTDesignTokens.Colors.ink.opacity(0.1), radius: 4, x: 0, y: 2)
+                            )
+                    }
+                }
+            }
+            .padding(.horizontal, PTDesignTokens.Spacing.md)
+
+            // Album Art Style Hero
             ZStack {
-                // Background image or default
+                // Artwork Container - Square with rounded corners
                 PTAsyncImage(url: talk.artworkURL.flatMap(URL.init)) {
                     defaultArtworkView
                 }
-                .aspectRatio(contentMode: .fill)
-                .clipped()
-                
-                // Dark overlay for text readability
-                LinearGradient(
-                    colors: [Color.clear, Color.black.opacity(0.6)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                
-                VStack(spacing: 0) {
-                    // Navigation overlay
-                    HStack {
-                        Button(action: { dismiss() }) {
-                            Image(systemName: "chevron.left")
-                                .font(PTFont.ptCardTitle)
-                                .foregroundColor(.white)
-                                .padding(PTDesignTokens.Spacing.sm)
-                                .background(
-                                    Circle()
-                                        .fill(Color.black.opacity(0.4))
-                                )
-                        }
-                        
-                        Spacer()
-                        
-                        HStack(spacing: PTDesignTokens.Spacing.sm) {
-                            // Download button
-                            Button(action: toggleDownload) {
-                                Group {
-                                    if isDownloading {
-                                        ProgressView()
-                                            .scaleEffect(0.8)
-                                            .tint(.white)
-                                    } else {
-                                        Image(systemName: isTalkDownloaded ? "checkmark.circle.fill" : "arrow.down.circle")
-                                            .font(PTFont.ptCardTitle)
-                                    }
-                                }
-                                .foregroundColor(.white)
-                                .padding(PTDesignTokens.Spacing.sm)
-                                .background(
-                                    Circle()
-                                        .fill(Color.black.opacity(0.4))
-                                )
-                            }
-                            
-                            // Share button
-                            Button(action: shareTalk) {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(PTFont.ptCardTitle)
-                                    .foregroundColor(.white)
-                                    .padding(PTDesignTokens.Spacing.sm)
-                                    .background(
-                                        Circle()
-                                            .fill(Color.black.opacity(0.4))
-                                    )
-                            }
-                        }
-                    }
-                    .padding(PTDesignTokens.Spacing.md)
-                    .zIndex(1)
-                    
+                .aspectRatio(1, contentMode: .fill)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl))
+                .shadow(color: PTDesignTokens.Colors.ink.opacity(0.15), radius: 12, x: 0, y: 6)
+
+                // Subtle overlay for better text contrast (only if artwork exists)
+                if talk.artworkURL != nil {
+                    LinearGradient(
+                        colors: [
+                            Color.black.opacity(0.1),
+                            Color.clear,
+                            Color.black.opacity(0.3)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl))
+                }
+
+                // Content overlay
+                VStack(spacing: PTDesignTokens.Spacing.sm) {
                     Spacer()
-                    
-                    // Talk info overlay
-                    VStack(spacing: PTDesignTokens.Spacing.md) {
+
+                    // Talk information at bottom
+                    VStack(spacing: PTDesignTokens.Spacing.xs) {
                         Text(talk.title)
                             .font(PTFont.ptDisplayMedium)
                             .foregroundColor(.white)
                             .multilineTextAlignment(.center)
-                            .lineLimit(3)
-                            .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
-                        
+                            .lineLimit(2)
+                            .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
+
                         Text(talk.speaker)
                             .font(PTFont.ptSectionTitle)
-                            .foregroundColor(.white.opacity(0.9))
-                            .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
-                        
-                        HStack(spacing: PTDesignTokens.Spacing.md) {
-                            if let biblePassage = talk.biblePassage {
+                            .foregroundColor(.white.opacity(0.95))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(1)
+                            .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
+
+                        // Metadata row
+                        HStack(spacing: PTDesignTokens.Spacing.sm) {
+                            if let biblePassage = talk.biblePassage, !biblePassage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 Text(biblePassage)
                                     .font(PTFont.ptCaptionText)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.white.opacity(0.9))
                                     .padding(.horizontal, PTDesignTokens.Spacing.sm)
                                     .padding(.vertical, PTDesignTokens.Spacing.xs)
                                     .background(
                                         Capsule()
-                                            .fill(Color.white.opacity(0.2))
+                                            .fill(Color.white.opacity(0.15))
                                     )
                             }
-                            
+
                             Text(talk.formattedYear)
                                 .font(PTFont.ptCaptionText)
                                 .foregroundColor(.white.opacity(0.8))
-                            
+
                             if talk.duration > 0 {
                                 Text("•")
                                     .foregroundColor(.white.opacity(0.6))
-                                
+
                                 Text(talk.formattedDuration)
                                     .font(PTFont.ptCaptionText)
                                     .foregroundColor(.white.opacity(0.8))
                             }
                         }
-                        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                        .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
                     }
                     .padding(PTDesignTokens.Spacing.lg)
-                    .zIndex(1)
                 }
             }
+            .aspectRatio(1, contentMode: .fit)
+            .padding(.horizontal, PTDesignTokens.Spacing.md)
         }
-        .frame(height: 320)
-        .cornerRadius(PTDesignTokens.BorderRadius.xl, corners: [.bottomLeft, .bottomRight])
+        .padding(.top, PTDesignTokens.Spacing.md)
     }
     
     private var defaultArtworkView: some View {
-        Rectangle()
-            .fill(PTDesignTokens.Colors.veryLight)
-            .overlay(
-                PTLogo(size: 60, showText: false)
-                    .opacity(0.3)
-            )
+        ZStack {
+            // Base background
+            Rectangle()
+                .fill(PTDesignTokens.Colors.veryLight)
+
+            // Subtle pattern overlay
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            PTDesignTokens.Colors.kleinBlue.opacity(0.05),
+                            PTDesignTokens.Colors.tang.opacity(0.03),
+                            PTDesignTokens.Colors.kleinBlue.opacity(0.05)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            // PT Logo - fills the entire artwork square
+            PTLogo(size: 200, showText: false, useFullLogo: true)
+                .opacity(0.3)
+
+            // Additional decorative elements
+            Circle()
+                .fill(PTDesignTokens.Colors.kleinBlue.opacity(0.03))
+                .frame(width: 200, height: 200)
+
+            Circle()
+                .fill(PTDesignTokens.Colors.tang.opacity(0.02))
+                .frame(width: 150, height: 150)
+        }
     }
     
     
@@ -519,7 +561,7 @@ struct TalkDetailView: View {
             }
             
             // Secondary action - Bible Passage
-            if let biblePassage = talk.biblePassage {
+            if let biblePassage = talk.biblePassage, !biblePassage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Button(action: { showingBiblePassage = true }) {
                     HStack(spacing: PTDesignTokens.Spacing.md) {
                         Image(systemName: "book.closed")

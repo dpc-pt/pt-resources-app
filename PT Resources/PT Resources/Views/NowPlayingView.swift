@@ -123,18 +123,17 @@ struct NowPlayingView: View {
     private var backgroundView: some View {
         ZStack {
             // Dynamic background based on artwork or brand colors
-            if let imageURL = playerService.currentTalk?.imageURL,
-               let url = URL(string: imageURL) {
-                AsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .scaleEffect(1.2) // Subtle zoom for depth
-                        .blur(radius: 50)
-                        .opacity(backgroundIntensity)
-                } placeholder: {
+            if let artworkURL = playerService.currentTalk?.artworkURL,
+               let url = URL(string: artworkURL) {
+                PTAsyncImage(
+                    url: url,
+                    targetSize: CGSize(width: 600, height: 400)
+                ) {
                     brandGradientBackground
                 }
+                .scaleEffect(1.2) // Subtle zoom for depth
+                .blur(radius: 50)
+                .opacity(backgroundIntensity)
             } else {
                 brandGradientBackground
             }
@@ -243,13 +242,12 @@ struct NowPlayingView: View {
             
             // Main artwork container
             Group {
-                if let imageURL = playerService.currentTalk?.imageURL,
-                   let url = URL(string: imageURL) {
-                    AsyncImage(url: url) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
+                if let artworkURL = playerService.currentTalk?.artworkURL,
+                   let url = URL(string: artworkURL) {
+                    PTAsyncImage(
+                        url: url,
+                        targetSize: CGSize(width: 280, height: 280)
+                    ) {
                         artworkPlaceholder
                     }
                 } else {
@@ -285,26 +283,13 @@ struct NowPlayingView: View {
     
     private var artworkPlaceholder: some View {
         RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
-            .fill(
-                LinearGradient(
-                    colors: [
-                        PTDesignTokens.Colors.tang.opacity(0.3),
-                        PTDesignTokens.Colors.kleinBlue.opacity(0.3)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            .fill(PTDesignTokens.Colors.kleinBlue)
             .overlay(
-                VStack(spacing: 16) {
-                    Image(systemName: "waveform")
-                        .font(.system(size: 48, weight: .light))
-                        .foregroundColor(.primary.opacity(0.6))
-                    
-                    Text("PT Resources")
-                        .font(PTFont.ptCardTitle)
-                        .foregroundColor(.primary.opacity(0.8))
-                }
+                Image("pt-resources")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: 120, maxHeight: 120)
+                    .foregroundColor(.primary.opacity(0.8))
             )
     }
     

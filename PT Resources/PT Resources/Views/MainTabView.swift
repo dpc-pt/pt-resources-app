@@ -48,6 +48,15 @@ struct MainTabView: View {
                 .tag(3)
                 .accessibilityIdentifier("BlogTab")
 
+            // Downloads Tab
+            DownloadsView()
+                .tabItem {
+                    Image(systemName: "arrow.down.circle.fill")
+                    Text("Downloads")
+                }
+                .tag(4)
+                .accessibilityIdentifier("DownloadsTab")
+
         }
         .tint(PTDesignTokens.Colors.tang)  // Using PT Tang for selected state
         .onAppear {

@@ -187,6 +187,7 @@ final class PlayerService: NSObject, ObservableObject {
             DispatchQueue.main.async {
                 self?.currentTime = time
                 self?.updateCurrentChapter()
+                self?.updateNowPlayingTimeOnly()
                 self?.savePlaybackState()
             }
         }
@@ -335,6 +336,15 @@ final class PlayerService: NSObject, ObservableObject {
         let playerItem = AVPlayerItem(url: url)
         player = AVPlayer(playerItem: playerItem)
         
+        // Configure player for audio-only AirPlay (prevents video AirPlay behavior)
+        player?.allowsExternalPlayback = true
+        player?.usesExternalPlaybackWhileExternalScreenIsActive = false
+        
+        // Explicitly set the player item as audio-only to prevent video behavior on AirPlay
+        if #available(iOS 16.0, *) {
+            player?.audiovisualBackgroundPlaybackPolicy = .continuesIfPossible
+        }
+        
         // Observe player item status
         playerItem.publisher(for: \.status)
             .receive(on: DispatchQueue.main)
@@ -385,6 +395,9 @@ final class PlayerService: NSObject, ObservableObject {
             Task { @MainActor in
                 self?.currentTime = time.seconds
                 self?.updateCurrentChapter()
+                
+                // Update iOS media controls scrubber position
+                self?.updateNowPlayingTimeOnly()
                 
                 // Save playback position every 30 seconds
                 if Int(time.seconds) % 30 == 0 {
@@ -507,6 +520,22 @@ final class PlayerService: NSObject, ObservableObject {
                 )
             }
         }
+    }
+    
+    /// Efficiently update only the time-related properties in iOS media controls
+    private func updateNowPlayingTimeOnly() {
+        guard let _ = currentTalk else { return }
+        
+        // Get current now playing info or create new one
+        var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
+        
+        // Update time-related properties only
+        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = NSNumber(value: duration)
+        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = NSNumber(value: currentTime)
+        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = NSNumber(value: playbackState == .playing ? playbackSpeed : 0.0)
+        
+        // Apply the updated info
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     }
 
     

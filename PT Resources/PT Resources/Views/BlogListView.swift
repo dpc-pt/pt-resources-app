@@ -22,8 +22,8 @@ struct BlogListView: View {
                 PTDesignTokens.Colors.background.ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    // Authentic PT Brand Header
-                    PTBrandHeader("Blog", subtitle: "Latest updates from Proclamation Trust")
+                    // Header with PT Logo
+                    blogHeader
 
                     VStack(spacing: PTDesignTokens.Spacing.md) {
                         // Search Bar with PT styling
@@ -115,6 +115,26 @@ struct BlogListView: View {
         } message: {
             Text(viewModel.error?.localizedDescription ?? "An error occurred")
         }
+    }
+
+    private var blogHeader: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
+                Text("Blog")
+                    .font(PTFont.ptDisplaySmall)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
+
+                Text("Latest updates from Proclamation Trust")
+                    .font(PTFont.ptBodyText)
+                    .foregroundColor(PTDesignTokens.Colors.medium)
+            }
+
+            Spacer()
+
+            PTLogo(size: 32, showText: false)
+        }
+        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+        .padding(.vertical, PTDesignTokens.Spacing.md)
     }
 }
 

@@ -29,7 +29,7 @@ struct EnhancedFilterView: View {
             VStack(spacing: 0) {
                 // Filter tabs
                 FilterTabBar(selectedTab: $selectedTab)
-                
+
                 // Content based on selected tab
                 TabView(selection: $selectedTab) {
                     SpeakersFilterTab(
@@ -38,34 +38,34 @@ struct EnhancedFilterView: View {
                         searchText: $searchText
                     )
                     .tag(0)
-                    
+
                     ConferencesFilterTab(
                         filters: $localFilters,
                         filtersAPIService: filtersAPIService,
                         searchText: $searchText
                     )
                     .tag(1)
-                    
+
                     BibleBooksFilterTab(
                         filters: $localFilters,
                         filtersAPIService: filtersAPIService,
                         searchText: $searchText
                     )
                     .tag(2)
-                    
+
                     YearsFilterTab(
                         filters: $localFilters,
                         filtersAPIService: filtersAPIService
                     )
                     .tag(3)
-                    
+
                     CollectionsFilterTab(
                         filters: $localFilters,
                         filtersAPIService: filtersAPIService,
                         searchText: $searchText
                     )
                     .tag(4)
-                    
+
                     AdvancedFilterTab(
                         filters: $localFilters
                     )
@@ -80,14 +80,18 @@ struct EnhancedFilterView: View {
                     Button("Clear All") {
                         localFilters = TalkSearchFilters()
                     }
+                    .font(PTFont.ptButtonText)
+                    .foregroundColor(PTDesignTokens.Colors.medium)
                 }
-                
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Apply") {
                         onFiltersChanged(localFilters)
                         dismiss()
                     }
+                    .font(PTFont.ptButtonText)
                     .fontWeight(.semibold)
+                    .foregroundColor(PTDesignTokens.Colors.kleinBlue)
                 }
             }
         }
@@ -102,7 +106,7 @@ struct EnhancedFilterView: View {
 
 struct FilterTabBar: View {
     @Binding var selectedTab: Int
-    
+
     private let tabs = [
         ("Speakers", "person.circle"),
         ("Conferences", "building.columns"),
@@ -111,31 +115,31 @@ struct FilterTabBar: View {
         ("Collections", "folder"),
         ("Advanced", "slider.horizontal.3")
     ]
-    
+
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 20) {
+            HStack(spacing: PTDesignTokens.Spacing.lg) {
                 ForEach(0..<tabs.count, id: \.self) { index in
-                    VStack(spacing: 4) {
+                    VStack(spacing: PTDesignTokens.Spacing.xs) {
                         Image(systemName: tabs[index].1)
-                            .font(.system(size: 20))
+                            .font(PTFont.ptSectionTitle)
                         Text(tabs[index].0)
-                            .font(.caption)
+                            .font(PTFont.ptCaptionText)
                             .fontWeight(.medium)
                     }
-                    .foregroundColor(selectedTab == index ? PTDesignTokens.Colors.kleinBlue : .gray)
+                    .foregroundColor(selectedTab == index ? PTDesignTokens.Colors.kleinBlue : PTDesignTokens.Colors.medium)
                     .onTapGesture {
                         selectedTab = index
                     }
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
         }
-        .background(Color(.systemBackground))
+        .background(PTDesignTokens.Colors.surface)
         .overlay(
             Rectangle()
                 .frame(height: 1)
-                .foregroundColor(.gray.opacity(0.3)),
+                .foregroundColor(PTDesignTokens.Colors.light.opacity(0.3)),
             alignment: .bottom
         )
     }
@@ -160,15 +164,21 @@ struct SpeakersFilterTab: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.lg) {
             FilterSearchBar(text: $searchText, placeholder: "Search speakers...")
-            
+
             if isLoading {
-                ProgressView("Loading speakers...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: PTDesignTokens.Spacing.lg) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text("Loading speakers...")
+                        .font(PTFont.ptBodyText)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 8) {
+                    LazyVStack(alignment: .leading, spacing: PTDesignTokens.Spacing.sm) {
                         ForEach(filteredSpeakers) { speaker in
                             FilterCheckboxRow(
                                 title: speaker.name,
@@ -179,7 +189,7 @@ struct SpeakersFilterTab: View {
                             }
                         }
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
                 }
             }
         }
@@ -226,53 +236,52 @@ struct ConferencesFilterTab: View {
             return conferences.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
         }
     }
+
+    var filteredConferenceTypes: [FilterOption] {
+        if searchText.isEmpty {
+            return conferenceTypes
+        } else {
+            return conferenceTypes.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        }
+    }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.lg) {
             FilterSearchBar(text: $searchText, placeholder: "Search conferences...")
-            
+
             if isLoading {
-                ProgressView("Loading conferences...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: PTDesignTokens.Spacing.lg) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text("Loading conferences...")
+                        .font(PTFont.ptBodyText)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 16) {
-                        // Conference Types Section
-                        if !conferenceTypes.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Conference Types")
-                                    .font(.headline)
-                                    .padding(.horizontal)
-                                
-                                ForEach(conferenceTypes) { type in
-                                    FilterCheckboxRow(
-                                        title: type.name,
-                                        subtitle: nil,
-                                        isSelected: filters.conferenceTypes.contains(type.id)
-                                    ) {
-                                        toggleConferenceType(type.id)
-                                    }
+                    LazyVStack(alignment: .leading, spacing: PTDesignTokens.Spacing.lg) {
+                        // Conference Types (if available)
+                        if !filteredConferenceTypes.isEmpty {
+                            ForEach(filteredConferenceTypes) { type in
+                                FilterCheckboxRow(
+                                    title: type.name,
+                                    subtitle: nil,
+                                    isSelected: filters.conferenceTypes.contains(type.id)
+                                ) {
+                                    toggleConferenceType(type.id)
                                 }
                             }
-                            
-                            Divider()
-                                .padding(.horizontal)
                         }
-                        
-                        // Specific Conferences Section
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Conferences")
-                                .font(.headline)
-                                .padding(.horizontal)
-                            
-                            ForEach(filteredConferences) { conference in
-                                FilterCheckboxRow(
-                                    title: conference.name,
-                                    subtitle: conference.count.map { "\($0) talks" },
-                                    isSelected: filters.conferenceIds.contains(conference.id)
-                                ) {
-                                    toggleConference(conference.id)
-                                }
+
+                        // Specific Conferences
+                        ForEach(filteredConferences) { conference in
+                            FilterCheckboxRow(
+                                title: conference.name,
+                                subtitle: conference.count.map { "\($0) talks" },
+                                isSelected: filters.conferenceIds.contains(conference.id)
+                            ) {
+                                toggleConference(conference.id)
                             }
                         }
                     }
@@ -334,15 +343,21 @@ struct BibleBooksFilterTab: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.lg) {
             FilterSearchBar(text: $searchText, placeholder: "Search Bible books...")
-            
+
             if isLoading {
-                ProgressView("Loading Bible books...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: PTDesignTokens.Spacing.lg) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text("Loading Bible books...")
+                        .font(PTFont.ptBodyText)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 8) {
+                    LazyVStack(alignment: .leading, spacing: PTDesignTokens.Spacing.sm) {
                         ForEach(filteredBooks) { book in
                             FilterCheckboxRow(
                                 title: book.name,
@@ -353,7 +368,7 @@ struct BibleBooksFilterTab: View {
                             }
                         }
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
                 }
             }
         }
@@ -391,13 +406,19 @@ struct YearsFilterTab: View {
     @State private var isLoading = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.lg) {
             if isLoading {
-                ProgressView("Loading years...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: PTDesignTokens.Spacing.lg) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text("Loading years...")
+                        .font(PTFont.ptBodyText)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 12) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: PTDesignTokens.Spacing.md) {
                         ForEach(years) { year in
                             YearFilterCard(
                                 year: year.name,
@@ -408,7 +429,7 @@ struct YearsFilterTab: View {
                             }
                         }
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
                 }
             }
         }
@@ -455,15 +476,21 @@ struct CollectionsFilterTab: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.lg) {
             FilterSearchBar(text: $searchText, placeholder: "Search collections...")
-            
+
             if isLoading {
-                ProgressView("Loading collections...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: PTDesignTokens.Spacing.lg) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text("Loading collections...")
+                        .font(PTFont.ptBodyText)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 8) {
+                    LazyVStack(alignment: .leading, spacing: PTDesignTokens.Spacing.sm) {
                         ForEach(filteredCollections) { collection in
                             FilterCheckboxRow(
                                 title: collection.name,
@@ -474,7 +501,7 @@ struct CollectionsFilterTab: View {
                             }
                         }
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
                 }
             }
         }
@@ -511,18 +538,24 @@ struct AdvancedFilterTab: View {
         Form {
             Section("Search") {
                 TextField("Search terms...", text: $filters.query)
+                    .font(PTFont.ptBodyText)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
             }
-            
+
             Section("Legacy Filters") {
                 TextField("Speaker name...", text: Binding(
                     get: { filters.speaker ?? "" },
                     set: { filters.speaker = $0.isEmpty ? nil : $0 }
                 ))
-                
+                .font(PTFont.ptBodyText)
+                .foregroundColor(PTDesignTokens.Colors.ink)
+
                 TextField("Series name...", text: Binding(
                     get: { filters.series ?? "" },
                     set: { filters.series = $0.isEmpty ? nil : $0 }
                 ))
+                .font(PTFont.ptBodyText)
+                .foregroundColor(PTDesignTokens.Colors.ink)
             }
             
             Section("Date Range") {
@@ -583,16 +616,53 @@ struct AdvancedFilterTab: View {
 struct FilterSearchBar: View {
     @Binding var text: String
     let placeholder: String
-    
+    @FocusState private var isFocused: Bool
+
     var body: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(.gray)
-            
-            TextField(placeholder, text: $text)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
+        HStack(spacing: PTDesignTokens.Spacing.md) {
+            HStack(spacing: PTDesignTokens.Spacing.md) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(isFocused ? PTDesignTokens.Colors.kleinBlue : PTDesignTokens.Colors.medium)
+                    .font(PTFont.ptSectionTitle)
+                    .frame(width: 20, height: 20)
+
+                TextField(placeholder, text: $text)
+                    .font(PTFont.ptBodyText)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
+                    .focused($isFocused)
+                    .submitLabel(.search)
+
+                if !text.isEmpty {
+                    Button(action: {
+                        text = ""
+                        isFocused = false
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(PTDesignTokens.Colors.medium)
+                            .font(PTFont.ptButtonText)
+                            .frame(width: 20, height: 20)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+            .padding(.horizontal, PTDesignTokens.Spacing.lg)
+            .padding(.vertical, PTDesignTokens.Spacing.md)
+            .background(
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.input)
+                    .fill(PTDesignTokens.Colors.surface)
+                    .shadow(
+                        color: isFocused ? PTDesignTokens.Colors.tang.opacity(0.2) : Color.black.opacity(0.05),
+                        radius: isFocused ? 4 : 2,
+                        x: 0,
+                        y: isFocused ? 2 : 1
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.input)
+                    .stroke(isFocused ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.light.opacity(0.3), lineWidth: isFocused ? 2 : 1)
+            )
+            .animation(.easeInOut(duration: 0.2), value: isFocused)
         }
-        .padding(.horizontal)
     }
 }
 
@@ -601,32 +671,33 @@ struct FilterCheckboxRow: View {
     let subtitle: String?
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: PTDesignTokens.Spacing.md) {
+            VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
                 Text(title)
-                    .font(.body)
-                
+                    .font(PTFont.ptBodyText)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
+
                 if let subtitle = subtitle {
                     Text(subtitle)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(PTFont.ptCaptionText)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
                 }
             }
-            
+
             Spacer()
-            
+
             Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                .foregroundColor(isSelected ? PTDesignTokens.Colors.kleinBlue : .gray)
-                .font(.title2)
+                .foregroundColor(isSelected ? PTDesignTokens.Colors.kleinBlue : PTDesignTokens.Colors.medium)
+                .font(PTFont.ptSectionTitle)
         }
         .contentShape(Rectangle())
         .onTapGesture {
             action()
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
+        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+        .padding(.vertical, PTDesignTokens.Spacing.sm)
     }
 }
 
@@ -635,27 +706,28 @@ struct YearFilterCard: View {
     let count: Int?
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: PTDesignTokens.Spacing.xs) {
             Text(year)
-                .font(.title2)
+                .font(PTFont.ptCardTitle)
                 .fontWeight(.semibold)
-            
+                .foregroundColor(PTDesignTokens.Colors.ink)
+
             if let count = count {
                 Text("\(count) talks")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .font(PTFont.ptCaptionText)
+                    .foregroundColor(PTDesignTokens.Colors.medium)
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
+        .padding(.vertical, PTDesignTokens.Spacing.md)
         .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(isSelected ? PTDesignTokens.Colors.kleinBlue.opacity(0.1) : Color(.systemGray6))
+            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                .fill(isSelected ? PTDesignTokens.Colors.tang.opacity(0.1) : PTDesignTokens.Colors.surface)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(isSelected ? PTDesignTokens.Colors.kleinBlue : Color.clear, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                        .stroke(isSelected ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.light.opacity(0.3), lineWidth: 1)
                 )
         )
         .onTapGesture {

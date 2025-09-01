@@ -41,7 +41,10 @@ struct MiniPlayerView: View {
                                 endPoint: .bottomTrailing
                             ))
                             .overlay(
-                                PTStarSymbol(size: 20)
+                                Image("pt-resources")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 28, height: 28)
                                     .opacity(0.8)
                             )
                     }

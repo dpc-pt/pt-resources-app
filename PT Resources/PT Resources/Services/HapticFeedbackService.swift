@@ -294,19 +294,27 @@ final class EnhancedAudioSessionService: NSObject, ObservableObject {
     /// Configure audio session for media playback
     func configureForMediaPlayback() {
         do {
-            // Use spokenAudio mode for better talk/sermon playback
+            // Use spokenAudio mode for better talk/sermon playback with audio-only AirPlay
             try audioSession.setCategory(
                 .playback,
                 mode: .spokenAudio,
-                options: [.allowAirPlay, .allowBluetooth, .allowBluetoothA2DP]
+                options: [
+                    .allowAirPlay,
+                    .allowBluetooth, 
+                    .allowBluetoothA2DP,
+                    .defaultToSpeaker  // Prefer audio-only output routes
+                ]
             )
             
             // Set preferred buffer duration for smooth playback
             try audioSession.setPreferredIOBufferDuration(0.005)
             
+            // Configure for audio-only AirPlay (prevents video behavior)
+            try audioSession.setPreferredInput(nil)
+            
             try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
             
-            PTLogger.general.info("Audio session configured for media playback with spokenAudio mode")
+            PTLogger.general.info("Audio session configured for audio-only media playback with spokenAudio mode")
             
         } catch let error as NSError {
             PTLogger.general.error("Failed to configure audio session: \(error.localizedDescription)")

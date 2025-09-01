@@ -25,12 +25,11 @@ struct TalksListView: View {
     private let apiService: TalksAPIServiceProtocol
     
     @State private var showingFilters = false
-
+    @State private var selectedTalk: Talk?
     @State private var selectedResourceId: String?
     @State private var downloadedTalks: [DownloadedTalk] = []
     @State private var isLoadingDownloadedTalks = false
-    @State private var showingDownloadsSheet = false
-    @State private var showingNowPlaying = false
+
     
     init(apiService: TalksAPIServiceProtocol = TalksAPIService(), filtersAPIService: FiltersAPIService = FiltersAPIService(), initialFilters: TalkSearchFilters? = nil) {
         self.apiService = apiService
@@ -43,8 +42,6 @@ struct TalksListView: View {
         NavigationStack {
             ZStack {
                 PTDesignTokens.Colors.background.ignoresSafeArea()
-                    .ptCornerPattern(position: .topLeft, size: .medium, hasLogo: false)
-                    .ptCornerPattern(position: .bottomRight, size: .large, hasLogo: false)
                 
                 VStack(spacing: 0) {
                     // Header with Downloads Button
@@ -59,18 +56,12 @@ struct TalksListView: View {
                         // Filter Bar with PT styling
                         PTFilterBar(
                             showingFilters: $showingFilters,
-                            activeFiltersCount: activeFiltersCount
+                            activeFiltersCount: activeFiltersCount,
+                            activeFilters: activeFilterLabels,
+                            onClearFilter: removeFilter
                         )
                         
-                        // Quick Filters
-                        if !viewModel.isLoading || !viewModel.talks.isEmpty {
-                            QuickFiltersView(
-                                quickFilters: filtersAPIService.getQuickFilters(),
-                                onFilterTap: { quickFilter in
-                                    viewModel.applyQuickFilter(quickFilter)
-                                }
-                            )
-                        }
+
                     }
                     .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
                     .padding(.bottom, PTDesignTokens.Spacing.sm)
@@ -93,7 +84,8 @@ struct TalksListView: View {
                                         talk: talk,
                                         isDownloaded: isTalkDownloaded(talk.id),
                                         downloadProgress: downloadService.downloadProgress[talk.id],
-                                        onTalkTap: { playTalk(talk) },
+                                        onTalkTap: { selectedTalk = talk },
+                                        onPlayTap: { playTalk(talk) },
                                         onDownloadTap: { downloadTalk(talk) }
                                     )
                                     .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
@@ -101,9 +93,8 @@ struct TalksListView: View {
                                     // Load more when near the end
                                     if talk == viewModel.filteredTalks.last && viewModel.hasMorePages {
                                         HStack {
-                                            PTLogo(size: 16, showText: false)
-                                                .rotationEffect(.degrees(360))
-                                                .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: true)
+                                            ProgressView()
+                                                .scaleEffect(0.8)
                                             Text("Loading more...")
                                                 .font(PTFont.ptCaptionText)
                                                 .foregroundColor(PTDesignTokens.Colors.medium)
@@ -149,16 +140,16 @@ struct TalksListView: View {
                 }
             )
         }
-
+        .sheet(item: $selectedTalk) { talk in
+            TalkDetailView(talk: talk, playerService: playerService, downloadService: downloadService)
+        }
         .sheet(item: Binding<ResourceNavigationItem?>(
             get: { selectedResourceId.map { ResourceNavigationItem(resourceId: $0) } },
             set: { _ in selectedResourceId = nil }
         )) { item in
             ResourceDetailView(resourceId: item.resourceId)
         }
-        .sheet(isPresented: $showingDownloadsSheet) {
-            DownloadsView(apiService: apiService)
-        }
+
         .alert("Error", isPresented: .constant(viewModel.error != nil)) {
             Button("OK") {
                 viewModel.error = nil
@@ -179,72 +170,156 @@ struct TalksListView: View {
         .onReceive(NotificationCenter.default.publisher(for: .downloadDeleted)) { _ in
             loadDownloadedTalks()
         }
-        .fullScreenCover(isPresented: $showingNowPlaying) {
-            NowPlayingView()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .showNowPlaying)) { _ in
-            showingNowPlaying = true
-        }
     }
     
     // MARK: - Computed Properties
     
     private var activeFiltersCount: Int {
         var count = 0
+
+        // Legacy filters
         if !viewModel.selectedFilters.query.isEmpty { count += 1 }
         if viewModel.selectedFilters.speaker != nil { count += 1 }
         if viewModel.selectedFilters.series != nil { count += 1 }
         if viewModel.selectedFilters.dateFrom != nil { count += 1 }
         if viewModel.selectedFilters.dateTo != nil { count += 1 }
+
+        // API-based filters
+        if !viewModel.selectedFilters.speakerIds.isEmpty { count += 1 }
+        if !viewModel.selectedFilters.conferenceIds.isEmpty { count += 1 }
+        if !viewModel.selectedFilters.conferenceTypes.isEmpty { count += 1 }
+        if !viewModel.selectedFilters.bibleBookIds.isEmpty { count += 1 }
+        if !viewModel.selectedFilters.years.isEmpty { count += 1 }
+        if !viewModel.selectedFilters.collections.isEmpty { count += 1 }
+
+        // Content filters
+        if viewModel.selectedFilters.hasTranscript != nil { count += 1 }
+        if viewModel.selectedFilters.isDownloaded != nil { count += 1 }
+
         return count
+    }
+
+    private var activeFilterLabels: [String] {
+        var labels: [String] = []
+
+        // Legacy filters
+        if !viewModel.selectedFilters.query.isEmpty {
+            labels.append("\"\(viewModel.selectedFilters.query)\"")
+        }
+        if let speaker = viewModel.selectedFilters.speaker {
+            labels.append(speaker)
+        }
+        if let series = viewModel.selectedFilters.series {
+            labels.append(series)
+        }
+        if viewModel.selectedFilters.dateFrom != nil || viewModel.selectedFilters.dateTo != nil {
+            var dateLabel = "Date: "
+            if let from = viewModel.selectedFilters.dateFrom {
+                dateLabel += from.formatted(.dateTime.year())
+            }
+            if viewModel.selectedFilters.dateFrom != nil && viewModel.selectedFilters.dateTo != nil {
+                dateLabel += " - "
+            }
+            if let to = viewModel.selectedFilters.dateTo {
+                dateLabel += to.formatted(.dateTime.year())
+            }
+            labels.append(dateLabel)
+        }
+
+        // API-based filters (showing counts for now - would need name resolution)
+        if !viewModel.selectedFilters.speakerIds.isEmpty {
+            labels.append("\(viewModel.selectedFilters.speakerIds.count) speaker\(viewModel.selectedFilters.speakerIds.count > 1 ? "s" : "")")
+        }
+        if !viewModel.selectedFilters.conferenceIds.isEmpty {
+            labels.append("\(viewModel.selectedFilters.conferenceIds.count) conference\(viewModel.selectedFilters.conferenceIds.count > 1 ? "s" : "")")
+        }
+        if !viewModel.selectedFilters.conferenceTypes.isEmpty {
+            labels.append("\(viewModel.selectedFilters.conferenceTypes.count) type\(viewModel.selectedFilters.conferenceTypes.count > 1 ? "s" : "")")
+        }
+        if !viewModel.selectedFilters.bibleBookIds.isEmpty {
+            labels.append("\(viewModel.selectedFilters.bibleBookIds.count) book\(viewModel.selectedFilters.bibleBookIds.count > 1 ? "s" : "")")
+        }
+        if !viewModel.selectedFilters.years.isEmpty {
+            labels.append("\(viewModel.selectedFilters.years.count) year\(viewModel.selectedFilters.years.count > 1 ? "s" : "")")
+        }
+        if !viewModel.selectedFilters.collections.isEmpty {
+            labels.append("\(viewModel.selectedFilters.collections.count) collection\(viewModel.selectedFilters.collections.count > 1 ? "s" : "")")
+        }
+
+        // Content filters
+        if let hasTranscript = viewModel.selectedFilters.hasTranscript {
+            labels.append(hasTranscript ? "Has transcript" : "No transcript")
+        }
+        if let isDownloaded = viewModel.selectedFilters.isDownloaded {
+            labels.append(isDownloaded ? "Downloaded" : "Not downloaded")
+        }
+
+        return labels
+    }
+
+    private func removeFilter(_ filterLabel: String) {
+        var newFilters = viewModel.selectedFilters
+
+        // Legacy filters
+        if filterLabel == "\"\(viewModel.selectedFilters.query)\"" {
+            newFilters.query = ""
+        } else if filterLabel == viewModel.selectedFilters.speaker {
+            newFilters.speaker = nil
+        } else if filterLabel == viewModel.selectedFilters.series {
+            newFilters.series = nil
+        } else if filterLabel.hasPrefix("Date: ") {
+            newFilters.dateFrom = nil
+            newFilters.dateTo = nil
+        }
+
+        // Content filters
+        else if filterLabel == "Has transcript" {
+            newFilters.hasTranscript = nil
+        } else if filterLabel == "No transcript" {
+            newFilters.hasTranscript = nil
+        } else if filterLabel == "Downloaded" {
+            newFilters.isDownloaded = nil
+        } else if filterLabel == "Not downloaded" {
+            newFilters.isDownloaded = nil
+        }
+
+        // API-based filters (clear entire categories for now)
+        else if filterLabel.hasSuffix("speaker") || filterLabel.hasSuffix("speakers") {
+            newFilters.speakerIds = []
+        } else if filterLabel.hasSuffix("conference") || filterLabel.hasSuffix("conferences") {
+            newFilters.conferenceIds = []
+        } else if filterLabel.hasSuffix("type") || filterLabel.hasSuffix("types") {
+            newFilters.conferenceTypes = []
+        } else if filterLabel.hasSuffix("book") || filterLabel.hasSuffix("books") {
+            newFilters.bibleBookIds = []
+        } else if filterLabel.hasSuffix("year") || filterLabel.hasSuffix("years") {
+            newFilters.years = []
+        } else if filterLabel.hasSuffix("collection") || filterLabel.hasSuffix("collections") {
+            newFilters.collections = []
+        }
+
+        // Apply the updated filters
+        viewModel.applyFilters(newFilters)
     }
     
     private var resourcesHeader: some View {
         HStack {
             VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
                 Text("Resources")
-                    .font(PTFont.ptSectionTitle)
+                    .font(PTFont.ptDisplaySmall)
                     .foregroundColor(PTDesignTokens.Colors.ink)
-                
+
                 Text("Sermons and talks from Proclamation Trust")
-                    .font(PTFont.ptCaptionText)
+                    .font(PTFont.ptBodyText)
                     .foregroundColor(PTDesignTokens.Colors.medium)
             }
-            
+
             Spacer()
-            
-            Button(action: { showingDownloadsSheet = true }) {
-                HStack(spacing: PTDesignTokens.Spacing.xs) {
-                    Image(systemName: "arrow.down.circle.fill")
-                        .font(.title3)
-                    
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("Downloads")
-                            .font(PTFont.ptCaptionText)
-                            .fontWeight(.medium)
-                        
-                        if !downloadedTalks.isEmpty {
-                            Text("\(downloadedTalks.count)")
-                                .font(PTFont.ptCaptionText)
-                                .foregroundColor(PTDesignTokens.Colors.medium)
-                        }
-                    }
-                }
-                .foregroundColor(PTDesignTokens.Colors.tang)
-                .padding(.horizontal, PTDesignTokens.Spacing.sm)
-                .padding(.vertical, PTDesignTokens.Spacing.xs)
-                .background(
-                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
-                        .fill(PTDesignTokens.Colors.tang.opacity(0.1))
-                )
-            }
-            .accessibilityLabel("View Downloads")
-            .accessibilityHint("Opens downloaded talks view with \(downloadedTalks.count) downloads")
+
+            PTLogo(size: 32, showText: false)
         }
         .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
-        .padding(.top, PTDesignTokens.Spacing.lg)
-        .padding(.bottom, PTDesignTokens.Spacing.md)
-        .background(PTDesignTokens.Colors.background)
+        .padding(.vertical, PTDesignTokens.Spacing.md)
     }
     
     // MARK: - Private Methods
@@ -252,11 +327,6 @@ struct TalksListView: View {
     private func playTalk(_ talk: Talk) {
         playerService.loadTalk(talk)
         playerService.play()
-        // Show the full now playing view
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            // Small delay to ensure the talk is loaded before showing the player
-            NotificationCenter.default.post(name: .showNowPlaying, object: nil)
-        }
     }
     
     private func downloadTalk(_ talk: Talk) {
@@ -347,7 +417,8 @@ private extension TalksListView {
                             DownloadedTalkRowView(
                                 downloadedTalk: downloadedTalk,
                                 onPlayTap: { playDownloadedTalk(downloadedTalk) },
-                                onDeleteTap: { deleteDownloadedTalk(downloadedTalk) }
+                                onDeleteTap: { deleteDownloadedTalk(downloadedTalk) },
+                                onTap: {}
                             )
                             .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
                         }

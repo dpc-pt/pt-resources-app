@@ -10,14 +10,23 @@ import SwiftUI
 struct PTLogo: View {
     let size: CGFloat
     let showText: Bool
+    let useFullLogo: Bool
 
-    init(size: CGFloat = 32, showText: Bool = true) {
+    init(size: CGFloat = 32, showText: Bool = true, useFullLogo: Bool = false) {
         self.size = size
         self.showText = showText
+        self.useFullLogo = useFullLogo
     }
 
     var body: some View {
-        if showText {
+        if useFullLogo {
+            // Use the full PT Resources logo
+            Image("pt-resources")
+                .resizable()
+                .scaledToFit()
+                .frame(height: size)
+                .foregroundColor(PTDesignTokens.Colors.ink)
+        } else if showText {
             // Use the full logo with text from SVG
             Image("pt-logo-primary-dark")
                 .resizable()
@@ -91,6 +100,7 @@ struct PTLogo_Previews: PreviewProvider {
             PTLogo(size: 48, showText: true)
             PTLogo(size: 32, showText: true)
             PTLogo(size: 24, showText: false)
+            PTLogo(size: 80, showText: false, useFullLogo: true)
             PTStarSymbol(size: 64)
             
             PTBrandHeader("Resources", subtitle: "Sermons and talks from Proclamation Trust")

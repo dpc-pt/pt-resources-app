@@ -19,11 +19,10 @@ struct ConferenceDetailView: View {
     @State private var conferenceResources: [Talk] = []
     @State private var isLoadingResources = false
     @State private var resourceError: APIError?
-
+    @State private var selectedTalk: Talk?
     @State private var showingDownloadAllAlert = false
     @State private var isDownloadingAll = false
     @State private var downloadAllProgress: [String: Float] = [:]
-    @State private var showingNowPlaying = false
     
     init(conference: ConferenceInfo) {
         self.conference = conference
@@ -36,11 +35,6 @@ struct ConferenceDetailView: View {
             LazyVStack(spacing: 0) {
                 // Conference Header
                 conferenceHeader
-                
-                // Download All Section
-                downloadAllSection
-                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
-                    .padding(.vertical, PTDesignTokens.Spacing.lg)
                 
                 // Resources Section
                 resourcesSection
@@ -62,7 +56,9 @@ struct ConferenceDetailView: View {
                 }
             }
         }
-
+        .navigationDestination(item: $selectedTalk) { talk in
+            TalkDetailView(talk: talk, downloadService: downloadService)
+        }
         .alert("Download All Resources", isPresented: $showingDownloadAllAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Download") {
@@ -73,12 +69,6 @@ struct ConferenceDetailView: View {
         }
         .onAppear {
             loadConferenceResources()
-        }
-        .fullScreenCover(isPresented: $showingNowPlaying) {
-            NowPlayingView()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .showNowPlaying)) { _ in
-            showingNowPlaying = true
         }
     }
     
@@ -123,20 +113,54 @@ struct ConferenceDetailView: View {
             
             // Conference Info Overlay
             VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.md) {
+                // Download All Button in top right
+                HStack {
+                    Spacer()
+
+                    Button(action: {
+                        if hasDownloadableResources {
+                            showingDownloadAllAlert = true
+                        }
+                    }) {
+                        HStack(spacing: PTDesignTokens.Spacing.xs) {
+                            if isDownloadingAll {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                                    .tint(.white)
+                            } else {
+                                Image(systemName: hasDownloadableResources ? "arrow.down.circle.fill" : "checkmark.circle.fill")
+                                    .font(PTFont.ptButtonText)
+                            }
+
+                            Text(downloadAllButtonText)
+                                .font(PTFont.ptCaptionText)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, PTDesignTokens.Spacing.sm)
+                        .padding(.vertical, PTDesignTokens.Spacing.xs)
+                        .background(
+                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                                .fill(hasDownloadableResources ? PTDesignTokens.Colors.kleinBlue.opacity(0.8) : PTDesignTokens.Colors.lawn.opacity(0.8))
+                        )
+                    }
+                    .disabled(!hasDownloadableResources || isDownloadingAll)
+                }
+
                 HStack {
                     VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
                         Text(conference.displayTitle)
                             .font(PTFont.ptDisplaySmall)
                             .foregroundColor(PTDesignTokens.Colors.ink)
-                        
+
                         HStack(spacing: PTDesignTokens.Spacing.sm) {
                             Text(conference.year)
                                 .font(PTFont.ptCardSubtitle)
                                 .foregroundColor(PTDesignTokens.Colors.tang)
-                            
+
                             Text("•")
                                 .foregroundColor(PTDesignTokens.Colors.medium)
-                            
+
                             HStack(spacing: PTDesignTokens.Spacing.xs) {
                                 Image(systemName: "doc.text")
                                     .font(.caption)
@@ -146,7 +170,7 @@ struct ConferenceDetailView: View {
                             .foregroundColor(PTDesignTokens.Colors.medium)
                         }
                     }
-                    
+
                     Spacer()
                 }
                 
@@ -171,67 +195,7 @@ struct ConferenceDetailView: View {
         .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
     }
     
-    // MARK: - Download All Section
-    
-    private var downloadAllSection: some View {
-        VStack(spacing: PTDesignTokens.Spacing.md) {
-            HStack {
-                VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
-                    Text("Download All")
-                        .font(PTFont.ptSectionTitle)
-                        .foregroundColor(PTDesignTokens.Colors.ink)
-                    
-                    Text("Get all resources from this conference for offline access")
-                        .font(PTFont.ptBodyText)
-                        .foregroundColor(PTDesignTokens.Colors.medium)
-                }
-                
-                Spacer()
-            }
-            
-            // Download All Button
-            Button(action: {
-                if hasDownloadableResources {
-                    showingDownloadAllAlert = true
-                }
-            }) {
-                HStack(spacing: PTDesignTokens.Spacing.sm) {
-                    if isDownloadingAll {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                            .tint(.white)
-                    } else {
-                        Image(systemName: hasDownloadableResources ? "arrow.down.circle.fill" : "checkmark.circle.fill")
-                            .font(PTFont.ptButtonText)
-                    }
-                    
-                    Text(downloadAllButtonText)
-                        .font(PTFont.ptButtonText)
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, PTDesignTokens.Spacing.cardPadding)
-                .padding(.vertical, PTDesignTokens.Spacing.md)
-                .background(
-                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
-                        .fill(hasDownloadableResources ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.lawn)
-                )
-                .shadow(
-                    color: PTDesignTokens.Shadows.button.color,
-                    radius: PTDesignTokens.Shadows.button.radius,
-                    x: PTDesignTokens.Shadows.button.x,
-                    y: PTDesignTokens.Shadows.button.y
-                )
-            }
-            .disabled(!hasDownloadableResources || isDownloadingAll)
-        }
-        .padding(PTDesignTokens.Spacing.cardPadding)
-        .background(PTDesignTokens.Colors.surface)
-        .cornerRadius(PTDesignTokens.BorderRadius.card)
-        .overlay(
-            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                .stroke(PTDesignTokens.Colors.border.opacity(0.5), lineWidth: 0.5)
-        )
-    }
+
     
     // MARK: - Resources Section
     
@@ -265,7 +229,8 @@ struct ConferenceDetailView: View {
                             talk: resource,
                             isDownloaded: isTalkDownloaded(resource.id),
                             downloadProgress: downloadService.downloadProgress[resource.id],
-                            onTalkTap: { playTalk(resource) },
+                            onTalkTap: { selectedTalk = resource },
+                            onPlayTap: { playTalk(resource) },
                             onDownloadTap: { downloadTalk(resource) }
                         )
                         .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
@@ -294,11 +259,11 @@ struct ConferenceDetailView: View {
         if isDownloadingAll {
             return "Downloading..."
         } else if downloadedResourceCount == conferenceResources.count && downloadedResourceCount > 0 {
-            return "All Downloaded"
+            return "Downloaded"
         } else if downloadedResourceCount > 0 {
-            return "Download Remaining (\(conferenceResources.count - downloadedResourceCount))"
+            return "Download (\(conferenceResources.count - downloadedResourceCount))"
         } else {
-            return "Download All (\(conferenceResources.count))"
+            return "Download All"
         }
     }
     
@@ -327,11 +292,6 @@ struct ConferenceDetailView: View {
     private func playTalk(_ talk: Talk) {
         playerService.loadTalk(talk)
         playerService.play()
-        // Show the full now playing view
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            // Small delay to ensure the talk is loaded before showing the player
-            NotificationCenter.default.post(name: .showNowPlaying, object: nil)
-        }
     }
     
     private func downloadTalk(_ talk: Talk) {

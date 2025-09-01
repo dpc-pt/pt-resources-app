@@ -12,7 +12,6 @@ extension Notification.Name {
     static let downloadCompleted = Notification.Name("downloadCompleted")
     static let downloadDeleted = Notification.Name("downloadDeleted")
     static let downloadFailed = Notification.Name("downloadFailed")
-    static let showNowPlaying = Notification.Name("showNowPlaying")
 }
 import Combine
 

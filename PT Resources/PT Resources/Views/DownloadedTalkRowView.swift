@@ -11,132 +11,84 @@ struct DownloadedTalkRowView: View {
     let downloadedTalk: DownloadedTalk
     let onPlayTap: () -> Void
     let onDeleteTap: () -> Void
+    let onTap: () -> Void
     
     @State private var isPressed = false
     
     var body: some View {
-        HStack(spacing: PTDesignTokens.Spacing.md) {
-            // Artwork/Thumbnail with PT styling and caching using priority order
-            PTAsyncImage(url: downloadedTalk.artworkURL.flatMap(URL.init),
-                       targetSize: CGSize(width: 72, height: 72)) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image)
-                        .fill(LinearGradient(
-                            colors: [PTDesignTokens.Colors.tang.opacity(0.1), PTDesignTokens.Colors.kleinBlue.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                    
-                    PTLogo(size: 24, showText: false)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image))
-            }
-            .frame(width: 72, height: 72)
-            .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image))
-            .overlay(
-                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image)
-                    .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
-            )
-            
-            // Talk Information
-            VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
-                Text(downloadedTalk.title)
-                    .font(PTFont.ptCardTitle)
-                    .foregroundColor(PTDesignTokens.Colors.ink)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                
-                Text(downloadedTalk.speaker)
-                    .font(PTFont.ptCardSubtitle)
-                    .foregroundColor(PTDesignTokens.Colors.tang)
-                
-                // Series and metadata
-                VStack(alignment: .leading, spacing: 2) {
-                    if let series = downloadedTalk.series, !series.isEmpty {
-                        Text(series)
-                            .font(PTFont.ptCaptionText)
-                            .foregroundColor(PTDesignTokens.Colors.medium)
+        Button(action: onTap) {
+            HStack(spacing: PTDesignTokens.Spacing.md) {
+                // Artwork/Thumbnail with PT styling and caching using priority order
+                PTAsyncImage(url: downloadedTalk.artworkURL.flatMap(URL.init),
+                           targetSize: CGSize(width: 72, height: 72)) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image)
+                            .fill(LinearGradient(
+                                colors: [PTDesignTokens.Colors.tang.opacity(0.1), PTDesignTokens.Colors.kleinBlue.opacity(0.1)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+
+                        PTLogo(size: 24, showText: false)
                     }
-                    
-                    // File size and duration
-                    HStack(spacing: PTDesignTokens.Spacing.xs) {
-                        Text(downloadedTalk.formattedDuration)
-                            .font(PTFont.ptCaptionText)
-                            .foregroundColor(PTDesignTokens.Colors.medium)
-                        
-                        Text("•")
-                            .font(PTFont.ptCaptionText)
-                            .foregroundColor(PTDesignTokens.Colors.light)
-                        
-                        Text(downloadedTalk.formattedFileSize)
-                            .font(PTFont.ptCaptionText)
-                            .foregroundColor(PTDesignTokens.Colors.medium)
-                        
-                        Spacer()
-                        
-                        // Enhanced Downloaded badge with quality indicator
-                        HStack(spacing: 4) {
-                            // Audio quality badge
-                            HStack(spacing: 2) {
-                                Image(systemName: "waveform")
-                                    .font(.system(size: 8, weight: .medium))
-                                    .foregroundColor(PTDesignTokens.Colors.tang)
-                                
-                                Text("MP3")
-                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
-                                    .foregroundColor(PTDesignTokens.Colors.tang)
-                            }
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(PTDesignTokens.Colors.tang.opacity(0.15))
-                            )
-                            
-                            // Offline ready indicator
-                            ZStack {
-                                Circle()
-                                    .fill(PTDesignTokens.Colors.success.opacity(0.2))
-                                    .frame(width: 16, height: 16)
-                                
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 8, weight: .bold))
-                                    .foregroundColor(PTDesignTokens.Colors.success)
-                            }
-                            
-                            Text("Ready")
+                    .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image))
+                }
+                .frame(width: 72, height: 72)
+                .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image))
+                .overlay(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image)
+                        .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
+                )
+
+                // Talk Information
+                VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
+                    Text(downloadedTalk.title)
+                        .font(PTFont.ptCardTitle)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+
+                    Text(downloadedTalk.speaker)
+                        .font(PTFont.ptCardSubtitle)
+                        .foregroundColor(PTDesignTokens.Colors.tang)
+
+                    // Series and metadata
+                    VStack(alignment: .leading, spacing: 2) {
+                        if let series = downloadedTalk.series, !series.isEmpty {
+                            Text(series)
                                 .font(PTFont.ptCaptionText)
+                                .foregroundColor(PTDesignTokens.Colors.medium)
+                        }
+
+                        // Duration and simple download indicator
+                        HStack(spacing: PTDesignTokens.Spacing.xs) {
+                            Text(downloadedTalk.formattedDuration)
+                                .font(PTFont.ptCaptionText)
+                                .foregroundColor(PTDesignTokens.Colors.medium)
+
+                            Spacer()
+
+                            // Simple download indicator
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 12))
                                 .foregroundColor(PTDesignTokens.Colors.success)
                         }
                     }
-                    
-                    // Additional metadata row
-                    HStack(spacing: PTDesignTokens.Spacing.xs) {
-                        Text("Downloaded \(formatRelativeTime(downloadedTalk.createdAt))")
-                            .font(PTFont.ptCaptionText)
-                            .foregroundColor(PTDesignTokens.Colors.medium)
-                        
-                        Text("•")
-                            .font(PTFont.ptCaptionText)
-                            .foregroundColor(PTDesignTokens.Colors.light)
-                        
-                        Text("Last played \(downloadedTalk.formattedLastAccessed)")
-                            .font(PTFont.ptCaptionText)
-                            .foregroundColor(PTDesignTokens.Colors.medium)
-                    }
                 }
+
+                Spacer()
+
+                // Play Button
+                Button(action: onPlayTap) {
+                    Image(systemName: "play.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(PTDesignTokens.Colors.tang)
+                }
+                .buttonStyle(.plain)
+                .accessibilityPlayButton(isPlaying: false)
             }
-            
-            Spacer()
-            
-            // Play Button
-            Button(action: onPlayTap) {
-                Image(systemName: "play.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(PTDesignTokens.Colors.tang)
-            }
-            .accessibilityPlayButton(isPlaying: false)
         }
+        .buttonStyle(.plain)
         .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
         .padding(.vertical, PTDesignTokens.Spacing.md)
         .background(PTDesignTokens.Colors.surface)
@@ -144,8 +96,8 @@ struct DownloadedTalkRowView: View {
             Rectangle()
                 .fill(PTDesignTokens.Colors.light.opacity(0.1))
                 .frame(height: 0.5)
-                .offset(y: 0)
-            , alignment: .bottom
+                .offset(y: 0),
+            alignment: .bottom
         )
         .scaleEffect(isPressed ? 0.98 : 1.0)
         .accessibilityDownloadedTalkRow(downloadedTalk)
@@ -155,14 +107,8 @@ struct DownloadedTalkRowView: View {
             }
         }, perform: {})
     }
-    
+
     // MARK: - Helper Methods
-    
-    private func formatRelativeTime(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: date, relativeTo: Date())
-    }
 }
 
 // MARK: - Preview
@@ -185,7 +131,8 @@ struct DownloadedTalkRowView_Previews: PreviewProvider {
                 defaultImageURL: nil
             ),
             onPlayTap: {},
-            onDeleteTap: {}
+            onDeleteTap: {},
+            onTap: {}
         )
         .padding()
         .background(Color(.systemGroupedBackground))
