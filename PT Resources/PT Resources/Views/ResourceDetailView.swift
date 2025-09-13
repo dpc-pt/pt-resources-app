@@ -12,7 +12,7 @@ struct ResourceDetailView: View {
     @StateObject private var resourceService = ResourceDetailService()
     @ObservedObject private var playerService = PlayerService.shared
     @ObservedObject private var videoPlayerManager = VideoPlayerManager.shared
-    @StateObject private var downloadService = DownloadService(apiService: TalksAPIService())
+    @EnvironmentObject private var downloadService: DownloadService
     
     @State private var resource: ResourceDetail?
     @State private var isLoading = true
@@ -62,6 +62,17 @@ struct ResourceDetailView: View {
                     }
                 } else if error != nil {
                     PTEmptyStateView()
+                }
+                
+                // Mini Player
+                if playerService.currentTalk != nil {
+                    VStack {
+                        Spacer()
+                        MiniPlayerView(playerService: playerService)
+                            .transition(.move(edge: .bottom))
+                            .background(PTDesignTokens.Colors.surface)
+                            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -4)
+                    }
                 }
             }
             .navigationBarHidden(true)

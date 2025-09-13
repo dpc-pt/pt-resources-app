@@ -9,6 +9,7 @@ import SwiftUI
 
 struct SettingsView: View {
     // MARK: - State Management
+    @ObservedObject private var playerService = PlayerService.shared
 
     @AppStorage("playbackSpeed") private var playbackSpeed: Double = 1.0
     @AppStorage("skipInterval") private var skipInterval: Int = 30
@@ -38,29 +39,42 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: PTDesignTokens.Spacing.xl) {
-                    // Header with PT Logo
-                    VStack(spacing: PTDesignTokens.Spacing.md) {
-                        PTLogo(size: 48, showText: false)
-                        Text("Settings")
-                            .font(PTFont.ptDisplaySmall)
-                            .foregroundColor(PTDesignTokens.Colors.ink)
-                    }
-                    .padding(.vertical, PTDesignTokens.Spacing.lg)
+            ZStack {
+                ScrollView {
+                    VStack(spacing: PTDesignTokens.Spacing.xl) {
+                        // Header with PT Logo
+                        VStack(spacing: PTDesignTokens.Spacing.md) {
+                            PTLogo(size: 48, showText: false)
+                            Text("Settings")
+                                .font(PTFont.ptDisplaySmall)
+                                .foregroundColor(PTDesignTokens.Colors.ink)
+                        }
+                        .padding(.vertical, PTDesignTokens.Spacing.lg)
 
-                    // Settings Sections
-                    VStack(spacing: PTDesignTokens.Spacing.lg) {
-                        playbackSection
-                        storageSection
-                        notificationsSection
-                        appearanceSection
-                        aboutSection
+                        // Settings Sections
+                        VStack(spacing: PTDesignTokens.Spacing.lg) {
+                            playbackSection
+                            storageSection
+                            notificationsSection
+                            appearanceSection
+                            aboutSection
+                        }
+                        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
                     }
-                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+                }
+                .background(PTDesignTokens.Colors.background)
+                
+                // Mini Player
+                if playerService.currentTalk != nil {
+                    VStack {
+                        Spacer()
+                        MiniPlayerView(playerService: playerService)
+                            .transition(.move(edge: .bottom))
+                            .background(PTDesignTokens.Colors.surface)
+                            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -4)
+                    }
                 }
             }
-            .background(PTDesignTokens.Colors.background)
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingPrivacySettings) {
                 PrivacySettingsView()

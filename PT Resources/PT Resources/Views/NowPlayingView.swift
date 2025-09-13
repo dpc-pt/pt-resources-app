@@ -16,7 +16,6 @@ struct NowPlayingView: View {
     
     // Animation and interaction state
     @State private var dragOffset: CGSize = .zero
-    @State private var isArtworkRotating = false
     @State private var showingQueue = false
     @State private var showingSpeed = false
     @State private var showingChapters = false
@@ -260,11 +259,7 @@ struct NowPlayingView: View {
                 RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
                     .stroke(.white.opacity(0.2), lineWidth: 1)
             )
-            .rotationEffect(.degrees(isArtworkRotating ? 1 : 0))
             .onTapGesture {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                    isArtworkRotating.toggle()
-                }
                 HapticFeedbackService.shared.mediumImpact()
             }
             .scaleEffect(playerService.isPlaying ? 1.0 : 0.98)
@@ -440,10 +435,7 @@ struct NowPlayingView: View {
     // MARK: - Helper Methods
     
     private func setupView() {
-        // Start subtle animations
-        withAnimation(.linear(duration: 30).repeatForever(autoreverses: false)) {
-            isArtworkRotating = true
-        }
+        // Setup any initial view state if needed
     }
     
     private func handleDrag(_ value: DragGesture.Value) {

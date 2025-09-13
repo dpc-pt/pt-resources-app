@@ -19,7 +19,7 @@ struct TalksListView: View {
     
     @StateObject private var viewModel: TalksViewModel
     @ObservedObject private var playerService = PlayerService.shared
-    @StateObject private var downloadService: DownloadService
+    @EnvironmentObject private var downloadService: DownloadService
     @StateObject private var networkMonitor = NetworkMonitor()
     @StateObject private var filtersAPIService: FiltersAPIService
     private let apiService: TalksAPIServiceProtocol
@@ -35,7 +35,6 @@ struct TalksListView: View {
         self.apiService = apiService
         self._filtersAPIService = StateObject(wrappedValue: filtersAPIService)
         self._viewModel = StateObject(wrappedValue: TalksViewModel(apiService: apiService, filtersAPIService: filtersAPIService, initialFilters: initialFilters))
-        self._downloadService = StateObject(wrappedValue: DownloadService(apiService: apiService))
     }
     
     var body: some View {
@@ -141,7 +140,7 @@ struct TalksListView: View {
             )
         }
         .sheet(item: $selectedTalk) { talk in
-            TalkDetailView(talk: talk, playerService: playerService, downloadService: downloadService)
+            TalkDetailView(talk: talk, playerService: playerService)
         }
         .sheet(item: Binding<ResourceNavigationItem?>(
             get: { selectedResourceId.map { ResourceNavigationItem(resourceId: $0) } },

@@ -11,7 +11,7 @@ import WebKit
 struct TalkDetailView: View {
     let talk: Talk
     @ObservedObject var playerService = PlayerService.shared
-    @ObservedObject var downloadService: DownloadService
+    @EnvironmentObject var downloadService: DownloadService
     @StateObject private var transcriptionService = TranscriptionService()
     @StateObject private var esvService = ESVService()
     
@@ -31,6 +31,9 @@ struct TalkDetailView: View {
     @State private var showingTranscriptSearch = false
     @State private var transcriptSearchText = ""
     @State private var searchResults: [TranscriptSegment] = []
+    @State private var isAutoDownloading = false
+    @State private var autoDownloadProgress: Float = 0.0
+    @State private var isStartingTranscription = false
     
     var body: some View {
         NavigationStack {
@@ -60,6 +63,14 @@ struct TalkDetailView: View {
                     actionButtonsSection
                         .padding(.horizontal, PTDesignTokens.Spacing.md)
                         .padding(.bottom, PTDesignTokens.Spacing.xl)
+                }
+                
+                // Mini Player
+                if playerService.currentTalk != nil {
+                    MiniPlayerView(playerService: playerService)
+                        .transition(.move(edge: .bottom))
+                        .background(PTDesignTokens.Colors.surface)
+                        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -4)
                 }
             }
             .background(PTDesignTokens.Colors.background)
@@ -96,6 +107,11 @@ struct TalkDetailView: View {
                     streamingTranscript = StreamingTranscript(talkID: talkID)
                 }
                 streamingTranscript?.addSegment(segment)
+            }
+        }
+        .onChange(of: downloadService.downloadProgress[talk.id] ?? 0.0) { progress in
+            if isAutoDownloading {
+                autoDownloadProgress = progress
             }
         }
         .sheet(isPresented: $showingTranscript) {
@@ -359,9 +375,15 @@ struct TalkDetailView: View {
             // Progress bar (only for audio)
             if selectedMediaType == .audio {
                 VStack(spacing: PTDesignTokens.Spacing.sm) {
-                    ProgressView(value: playerService.currentTime, total: playerService.duration)
-                        .progressViewStyle(PTMediaProgressStyle())
-                        .frame(height: 6)
+                    // Interactive scrubber
+                    PTProgressBar(
+                        value: playerService.duration > 0 ? playerService.currentTime / playerService.duration : 0,
+                        onChanged: { newValue in
+                            let newTime = newValue * playerService.duration
+                            playerService.seek(to: newTime)
+                        }
+                    )
+                    .frame(height: 20)
                     
                     HStack {
                         Text(timeString(from: playerService.currentTime))
@@ -652,6 +674,56 @@ struct TalkDetailView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .padding(PTDesignTokens.Spacing.xl)
+                    } else if isAutoDownloading {
+                        // Auto-downloading state
+                        VStack(spacing: PTDesignTokens.Spacing.lg) {
+                            PTLogo(size: 64, showText: false)
+                                .opacity(0.6)
+                            
+                            VStack(spacing: PTDesignTokens.Spacing.sm) {
+                                Text("Downloading Talk")
+                                    .font(PTFont.ptSectionTitle)
+                                    .foregroundColor(PTDesignTokens.Colors.ink)
+                                
+                                Text("Downloading audio file for transcription...")
+                                    .font(PTFont.ptBodyText)
+                                    .foregroundColor(PTDesignTokens.Colors.medium)
+                            }
+                            
+                            VStack(spacing: PTDesignTokens.Spacing.sm) {
+                                ProgressView(value: autoDownloadProgress)
+                                    .progressViewStyle(LinearProgressViewStyle(tint: PTDesignTokens.Colors.tang))
+                                
+                                Text("\(Int(autoDownloadProgress * 100))%")
+                                    .font(PTFont.ptCaptionText)
+                                    .foregroundColor(PTDesignTokens.Colors.medium)
+                            }
+                            .padding(.horizontal, PTDesignTokens.Spacing.lg)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(PTDesignTokens.Spacing.xl)
+                    } else if isStartingTranscription {
+                        // Starting transcription state
+                        VStack(spacing: PTDesignTokens.Spacing.lg) {
+                            PTLogo(size: 64, showText: false)
+                                .opacity(0.6)
+                            
+                            VStack(spacing: PTDesignTokens.Spacing.sm) {
+                                Text("Starting Transcription")
+                                    .font(PTFont.ptSectionTitle)
+                                    .foregroundColor(PTDesignTokens.Colors.ink)
+                                
+                                Text("Preparing to transcribe the downloaded audio...")
+                                    .font(PTFont.ptBodyText)
+                                    .foregroundColor(PTDesignTokens.Colors.medium)
+                            }
+                            
+                            ProgressView()
+                                .scaleEffect(1.2)
+                                .tint(PTDesignTokens.Colors.tang)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(PTDesignTokens.Spacing.xl)
                     } else {
                         // Request transcription or show existing
                         VStack(spacing: PTDesignTokens.Spacing.lg) {
@@ -680,12 +752,11 @@ struct TalkDetailView: View {
                             }
                             
                             Button(action: {
-                                requestTranscription()
-                                showingTranscript = false
+                                startDownloadAndTranscribe()
                             }) {
                                 HStack {
                                     Image(systemName: isTalkDownloaded ? "waveform.badge.checkmark" : "arrow.down.circle")
-                                    Text(isTalkDownloaded ? "Generate Transcript" : "Download Talk First")
+                                    Text(isTalkDownloaded ? "Generate Transcript" : "Download & Transcribe")
                                 }
                                 .font(PTFont.ptButtonText)
                                 .foregroundColor(.white)
@@ -693,11 +764,10 @@ struct TalkDetailView: View {
                                 .padding(.vertical, PTDesignTokens.Spacing.md)
                                 .background(
                                     RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
-                                        .fill(isTalkDownloaded ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.medium)
-                                        .shadow(color: (isTalkDownloaded ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.medium).opacity(0.3), radius: 8, x: 0, y: 4)
+                                        .fill(PTDesignTokens.Colors.tang)
+                                        .shadow(color: PTDesignTokens.Colors.tang.opacity(0.3), radius: 8, x: 0, y: 4)
                                 )
                             }
-                            .disabled(!isTalkDownloaded)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .padding(PTDesignTokens.Spacing.xl)
@@ -1108,24 +1178,67 @@ struct TalkDetailView: View {
             }
         }
         
-        private func requestTranscription() {
+        private func startDownloadAndTranscribe() {
             Task {
-                do {
-                    // Check if talk is downloaded first
-                    guard isTalkDownloaded else {
-                        print("Cannot transcribe: talk not downloaded")
-                        return
+                if isTalkDownloaded {
+                    // Already downloaded, just start transcription
+                    await MainActor.run {
+                        isStartingTranscription = true
+                    }
+                    await requestTranscription()
+                    await MainActor.run {
+                        isStartingTranscription = false
+                    }
+                } else {
+                    // Start download first, then transcribe
+                    await MainActor.run {
+                        isAutoDownloading = true
+                        autoDownloadProgress = 0.0
                     }
                     
-                    print("Starting local transcription using on-device processing...")
-                    try await transcriptionService.requestTranscription(for: talk)
-                    
-                    // The UI will automatically refresh via the notification listener
-                } catch TranscriptionError.audioFileNotFound {
-                    print("Audio file not found - transcript requires downloaded audio")
-                } catch {
-                    print("Local transcription failed: \(error)")
+                    do {
+                        // Start download
+                        try await downloadService.downloadTalk(talk)
+                        
+                        await MainActor.run {
+                            isTalkDownloaded = true
+                            isAutoDownloading = false
+                            isStartingTranscription = true
+                        }
+                        
+                        // Now start transcription immediately
+                        await requestTranscription()
+                        await MainActor.run {
+                            isStartingTranscription = false
+                        }
+                        
+                    } catch {
+                        await MainActor.run {
+                            isAutoDownloading = false
+                            isStartingTranscription = false
+                            print("Download failed: \(error)")
+                        }
+                    }
                 }
+            }
+        }
+        
+        private func requestTranscription() async {
+            do {
+                // Check if talk is downloaded first
+                guard isTalkDownloaded else {
+                    print("Cannot transcribe: talk not downloaded")
+                    return
+                }
+                
+                print("Starting local transcription using on-device processing...")
+                try await transcriptionService.requestTranscription(for: talk)
+                
+                // The UI will automatically refresh via the notification listener
+            } catch TranscriptionError.audioFileNotFound {
+                print("Audio file not found - transcript requires downloaded audio")
+            } catch {
+                print("Local transcription failed: \(error)")
             }
         }
         
@@ -1570,10 +1683,8 @@ struct TalkDetailView: View {
     
     struct TalkDetailView_Previews: PreviewProvider {
         static var previews: some View {
-            TalkDetailView(
-                talk: Talk.mockTalks[0],
-                downloadService: DownloadService(apiService: TalksAPIService())
-            )
+            TalkDetailView(talk: Talk.mockTalks[0])
+                .environmentObject(DownloadService(apiService: TalksAPIService()))
         }
     }
     

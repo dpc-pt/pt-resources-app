@@ -136,6 +136,16 @@ final class MediaArtworkService: ObservableObject {
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             
+            // Check if this is an SVG file by looking at the URL or content
+            let isSVG = url.pathExtension.lowercased() == "svg" || 
+                       String(data: data.prefix(100), encoding: .utf8)?.contains("<svg") == true
+            
+            if isSVG {
+                PTLogger.general.info("Detected SVG file, falling back to local PT Resources logo: \(url)")
+                // For SVG files, fall back to the local PT Resources logo
+                return generateSimplePTArtwork()
+            }
+            
             guard let image = UIImage(data: data) else {
                 PTLogger.general.warning("Failed to create image from remote data: \(url)")
                 return nil

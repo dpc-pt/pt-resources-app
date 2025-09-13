@@ -21,6 +21,7 @@ struct BlogPostNavigationItem: Identifiable {
 
 struct HomeView: View {
     @StateObject private var latestContentService = LatestContentService()
+    @ObservedObject private var playerService = PlayerService.shared
     @State private var latestContent: LatestContentResponse?
     @State private var isLoading = false
     @State private var error: APIError?
@@ -97,6 +98,17 @@ struct HomeView: View {
                     }
                 } else {
                     PTEmptyStateView()
+                }
+                
+                // Mini Player
+                if playerService.currentTalk != nil {
+                    VStack {
+                        Spacer()
+                        MiniPlayerView(playerService: playerService)
+                            .transition(.move(edge: .bottom))
+                            .background(PTDesignTokens.Colors.surface)
+                            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -4)
+                    }
                 }
             }
             .navigationBarTitleDisplayMode(.inline)

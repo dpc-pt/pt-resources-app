@@ -7,6 +7,7 @@
 
 import Foundation
 import CoreData
+import AVFoundation
 
 extension Notification.Name {
     static let downloadCompleted = Notification.Name("downloadCompleted")
@@ -22,6 +23,8 @@ final class DownloadService: NSObject, ObservableObject {
     
     @Published var activeDownloads: [DownloadTask] = []
     @Published var downloadProgress: [String: Float] = [:]
+    @Published var cachedDownloadedTalks: [DownloadedTalk] = []
+    @Published var isCacheValid = false
     
     // MARK: - Private Properties
     
@@ -34,9 +37,11 @@ final class DownloadService: NSObject, ObservableObject {
     
     private let apiService: TalksAPIServiceProtocol
     private let persistenceController: PersistenceController
-    private let fileManager = FileManager.default
+    // FileManager is not Sendable, so we'll use FileManager.default directly in methods
     
     private var backgroundCompletionHandler: (() -> Void)?
+    private var lastCacheUpdate: Date?
+    private let cacheValidityDuration: TimeInterval = 300 // 5 minutes
     
     // MARK: - Initialization
     
@@ -47,6 +52,11 @@ final class DownloadService: NSObject, ObservableObject {
         
         // Load existing download tasks
         loadDownloadTasks()
+        
+        // Preload cached downloaded talks for immediate UI display
+        Task {
+            await preloadDownloadedTalks()
+        }
     }
     
     // MARK: - Public Methods
@@ -191,11 +201,11 @@ final class DownloadService: NSObject, ObservableObject {
         let audioURL = getLocalMediaURL(for: talkID, mediaType: .audio)
         let videoURL = getLocalMediaURL(for: talkID, mediaType: .video)
         
-        if fileManager.fileExists(atPath: audioURL.path) {
-            try fileManager.removeItem(at: audioURL)
+        if FileManager.default.fileExists(atPath: audioURL.path) {
+            try FileManager.default.removeItem(at: audioURL)
         }
-        if fileManager.fileExists(atPath: videoURL.path) {
-            try fileManager.removeItem(at: videoURL)
+        if FileManager.default.fileExists(atPath: videoURL.path) {
+            try FileManager.default.removeItem(at: videoURL)
         }
         
         // Update Core Data
@@ -218,6 +228,9 @@ final class DownloadService: NSObject, ObservableObject {
                 context.delete(entity)
             }
         }
+        
+        // Invalidate cache
+        invalidateCache()
         
         // Post notification that download was deleted
         NotificationCenter.default.post(name: .downloadDeleted, object: nil, userInfo: ["talkID": talkID])
@@ -281,8 +294,8 @@ final class DownloadService: NSObject, ObservableObject {
         // Check if either audio or video file exists locally
         let audioURL = getLocalMediaURL(for: talkID, mediaType: .audio)
         let videoURL = getLocalMediaURL(for: talkID, mediaType: .video)
-        let fileExists = fileManager.fileExists(atPath: audioURL.path) || 
-                        fileManager.fileExists(atPath: videoURL.path)
+        let fileExists = FileManager.default.fileExists(atPath: audioURL.path) || 
+                        FileManager.default.fileExists(atPath: videoURL.path)
         
         // Also check Core Data to ensure consistency
         let isMarkedDownloaded = try? await persistenceController.performBackgroundTask { context in
@@ -318,10 +331,21 @@ final class DownloadService: NSObject, ObservableObject {
     }
     
     func getDownloadedTalksWithMetadata() async throws -> [DownloadedTalk] {
+        // Return cached data if available and valid
+        if isCacheValid, !cachedDownloadedTalks.isEmpty {
+            PTLogger.general.info("Returning cached downloaded talks: \(self.cachedDownloadedTalks.count)")
+            return cachedDownloadedTalks
+        }
+        
+        // Otherwise, refresh the cache
+        return try await refreshDownloadedTalksCache()
+    }
+    
+    func refreshDownloadedTalksCache() async throws -> [DownloadedTalk] {
         // First, scan filesystem to ensure we don't miss any downloaded files
         await scanAndReconcileDownloadedFiles()
         
-        return try await persistenceController.performBackgroundTask { context in
+        let talks = try await persistenceController.performBackgroundTask { context in
             let request: NSFetchRequest<TalkEntity> = TalkEntity.fetchRequest()
             request.predicate = NSPredicate(format: "isDownloaded == YES")
             
@@ -350,12 +374,124 @@ final class DownloadService: NSObject, ObservableObject {
                 
                 PTLogger.general.info("Successfully found downloaded talk: \(entity.title.isEmpty ? entity.id : entity.title)")
                 
+                // Get actual duration from audio file
+                let actualDuration = self.getAudioFileDuration(filePath: localPath)
+                
                 return DownloadedTalk(
                     id: entity.id,
                     title: entity.title.isEmpty ? "Downloaded Talk" : entity.title,
                     speaker: entity.speaker?.isEmpty == false ? entity.speaker! : "Unknown Speaker",
                     series: entity.series,
-                    duration: Int(entity.duration),
+                    duration: actualDuration,
+                    fileSize: entity.fileSize,
+                    localAudioURL: localPath,
+                    lastAccessedAt: entity.lastAccessedAt ?? Date(),
+                    createdAt: entity.createdAt ?? Date(),
+                    imageURL: entity.imageURL,
+                    conferenceImageURL: entity.conferenceImageURL,
+                    defaultImageURL: entity.defaultImageURL
+                )
+            }
+        }
+        
+        // Update cache
+        await MainActor.run {
+            self.cachedDownloadedTalks = talks
+            self.isCacheValid = true
+            self.lastCacheUpdate = Date()
+        }
+        
+        return talks
+    }
+    
+    // MARK: - Cache Management
+    
+    func preloadDownloadedTalks() async {
+        PTLogger.general.info("🔄 Preloading downloaded talks cache...")
+        
+        do {
+            // Try to load from Core Data first (fast path)
+            let talks = try await loadDownloadedTalksFromCoreData()
+            
+            await MainActor.run {
+                self.cachedDownloadedTalks = talks
+                self.isCacheValid = true
+                self.lastCacheUpdate = Date()
+            }
+            
+            PTLogger.general.info("✅ Preloaded \(talks.count) downloaded talks from cache")
+            
+            // If we found talks, we're good. If not, try a background refresh
+            if talks.isEmpty {
+                PTLogger.general.info("No talks found in Core Data, attempting background refresh...")
+                Task {
+                    do {
+                        try await refreshDownloadedTalksCache()
+                    } catch {
+                        PTLogger.general.error("❌ Background refresh failed: \(error.localizedDescription)")
+                    }
+                }
+            } else if shouldRefreshCache() {
+                Task {
+                    do {
+                        try await refreshDownloadedTalksCache()
+                    } catch {
+                        PTLogger.general.error("❌ Background refresh failed: \(error.localizedDescription)")
+                    }
+                }
+            }
+        } catch {
+            PTLogger.general.error("❌ Failed to preload downloaded talks: \(error.localizedDescription)")
+            // Try to refresh cache as fallback
+            Task {
+                do {
+                    try await refreshDownloadedTalksCache()
+                } catch {
+                    PTLogger.general.error("❌ Fallback refresh also failed: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    private func loadDownloadedTalksFromCoreData() async throws -> [DownloadedTalk] {
+        return try await persistenceController.performBackgroundTask { context in
+            let request: NSFetchRequest<TalkEntity> = TalkEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "isDownloaded == YES")
+            
+            let entities = try context.fetch(request)
+            PTLogger.general.info("Found \(entities.count) talks marked as downloaded in Core Data")
+            
+            // Debug: Log all entities found
+            for entity in entities {
+                PTLogger.general.info("Entity: \(entity.id) - isDownloaded: \(entity.isDownloaded) - localAudioURL: \(entity.localAudioURL ?? "nil")")
+            }
+            
+            return entities.compactMap { entity -> DownloadedTalk? in
+                guard !entity.id.isEmpty else {
+                    PTLogger.general.error("Downloaded talk entity has no ID")
+                    return nil
+                }
+                
+                guard let localPath = entity.localAudioURL else {
+                    PTLogger.general.error("Downloaded talk \(entity.id) has no localAudioURL")
+                    return nil
+                }
+                
+                let fileExists = FileManager.default.fileExists(atPath: localPath)
+                if !fileExists {
+                    PTLogger.general.error("Downloaded talk \(entity.id) file does not exist at path: \(localPath)")
+                    return nil
+                }
+                
+                // Get actual duration from audio file
+                let actualDuration = self.getAudioFileDuration(filePath: localPath)
+                
+                return DownloadedTalk(
+                    id: entity.id,
+                    title: entity.title.isEmpty ? "Downloaded Talk" : entity.title,
+                    speaker: entity.speaker?.isEmpty == false ? entity.speaker! : "Unknown Speaker",
+                    series: entity.series,
+                    duration: actualDuration,
                     fileSize: entity.fileSize,
                     localAudioURL: localPath,
                     lastAccessedAt: entity.lastAccessedAt ?? Date(),
@@ -368,6 +504,47 @@ final class DownloadService: NSObject, ObservableObject {
         }
     }
     
+    private func shouldRefreshCache() -> Bool {
+        guard let lastUpdate = lastCacheUpdate else { return true }
+        return Date().timeIntervalSince(lastUpdate) > cacheValidityDuration
+    }
+    
+    func invalidateCache() {
+        isCacheValid = false
+        cachedDownloadedTalks = []
+        lastCacheUpdate = nil
+    }
+    
+    // MARK: - Audio File Duration
+    
+    nonisolated private func getAudioFileDuration(filePath: String) -> Int {
+        let url = URL(fileURLWithPath: filePath)
+        
+        do {
+            let audioFile = try AVAudioFile(forReading: url)
+            let frameCount = audioFile.length
+            let sampleRate = audioFile.fileFormat.sampleRate
+            let duration = Double(frameCount) / sampleRate
+            return Int(duration)
+        } catch {
+            PTLogger.general.error("Failed to get audio duration for \(filePath): \(error.localizedDescription)")
+            
+            // Fallback: try to estimate from file size (very rough estimate)
+            do {
+                let attributes = try FileManager.default.attributesOfItem(atPath: filePath)
+                if let fileSize = attributes[.size] as? Int64 {
+                    // Rough estimate: assume 128kbps MP3 (16KB per second)
+                    let estimatedDuration = Int(fileSize / 16000)
+                    return max(estimatedDuration, 0)
+                }
+            } catch {
+                PTLogger.general.error("Failed to get file size for duration estimation: \(error.localizedDescription)")
+            }
+            
+            return 0
+        }
+    }
+    
     // MARK: - Filesystem Scanning
     
     func scanAndReconcileDownloadedFiles() async {
@@ -375,13 +552,13 @@ final class DownloadService: NSObject, ObservableObject {
         
         let audioDirectory = getAudioDirectory()
         
-        guard fileManager.fileExists(atPath: audioDirectory.path) else {
+        guard FileManager.default.fileExists(atPath: audioDirectory.path) else {
             PTLogger.general.info("📁 Audio directory does not exist, nothing to scan")
             return
         }
         
         do {
-            let audioFiles = try fileManager.contentsOfDirectory(at: audioDirectory, includingPropertiesForKeys: [.fileSizeKey, .creationDateKey, .contentModificationDateKey], options: .skipsHiddenFiles)
+            let audioFiles = try FileManager.default.contentsOfDirectory(at: audioDirectory, includingPropertiesForKeys: [.fileSizeKey, .creationDateKey, .contentModificationDateKey], options: .skipsHiddenFiles)
             
             PTLogger.general.info("📁 Found \(audioFiles.count) audio files in directory")
             
@@ -584,8 +761,8 @@ final class DownloadService: NSObject, ObservableObject {
         var totalSize: Int64 = 0
         
         // Check audio directory
-        if fileManager.fileExists(atPath: audioDirectory.path) {
-            guard let enumerator = fileManager.enumerator(at: audioDirectory, includingPropertiesForKeys: [.fileSizeKey]) else {
+        if FileManager.default.fileExists(atPath: audioDirectory.path) {
+            guard let enumerator = FileManager.default.enumerator(at: audioDirectory, includingPropertiesForKeys: [.fileSizeKey]) else {
                 PTLogger.general.error("Failed to create enumerator for audio directory")
                 return 0
             }
@@ -605,8 +782,8 @@ final class DownloadService: NSObject, ObservableObject {
         }
         
         // Check video directory
-        if fileManager.fileExists(atPath: videoDirectory.path) {
-            guard let enumerator = fileManager.enumerator(at: videoDirectory, includingPropertiesForKeys: [.fileSizeKey]) else {
+        if FileManager.default.fileExists(atPath: videoDirectory.path) {
+            guard let enumerator = FileManager.default.enumerator(at: videoDirectory, includingPropertiesForKeys: [.fileSizeKey]) else {
                 PTLogger.general.error("Failed to create enumerator for video directory")
                 return totalSize
             }
@@ -674,14 +851,14 @@ final class DownloadService: NSObject, ObservableObject {
     }
     
     private func validateDownloadedFile(at url: URL, expectedSize: Int64?) -> Bool {
-        guard fileManager.fileExists(atPath: url.path) else {
+        guard FileManager.default.fileExists(atPath: url.path) else {
             PTLogger.general.error("Downloaded file does not exist at path: \(url.path)")
             return false
         }
         
         // Check file size
         do {
-            let attributes = try fileManager.attributesOfItem(atPath: url.path)
+            let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
             let fileSize = attributes[.size] as? Int64 ?? 0
             
             if let expectedSize = expectedSize, expectedSize > 0 {
@@ -754,15 +931,15 @@ final class DownloadService: NSObject, ObservableObject {
     }
     
     nonisolated private func getAudioDirectory() -> URL {
-        let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         let audioDirectory = documentsPath.appendingPathComponent("audio")
         
         PTLogger.general.info("📁 Audio directory path: \(audioDirectory.path)")
         
         // Create directory if it doesn't exist
-        if !fileManager.fileExists(atPath: audioDirectory.path) {
+        if !FileManager.default.fileExists(atPath: audioDirectory.path) {
             do {
-                try fileManager.createDirectory(at: audioDirectory, withIntermediateDirectories: true, attributes: nil)
+                try FileManager.default.createDirectory(at: audioDirectory, withIntermediateDirectories: true, attributes: nil)
                 PTLogger.general.info("📁 Created audio directory successfully")
             } catch {
                 PTLogger.general.error("📁 Failed to create audio directory: \(error)")
@@ -781,13 +958,13 @@ final class DownloadService: NSObject, ObservableObject {
     }
     
     nonisolated private func getVideoDirectory() -> URL {
-        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         let videoDirectory = documentsURL.appendingPathComponent("video")
         
         // Create directory if it doesn't exist
-        if !fileManager.fileExists(atPath: videoDirectory.path) {
+        if !FileManager.default.fileExists(atPath: videoDirectory.path) {
             do {
-                try fileManager.createDirectory(at: videoDirectory, withIntermediateDirectories: true, attributes: nil)
+                try FileManager.default.createDirectory(at: videoDirectory, withIntermediateDirectories: true, attributes: nil)
             } catch {
                 PTLogger.general.error("📁 Failed to create video directory: \(error)")
             }}
@@ -799,7 +976,7 @@ final class DownloadService: NSObject, ObservableObject {
         PTLogger.general.info("🚚 Moving file from \(sourceURL.path) to \(destinationURL.path)")
         
         // Check if source file exists
-        guard fileManager.fileExists(atPath: sourceURL.path) else {
+        guard FileManager.default.fileExists(atPath: sourceURL.path) else {
             PTLogger.general.error("🚨 Source file does not exist: \(sourceURL.path)")
             throw DownloadError.fileNotFound
         }
@@ -808,9 +985,9 @@ final class DownloadService: NSObject, ObservableObject {
         let directory = destinationURL.deletingLastPathComponent()
         PTLogger.general.info("📁 Ensuring directory exists: \(directory.path)")
         
-        if !fileManager.fileExists(atPath: directory.path) {
+        if !FileManager.default.fileExists(atPath: directory.path) {
             do {
-                try fileManager.createDirectory(at: directory, withIntermediateDirectories: true, attributes: nil)
+                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: nil)
                 PTLogger.general.info("📁 Created directory: \(directory.path)")
             } catch {
                 PTLogger.general.error("📁 Failed to create directory: \(error)")
@@ -821,19 +998,19 @@ final class DownloadService: NSObject, ObservableObject {
         }
         
         // Remove existing file if it exists
-        if fileManager.fileExists(atPath: destinationURL.path) {
+        if FileManager.default.fileExists(atPath: destinationURL.path) {
             PTLogger.general.info("🗑️ Removing existing file: \(destinationURL.path)")
-            try fileManager.removeItem(at: destinationURL)
+            try FileManager.default.removeItem(at: destinationURL)
         }
         
         // Try to move the file
         do {
-            try fileManager.moveItem(at: sourceURL, to: destinationURL)
+            try FileManager.default.moveItem(at: sourceURL, to: destinationURL)
             PTLogger.general.info("✅ Successfully moved file to: \(destinationURL.path)")
             
             // Verify the file was actually moved
-            if fileManager.fileExists(atPath: destinationURL.path) {
-                let attributes = try fileManager.attributesOfItem(atPath: destinationURL.path)
+            if FileManager.default.fileExists(atPath: destinationURL.path) {
+                let attributes = try FileManager.default.attributesOfItem(atPath: destinationURL.path)
                 let fileSize = attributes[.size] as? Int64 ?? 0
                 PTLogger.general.info("📊 Moved file size: \(fileSize) bytes")
             } else {
@@ -846,11 +1023,11 @@ final class DownloadService: NSObject, ObservableObject {
             // Try copying instead of moving as a fallback
             PTLogger.general.info("🔄 Attempting to copy file as fallback...")
             do {
-                try fileManager.copyItem(at: sourceURL, to: destinationURL)
+                try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
                 PTLogger.general.info("✅ Successfully copied file to: \(destinationURL.path)")
                 
                 // Remove the original file after successful copy
-                try? fileManager.removeItem(at: sourceURL)
+                try? FileManager.default.removeItem(at: sourceURL)
                 PTLogger.general.info("🗑️ Removed original file after copy")
             } catch let copyError {
                 PTLogger.general.error("🚨 Copy fallback also failed: \(copyError)")
@@ -928,7 +1105,7 @@ extension DownloadService: URLSessionDownloadDelegate {
             PTLogger.general.error("Downloaded file validation failed for talk: \(talkID)")
             
             // Remove invalid file
-            try? fileManager.removeItem(at: localURL)
+            try? FileManager.default.removeItem(at: localURL)
             
             // Update download task status to failed
             if let index = activeDownloads.firstIndex(where: { $0.talkID == talkID }) {
@@ -949,10 +1126,15 @@ extension DownloadService: URLSessionDownloadDelegate {
                 PTLogger.general.info("Found \(talkEntities.count) talk entities with ID \(talkID)")
                 
                 if let talkEntity = talkEntities.first {
-                    PTLogger.general.info("Updating talk entity: \(talkEntity.title ?? "Unknown") - setting isDownloaded=true, localAudioURL=\(localURL.path)")
+                    PTLogger.general.info("Updating talk entity: \(talkEntity.title) - setting isDownloaded=true, localAudioURL=\(localURL.path)")
                     talkEntity.isDownloaded = true
                     talkEntity.localAudioURL = localURL.path
                     talkEntity.lastAccessedAt = Date()
+                    
+                    // Get actual duration from the downloaded audio file
+                    let actualDuration = self.getAudioFileDuration(filePath: localURL.path)
+                    talkEntity.duration = Int32(actualDuration)
+                    
                     if let attributes = try? FileManager.default.attributesOfItem(atPath: localURL.path),
                        let size = attributes[.size] as? Int64 {
                         talkEntity.fileSize = size
@@ -964,7 +1146,11 @@ extension DownloadService: URLSessionDownloadDelegate {
                     newTalkEntity.id = talkID
                     newTalkEntity.title = "Downloaded Talk" // Placeholder - should be populated from Talk object
                     newTalkEntity.speaker = "Unknown Speaker" // Placeholder
-                    newTalkEntity.duration = 0 // Will be updated when played
+                    
+                    // Get actual duration from the downloaded audio file
+                    let actualDuration = self.getAudioFileDuration(filePath: localURL.path)
+                    newTalkEntity.duration = Int32(actualDuration)
+                    
                     newTalkEntity.isDownloaded = true
                     newTalkEntity.localAudioURL = localURL.path
                     newTalkEntity.lastAccessedAt = Date()
@@ -1000,6 +1186,9 @@ extension DownloadService: URLSessionDownloadDelegate {
             downloadProgress.removeValue(forKey: talkID)
             
             PTLogger.general.info("Download completed and validated for talk: \(talkID)")
+            
+            // Invalidate cache to refresh downloaded talks list
+            invalidateCache()
             
             // Post notification that download completed
             NotificationCenter.default.post(name: .downloadCompleted, object: nil, userInfo: ["talkID": talkID])

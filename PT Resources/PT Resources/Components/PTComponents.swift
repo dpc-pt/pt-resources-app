@@ -368,7 +368,7 @@ struct PTFeaturedBlogCard: View {
                 }
             }
             .padding(PTDesignTokens.Spacing.lg)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.lg)
                     .fill(PTDesignTokens.Colors.surface)
@@ -381,5 +381,6 @@ struct PTFeaturedBlogCard: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
+        .frame(maxWidth: .infinity)
     }
 }

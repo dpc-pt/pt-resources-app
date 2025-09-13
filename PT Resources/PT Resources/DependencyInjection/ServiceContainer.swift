@@ -28,7 +28,7 @@ protocol ServiceContainerProtocol {
     var filtersAPIService: any FiltersAPIServiceProtocol { get }
     
     // Data Services
-    var downloadService: DownloadServiceProtocol { get }
+    var downloadService: DownloadService { get }
     var imageCacheService: ImageCacheServiceProtocol { get }
     
     // Persistence
@@ -84,8 +84,15 @@ final class ServiceContainer: ObservableObject, ServiceContainerProtocol {
     
     // MARK: - Data Services
     
-    lazy var downloadService: DownloadServiceProtocol = {
-        SimplifiedDownloadService(apiService: talksAPIService, persistenceController: persistenceController, errorCoordinator: errorCoordinator)
+    lazy var downloadService: DownloadService = {
+        let service = DownloadService(apiService: talksAPIService, persistenceController: persistenceController)
+        
+        // Start preloading downloaded talks in background
+        Task {
+            await service.preloadDownloadedTalks()
+        }
+        
+        return service
     }()
     
     lazy var imageCacheService: ImageCacheServiceProtocol = {
@@ -203,6 +210,7 @@ extension View {
             .environmentObject(container.errorCoordinator as! ErrorCoordinator)
             .environmentObject(container.filteringService as! FilteringService)
             .environmentObject(container.navigationCoordinator as! NavigationCoordinator)
+            .environmentObject(container.downloadService)
             .environment(\.serviceContainer, container)
     }
 }

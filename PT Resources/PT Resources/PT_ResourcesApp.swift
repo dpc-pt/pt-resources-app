@@ -45,8 +45,22 @@ struct PT_ResourcesApp: App {
                 PTFontDebugger.shared.debugFonts()
                 #endif
 
-                // Show splash screen for 2-3 seconds (configurable)
-                try? await Task.sleep(nanoseconds: 2_500_000_000) // 2.5 seconds
+                // Start preloading critical data during splash screen
+                async let fontRegistration: Void = {
+                    // Fonts are already registered above, this is just for timing
+                }()
+                
+                async let downloadPreloading: Void = {
+                    // Preload downloaded talks for immediate UI response
+                    await serviceContainer.downloadService.preloadDownloadedTalks()
+                }()
+                
+                // Wait for critical preloading to complete
+                await fontRegistration
+                await downloadPreloading
+
+                // Show splash screen for minimum time (configurable)
+                try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds minimum
 
                 await MainActor.run {
                     withAnimation {
@@ -66,31 +80,44 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     }
     
     func applicationDidEnterBackground(_ application: UIApplication) {
+        PTLogger.general.info("App delegate: Application did enter background")
+        
+        // Notify service container
         serviceContainer?.enterBackground()
         
-        // Handle background audio session
+        // The PlayerService will handle its own background task management via notification observers
+        // We just need to ensure the audio session is properly configured
         do {
-            try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
-            PTLogger.general.info("App entered background - maintained active audio session")
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            PTLogger.general.info("App delegate: Maintained active audio session for background")
         } catch {
-            PTLogger.general.error("Failed to maintain audio session in background: \(error)")
+            PTLogger.general.error("App delegate: Failed to maintain audio session in background: \(error)")
         }
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
+        PTLogger.general.info("App delegate: Application will enter foreground")
+        
+        // Notify service container
         serviceContainer?.becomeActive()
         
-        // Handle foreground audio session
+        // Reactivate audio session if needed
         do {
-            try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
-            PTLogger.general.info("App entered foreground - verified audio session is active")
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            PTLogger.general.info("App delegate: Verified audio session is active for foreground")
         } catch {
-            PTLogger.general.error("Failed to reactivate audio session on foreground: \(error)")
+            PTLogger.general.error("App delegate: Failed to reactivate audio session on foreground: \(error)")
         }
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
+        PTLogger.general.info("App delegate: Application will terminate")
+        
+        // Cleanup all services
         serviceContainer?.cleanup()
-        PTLogger.general.info("App terminating - cleaned up resources")
+        
+        PTLogger.general.info("App delegate: Completed cleanup")
     }
 }

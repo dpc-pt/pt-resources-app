@@ -11,7 +11,7 @@ struct ConferenceDetailView: View {
     let conference: ConferenceInfo
     
     @StateObject private var viewModel: ConferencesViewModel
-    @StateObject private var downloadService: DownloadService
+    @EnvironmentObject private var downloadService: DownloadService
     @ObservedObject private var playerService = PlayerService.shared
     
     @Environment(\.dismiss) private var dismiss
@@ -27,20 +27,32 @@ struct ConferenceDetailView: View {
     init(conference: ConferenceInfo) {
         self.conference = conference
         self._viewModel = StateObject(wrappedValue: ConferencesViewModel())
-        self._downloadService = StateObject(wrappedValue: DownloadService(apiService: TalksAPIService()))
     }
     
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                // Conference Header
-                conferenceHeader
-                
-                // Resources Section
-                resourcesSection
+        ZStack {
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    // Conference Header
+                    conferenceHeader
+                    
+                    // Resources Section
+                    resourcesSection
+                }
+            }
+            .background(PTDesignTokens.Colors.background.ignoresSafeArea())
+            
+            // Mini Player
+            if playerService.currentTalk != nil {
+                VStack {
+                    Spacer()
+                    MiniPlayerView(playerService: playerService)
+                        .transition(.move(edge: .bottom))
+                        .background(PTDesignTokens.Colors.surface)
+                        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -4)
+                }
             }
         }
-        .background(PTDesignTokens.Colors.background.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -57,7 +69,7 @@ struct ConferenceDetailView: View {
             }
         }
         .navigationDestination(item: $selectedTalk) { talk in
-            TalkDetailView(talk: talk, downloadService: downloadService)
+            TalkDetailView(talk: talk)
         }
         .alert("Download All Resources", isPresented: $showingDownloadAllAlert) {
             Button("Cancel", role: .cancel) { }

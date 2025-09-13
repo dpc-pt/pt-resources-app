@@ -10,6 +10,7 @@ import SwiftUI
 struct BlogDetailView: View {
     let blogPost: BlogPost
     @StateObject private var viewModel: BlogDetailViewModel
+    @ObservedObject private var playerService = PlayerService.shared
     @Environment(\.dismiss) private var dismiss
 
     init(blogPost: BlogPost, apiService: BlogAPIServiceProtocol = BlogAPIService()) {
@@ -165,6 +166,17 @@ struct BlogDetailView: View {
                             .padding(.top, PTDesignTokens.Spacing.xl)
                         }
                         .padding(.bottom, PTDesignTokens.Spacing.xl)
+                    }
+                }
+                
+                // Mini Player
+                if playerService.currentTalk != nil {
+                    VStack {
+                        Spacer()
+                        MiniPlayerView(playerService: playerService)
+                            .transition(.move(edge: .bottom))
+                            .background(PTDesignTokens.Colors.surface)
+                            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -4)
                     }
                 }
             }

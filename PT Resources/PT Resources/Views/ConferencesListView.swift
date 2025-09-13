@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ConferencesListView: View {
-    
+    @ObservedObject private var playerService = PlayerService.shared
     @StateObject private var viewModel: ConferencesViewModel
     @State private var showingFilters = false
     @State private var selectedConference: ConferenceInfo?
@@ -108,6 +108,17 @@ struct ConferencesListView: View {
                         .refreshable {
                             viewModel.refreshConferences()
                         }
+                    }
+                }
+                
+                // Mini Player
+                if playerService.currentTalk != nil {
+                    VStack {
+                        Spacer()
+                        MiniPlayerView(playerService: playerService)
+                            .transition(.move(edge: .bottom))
+                            .background(PTDesignTokens.Colors.surface)
+                            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -4)
                     }
                 }
             }

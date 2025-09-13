@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct BlogListView: View {
+    @ObservedObject private var playerService = PlayerService.shared
     @StateObject private var viewModel: BlogViewModel
     @State private var selectedBlogPost: BlogPost?
     @State private var showingCategoryFilter = false
@@ -86,6 +87,17 @@ struct BlogListView: View {
                         .refreshable {
                             viewModel.refreshBlogPosts()
                         }
+                    }
+                }
+                
+                // Mini Player
+                if playerService.currentTalk != nil {
+                    VStack {
+                        Spacer()
+                        MiniPlayerView(playerService: playerService)
+                            .transition(.move(edge: .bottom))
+                            .background(PTDesignTokens.Colors.surface)
+                            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -4)
                     }
                 }
             }

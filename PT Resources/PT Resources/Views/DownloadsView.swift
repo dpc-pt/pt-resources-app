@@ -9,7 +9,7 @@ import SwiftUI
 import Combine
 
 struct DownloadsView: View {
-    @StateObject private var downloadService: DownloadService
+    @EnvironmentObject private var downloadService: DownloadService
     @StateObject private var networkMonitor = NetworkMonitor()
     @ObservedObject private var playerService = PlayerService.shared
     
@@ -21,11 +21,7 @@ struct DownloadsView: View {
     @State private var errorMessage: String?
     @State private var showingError = false
     @State private var selectedDownloadedTalk: DownloadedTalk? = nil
-    @State private var showingTalkDetail = false
-    
-    init(apiService: TalksAPIServiceProtocol = TalksAPIService()) {
-        self._downloadService = StateObject(wrappedValue: DownloadService(apiService: apiService))
-    }
+    @State private var isInitialLoad = true
     
     var body: some View {
         NavigationStack {
@@ -58,6 +54,12 @@ struct DownloadsView: View {
             .navigationBarHidden(true)
         }
         .onAppear {
+            // Show cached data immediately if available
+            if downloadService.isCacheValid && !downloadService.cachedDownloadedTalks.isEmpty {
+                downloadedTalks = downloadService.cachedDownloadedTalks
+                isInitialLoad = false
+            }
+            
             Task {
                 await loadDownloadedTalks()
             }
@@ -75,6 +77,12 @@ struct DownloadsView: View {
         .onReceive(NotificationCenter.default.publisher(for: .downloadFailed)) { _ in
             Task {
                 await loadDownloadedTalks()
+            }
+        }
+        .onReceive(downloadService.$cachedDownloadedTalks) { cachedTalks in
+            // Update UI when cache is updated in background
+            if !cachedTalks.isEmpty && !isInitialLoad {
+                downloadedTalks = cachedTalks
             }
         }
         .confirmationDialog("Sort Downloads", isPresented: $showingSortOptions) {
@@ -96,26 +104,21 @@ struct DownloadsView: View {
                 Text(errorMessage)
             }
         }
-        .sheet(isPresented: $showingTalkDetail) {
-            if let downloadedTalk = selectedDownloadedTalk {
-                let talk = Talk(
-                    id: downloadedTalk.id,
-                    title: downloadedTalk.title,
-                    description: nil,
-                    speaker: downloadedTalk.speaker,
-                    series: downloadedTalk.series,
-                    biblePassage: nil,
-                    dateRecorded: downloadedTalk.createdAt,
-                    duration: downloadedTalk.duration,
-                    audioURL: nil, // Let PlayerService find the local file using talk ID
-                    imageURL: downloadedTalk.artworkURL
-                )
+        .sheet(item: $selectedDownloadedTalk) { downloadedTalk in
+            let talk = Talk(
+                id: downloadedTalk.id,
+                title: downloadedTalk.title,
+                description: nil,
+                speaker: downloadedTalk.speaker,
+                series: downloadedTalk.series,
+                biblePassage: nil,
+                dateRecorded: downloadedTalk.createdAt,
+                duration: downloadedTalk.duration,
+                audioURL: nil, // Let PlayerService find the local file using talk ID
+                imageURL: downloadedTalk.artworkURL
+            )
 
-                TalkDetailView(
-                    talk: talk,
-                    downloadService: downloadService
-                )
-            }
+            TalkDetailView(talk: talk)
         }
     }
     
@@ -268,7 +271,6 @@ struct DownloadsView: View {
 
     private func showTalkDetail(_ downloadedTalk: DownloadedTalk) {
         selectedDownloadedTalk = downloadedTalk
-        showingTalkDetail = true
     }
     
     // MARK: - Computed Properties
@@ -298,16 +300,22 @@ struct DownloadsView: View {
     }
     
     private func loadDownloadedTalks() async {
-        isLoading = true
+        // Only show loading if this is the initial load and we don't have cached data
+        if isInitialLoad && downloadedTalks.isEmpty {
+            isLoading = true
+        }
+        
         do {
             let talks = try await downloadService.getDownloadedTalksWithMetadata()
             await MainActor.run {
                 self.downloadedTalks = talks
                 self.isLoading = false
+                self.isInitialLoad = false
             }
         } catch {
             await MainActor.run {
                 self.isLoading = false
+                self.isInitialLoad = false
                 self.errorMessage = "Unable to load downloaded talks. Please try again."
                 self.showingError = true
             }

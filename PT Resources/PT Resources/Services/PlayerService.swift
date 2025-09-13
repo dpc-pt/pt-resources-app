@@ -41,6 +41,8 @@ final class PlayerService: NSObject, ObservableObject {
     private var persistenceController: PersistenceController
     private var cancellables = Set<AnyCancellable>()
     private var backgroundTaskIdentifier: UIBackgroundTaskIdentifier = .invalid
+    private var backgroundTaskRenewalTimer: Timer?
+    private var backgroundTaskStartTime: Date?
 
 
     // Sleep timer
@@ -293,28 +295,103 @@ final class PlayerService: NSObject, ObservableObject {
         // End any existing background task first
         endBackgroundTask()
 
-        backgroundTaskIdentifier = UIApplication.shared.beginBackgroundTask(withName: "AudioPlayback") {
+        backgroundTaskIdentifier = UIApplication.shared.beginBackgroundTask(withName: "AudioPlayback") { [weak self] in
             // Background task expired - system will end it automatically
-            // Just clean up our identifier
             Task { @MainActor in
+                guard let self = self else { return }
+                
+                PTLogger.general.warning("Background task expired - system ended task automatically")
                 self.backgroundTaskIdentifier = .invalid
-                print("Background task expired - system ended task automatically")
+                self.stopBackgroundTaskRenewal()
 
-                // Stop playback if background task expires
+                // If we're still playing, pause to prevent issues
                 if self.playbackState == .playing {
+                    PTLogger.general.info("Pausing playback due to background task expiration")
                     self.pause()
                 }
             }
         }
 
-        print("Started background task for audio playback: \(backgroundTaskIdentifier.rawValue)")
+        if backgroundTaskIdentifier != .invalid {
+            backgroundTaskStartTime = Date()
+            PTLogger.general.info("Started background task for audio playback: \(self.backgroundTaskIdentifier.rawValue)")
+            startBackgroundTaskRenewal()
+        } else {
+            PTLogger.general.error("Failed to start background task - system may be terminating background tasks")
+        }
     }
 
     private func endBackgroundTask() {
         if backgroundTaskIdentifier != .invalid {
+            let taskDuration = backgroundTaskStartTime.map { Date().timeIntervalSince($0) } ?? 0
             UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
+            PTLogger.general.info("Ended background task for audio playback: \(self.backgroundTaskIdentifier.rawValue) (duration: \(String(format: "%.1f", taskDuration))s)")
             backgroundTaskIdentifier = .invalid
-            print("Ended background task for audio playback")
+            backgroundTaskStartTime = nil
+        }
+        stopBackgroundTaskRenewal()
+    }
+    
+    private func startBackgroundTaskRenewal() {
+        // Stop any existing renewal timer
+        stopBackgroundTaskRenewal()
+        
+        // Start a timer to renew the background task every 20 seconds
+        // Background tasks typically expire after 30 seconds, so we renew at 20 seconds for safety
+        backgroundTaskRenewalTimer = Timer.scheduledTimer(withTimeInterval: 20.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self = self else { return }
+                
+                // Only renew if we're still playing and the background task is valid
+                if self.playbackState == .playing && self.backgroundTaskIdentifier != .invalid {
+                    PTLogger.general.info("Renewing background task for continued audio playback")
+                    self.renewBackgroundTask()
+                } else {
+                    // Stop renewal if we're no longer playing
+                    self.stopBackgroundTaskRenewal()
+                }
+            }
+        }
+        
+        PTLogger.general.info("Started background task renewal timer (20 second intervals)")
+    }
+    
+    private func stopBackgroundTaskRenewal() {
+        backgroundTaskRenewalTimer?.invalidate()
+        backgroundTaskRenewalTimer = nil
+        PTLogger.general.info("Stopped background task renewal timer")
+    }
+    
+    private func renewBackgroundTask() {
+        // End the current background task
+        if backgroundTaskIdentifier != .invalid {
+            UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
+            PTLogger.general.info("Ended previous background task: \(self.backgroundTaskIdentifier.rawValue)")
+        }
+        
+        // Start a new background task immediately
+        backgroundTaskIdentifier = UIApplication.shared.beginBackgroundTask(withName: "AudioPlayback") { [weak self] in
+            Task { @MainActor in
+                guard let self = self else { return }
+                
+                PTLogger.general.warning("Renewed background task expired - system ended task automatically")
+                self.backgroundTaskIdentifier = .invalid
+                self.stopBackgroundTaskRenewal()
+
+                // If we're still playing, pause to prevent issues
+                if self.playbackState == .playing {
+                    PTLogger.general.info("Pausing playback due to renewed background task expiration")
+                    self.pause()
+                }
+            }
+        }
+        
+        if backgroundTaskIdentifier != .invalid {
+            backgroundTaskStartTime = Date()
+            PTLogger.general.info("Successfully renewed background task for audio playback: \(self.backgroundTaskIdentifier.rawValue)")
+        } else {
+            PTLogger.general.error("Failed to renew background task - system may be terminating background tasks")
+            stopBackgroundTaskRenewal()
         }
     }
     
@@ -481,6 +558,7 @@ final class PlayerService: NSObject, ObservableObject {
     }
     
     private func setupNotificationObservers() {
+        // Audio session notifications
         NotificationCenter.default
             .publisher(for: AVAudioSession.interruptionNotification)
             .receive(on: DispatchQueue.main)
@@ -494,6 +572,31 @@ final class PlayerService: NSObject, ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] notification in
                 self?.handleAudioRouteChange(notification)
+            }
+            .store(in: &cancellables)
+        
+        // App lifecycle notifications for proper background task management
+        NotificationCenter.default
+            .publisher(for: UIApplication.didEnterBackgroundNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.handleAppDidEnterBackground()
+            }
+            .store(in: &cancellables)
+        
+        NotificationCenter.default
+            .publisher(for: UIApplication.willEnterForegroundNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.handleAppWillEnterForeground()
+            }
+            .store(in: &cancellables)
+        
+        NotificationCenter.default
+            .publisher(for: UIApplication.willTerminateNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.handleAppWillTerminate()
             }
             .store(in: &cancellables)
     }
@@ -598,6 +701,55 @@ final class PlayerService: NSObject, ObservableObject {
         default:
             break
         }
+    }
+    
+    // MARK: - App Lifecycle Handlers
+    
+    private func handleAppDidEnterBackground() {
+        PTLogger.general.info("App entered background - managing background task")
+        
+        // If we're playing audio, ensure background task is active
+        if playbackState == .playing {
+            // Only start background task if we don't already have one
+            if backgroundTaskIdentifier == .invalid {
+                startBackgroundTask()
+            }
+            
+            // Configure audio session for background playback
+            do {
+                let audioSession = AVAudioSession.sharedInstance()
+                try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+                PTLogger.general.info("Audio session maintained for background playback")
+            } catch {
+                PTLogger.general.error("Failed to maintain audio session in background: \(error)")
+            }
+        } else {
+            // If not playing, end any existing background task
+            endBackgroundTask()
+        }
+    }
+    
+    private func handleAppWillEnterForeground() {
+        PTLogger.general.info("App entering foreground - verifying background task status")
+        
+        // End background task since we're back in foreground
+        endBackgroundTask()
+        
+        // Reactivate audio session if needed
+        reactivateAudioSessionIfNeeded()
+    }
+    
+    private func handleAppWillTerminate() {
+        PTLogger.general.info("App terminating - cleaning up resources")
+        
+        // Save current playback state
+        savePlaybackState()
+        
+        // End background task
+        endBackgroundTask()
+        
+        // Cleanup player resources
+        cleanup()
     }
     
     private func loadChapters(for talkID: String) {

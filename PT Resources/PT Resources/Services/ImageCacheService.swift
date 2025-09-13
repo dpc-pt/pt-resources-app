@@ -210,6 +210,19 @@ final class ImageCacheService: ImageCacheServiceProtocol {
             throw ImageCacheError.invalidResponse
         }
 
+        // Check if this is an SVG file by looking at the URL or content
+        let isSVG = url.pathExtension.lowercased() == "svg" || 
+                   String(data: data.prefix(100), encoding: .utf8)?.contains("<svg") == true
+        
+        if isSVG {
+            PTLogger.general.info("Detected SVG file, using local PT Resources logo as fallback: \(url.absoluteString)")
+            // For SVG files, use the local PT Resources logo
+            guard let ptLogo = UIImage(named: "pt-resources") else {
+                throw ImageCacheError.invalidImageData
+            }
+            return ptLogo
+        }
+
         guard let image = UIImage(data: data) else {
             PTLogger.general.error("Failed to decode image data from URL: \(url.absoluteString)")
             throw ImageCacheError.invalidImageData

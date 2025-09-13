@@ -347,9 +347,10 @@ struct PTConferenceCard: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(PTDesignTokens.Spacing.md)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
             .buttonStyle(PlainButtonStyle())
+            .frame(maxWidth: .infinity)
         }
     }
 }
@@ -448,9 +449,10 @@ struct PTBlogCard: View {
                     BlogMetadata(blogPost: blogPost)
                 }
                 .padding(PTDesignTokens.Spacing.md)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
             .buttonStyle(PlainButtonStyle())
+            .frame(maxWidth: .infinity)
         }
     }
 }
