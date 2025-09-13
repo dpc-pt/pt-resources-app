@@ -75,12 +75,12 @@ class ESVService: ObservableObject {
             
             let entities = try context.fetch(request)
             return entities.compactMap { entity -> ESVPassage? in
-                guard let reference = entity.reference,
-                      let text = entity.text else {
+                guard !entity.reference.isEmpty,
+                      !entity.text.isEmpty else {
                     return nil
                 }
                 
-                return ESVPassage(reference: reference, passages: [text])
+                return ESVPassage(reference: entity.reference, passages: [entity.text])
             }
         }
     }
@@ -182,13 +182,12 @@ class ESVService: ObservableObject {
             request.fetchLimit = 1
             
             guard let entity = try context.fetch(request).first,
-                  let cachedAt = entity.cachedAt,
-                  let text = entity.text else {
+                  !entity.text.isEmpty else {
                 return nil
             }
             
-            let passage = ESVPassage(reference: reference, passages: [text])
-            _ = cachedAt.addingTimeInterval(Config.esvCacheExpiration)
+            let passage = ESVPassage(reference: reference, passages: [entity.text])
+            _ = entity.cachedAt.addingTimeInterval(Config.esvCacheExpiration)
             
             return CachedESVPassage(
                 passage: passage,

@@ -14,6 +14,7 @@ struct EnhancedFilterView: View {
     @ObservedObject var filtersAPIService: FiltersAPIService
     let onFiltersChanged: (TalkSearchFilters) -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     
     @State private var selectedTab = 0
     @State private var searchText = ""
@@ -106,6 +107,7 @@ struct EnhancedFilterView: View {
 
 struct FilterTabBar: View {
     @Binding var selectedTab: Int
+    @Environment(\.colorScheme) private var colorScheme
 
     private let tabs = [
         ("Speakers", "person.circle"),
@@ -127,7 +129,7 @@ struct FilterTabBar: View {
                             .font(PTFont.ptCaptionText)
                             .fontWeight(.medium)
                     }
-                    .foregroundColor(selectedTab == index ? PTDesignTokens.Colors.kleinBlue : PTDesignTokens.Colors.medium)
+                    .foregroundColor(selectedTab == index ? PTDesignTokens.Colors.kleinBlue : adaptiveTextColor)
                     .onTapGesture {
                         selectedTab = index
                     }
@@ -135,13 +137,26 @@ struct FilterTabBar: View {
             }
             .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
         }
-        .background(PTDesignTokens.Colors.surface)
+        .background(adaptiveBackgroundColor)
         .overlay(
             Rectangle()
                 .frame(height: 1)
-                .foregroundColor(PTDesignTokens.Colors.light.opacity(0.3)),
+                .foregroundColor(adaptiveBorderColor),
             alignment: .bottom
         )
+    }
+    
+    // MARK: - Adaptive Colors
+    private var adaptiveTextColor: Color {
+        colorScheme == .dark ? PTDesignTokens.Colors.light : PTDesignTokens.Colors.medium
+    }
+    
+    private var adaptiveBackgroundColor: Color {
+        colorScheme == .dark ? PTDesignTokens.Colors.dark : PTDesignTokens.Colors.surface
+    }
+    
+    private var adaptiveBorderColor: Color {
+        colorScheme == .dark ? PTDesignTokens.Colors.medium.opacity(0.3) : PTDesignTokens.Colors.light.opacity(0.3)
     }
 }
 
@@ -617,18 +632,19 @@ struct FilterSearchBar: View {
     @Binding var text: String
     let placeholder: String
     @FocusState private var isFocused: Bool
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         HStack(spacing: PTDesignTokens.Spacing.md) {
             HStack(spacing: PTDesignTokens.Spacing.md) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(isFocused ? PTDesignTokens.Colors.kleinBlue : PTDesignTokens.Colors.medium)
+                    .foregroundColor(isFocused ? PTDesignTokens.Colors.kleinBlue : adaptiveIconColor)
                     .font(PTFont.ptSectionTitle)
                     .frame(width: 20, height: 20)
 
                 TextField(placeholder, text: $text)
                     .font(PTFont.ptBodyText)
-                    .foregroundColor(PTDesignTokens.Colors.ink)
+                    .foregroundColor(adaptiveTextColor)
                     .focused($isFocused)
                     .submitLabel(.search)
 
@@ -649,9 +665,9 @@ struct FilterSearchBar: View {
             .padding(.vertical, PTDesignTokens.Spacing.md)
             .background(
                 RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.input)
-                    .fill(PTDesignTokens.Colors.surface)
+                    .fill(adaptiveSearchBackgroundColor)
                     .shadow(
-                        color: isFocused ? PTDesignTokens.Colors.tang.opacity(0.2) : Color.black.opacity(0.05),
+                        color: isFocused ? PTDesignTokens.Colors.tang.opacity(0.2) : adaptiveShadowColor,
                         radius: isFocused ? 4 : 2,
                         x: 0,
                         y: isFocused ? 2 : 1
@@ -659,10 +675,31 @@ struct FilterSearchBar: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.input)
-                    .stroke(isFocused ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.light.opacity(0.3), lineWidth: isFocused ? 2 : 1)
+                    .stroke(isFocused ? PTDesignTokens.Colors.tang : adaptiveBorderColor, lineWidth: isFocused ? 2 : 1)
             )
             .animation(.easeInOut(duration: 0.2), value: isFocused)
         }
+    }
+    
+    // MARK: - Adaptive Colors
+    private var adaptiveTextColor: Color {
+        colorScheme == .dark ? PTDesignTokens.Colors.light : PTDesignTokens.Colors.ink
+    }
+    
+    private var adaptiveIconColor: Color {
+        colorScheme == .dark ? PTDesignTokens.Colors.light : PTDesignTokens.Colors.medium
+    }
+    
+    private var adaptiveSearchBackgroundColor: Color {
+        colorScheme == .dark ? PTDesignTokens.Colors.dark : PTDesignTokens.Colors.surface
+    }
+    
+    private var adaptiveShadowColor: Color {
+        colorScheme == .dark ? Color.black.opacity(0.3) : Color.black.opacity(0.05)
+    }
+    
+    private var adaptiveBorderColor: Color {
+        colorScheme == .dark ? PTDesignTokens.Colors.medium.opacity(0.3) : PTDesignTokens.Colors.light.opacity(0.3)
     }
 }
 
@@ -671,25 +708,26 @@ struct FilterCheckboxRow: View {
     let subtitle: String?
     let isSelected: Bool
     let action: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         HStack(spacing: PTDesignTokens.Spacing.md) {
             VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
                 Text(title)
                     .font(PTFont.ptBodyText)
-                    .foregroundColor(PTDesignTokens.Colors.ink)
+                    .foregroundColor(adaptiveTitleColor)
 
                 if let subtitle = subtitle {
                     Text(subtitle)
                         .font(PTFont.ptCaptionText)
-                        .foregroundColor(PTDesignTokens.Colors.medium)
+                        .foregroundColor(adaptiveSubtitleColor)
                 }
             }
 
             Spacer()
 
             Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                .foregroundColor(isSelected ? PTDesignTokens.Colors.kleinBlue : PTDesignTokens.Colors.medium)
+                .foregroundColor(isSelected ? PTDesignTokens.Colors.kleinBlue : adaptiveIconColor)
                 .font(PTFont.ptSectionTitle)
         }
         .contentShape(Rectangle())
@@ -699,6 +737,19 @@ struct FilterCheckboxRow: View {
         .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
         .padding(.vertical, PTDesignTokens.Spacing.sm)
     }
+    
+    // MARK: - Adaptive Colors
+    private var adaptiveTitleColor: Color {
+        colorScheme == .dark ? PTDesignTokens.Colors.light : PTDesignTokens.Colors.ink
+    }
+    
+    private var adaptiveSubtitleColor: Color {
+        colorScheme == .dark ? PTDesignTokens.Colors.medium : PTDesignTokens.Colors.medium
+    }
+    
+    private var adaptiveIconColor: Color {
+        colorScheme == .dark ? PTDesignTokens.Colors.light : PTDesignTokens.Colors.medium
+    }
 }
 
 struct YearFilterCard: View {
@@ -706,32 +757,58 @@ struct YearFilterCard: View {
     let count: Int?
     let isSelected: Bool
     let action: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(spacing: PTDesignTokens.Spacing.xs) {
             Text(year)
                 .font(PTFont.ptCardTitle)
                 .fontWeight(.semibold)
-                .foregroundColor(PTDesignTokens.Colors.ink)
+                .foregroundColor(adaptiveTitleColor)
 
             if let count = count {
                 Text("\(count) talks")
                     .font(PTFont.ptCaptionText)
-                    .foregroundColor(PTDesignTokens.Colors.medium)
+                    .foregroundColor(adaptiveSubtitleColor)
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, PTDesignTokens.Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                .fill(isSelected ? PTDesignTokens.Colors.tang.opacity(0.1) : PTDesignTokens.Colors.surface)
+                .fill(adaptiveCardBackgroundColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                        .stroke(isSelected ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.light.opacity(0.3), lineWidth: 1)
+                        .stroke(adaptiveCardBorderColor, lineWidth: 1)
                 )
         )
         .onTapGesture {
             action()
+        }
+    }
+    
+    // MARK: - Adaptive Colors
+    private var adaptiveTitleColor: Color {
+        colorScheme == .dark ? PTDesignTokens.Colors.light : PTDesignTokens.Colors.ink
+    }
+    
+    private var adaptiveSubtitleColor: Color {
+        colorScheme == .dark ? PTDesignTokens.Colors.medium : PTDesignTokens.Colors.medium
+    }
+    
+    private var adaptiveCardBackgroundColor: Color {
+        if isSelected {
+            return colorScheme == .dark ? PTDesignTokens.Colors.tang.opacity(0.2) : PTDesignTokens.Colors.tang.opacity(0.1)
+        } else {
+            return colorScheme == .dark ? PTDesignTokens.Colors.dark : PTDesignTokens.Colors.surface
+        }
+    }
+    
+    private var adaptiveCardBorderColor: Color {
+        if isSelected {
+            return PTDesignTokens.Colors.tang
+        } else {
+            return colorScheme == .dark ? PTDesignTokens.Colors.medium.opacity(0.3) : PTDesignTokens.Colors.light.opacity(0.3)
         }
     }
 }

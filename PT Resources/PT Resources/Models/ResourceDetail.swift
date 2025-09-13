@@ -15,7 +15,7 @@ struct ResourceDetailResponse: Codable {
 
 // MARK: - Resource Detail
 
-struct ResourceDetail: Codable, Identifiable {
+struct ResourceDetail: Codable, Identifiable, Hashable {
     let id: String
     let title: String
     let description: String
@@ -70,7 +70,7 @@ struct ResourceDetail: Codable, Identifiable {
 
 // MARK: - Book
 
-struct Book: Codable, Identifiable {
+struct Book: Codable, Identifiable, Hashable {
     let id: String
     let name: String
     let shortName: String?
@@ -79,7 +79,7 @@ struct Book: Codable, Identifiable {
 
 // MARK: - Related Resource
 
-struct RelatedResource: Codable, Identifiable {
+struct RelatedResource: Codable, Identifiable, Hashable {
     let id: String
     let title: String
     let description: String

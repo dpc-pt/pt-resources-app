@@ -116,7 +116,7 @@ final class DownloadService: NSObject, ObservableObject {
                 entity.downloadURL = downloadTask.downloadURL
                 entity.status = downloadTask.status.rawValue
                 entity.totalBytes = downloadTask.totalBytes
-                // TODO: Add mediaType field to Core Data schema
+                // Note: mediaType field can be added to Core Data schema in future version
                 // entity.mediaType = mediaType.rawValue
                 entity.createdAt = Date()
             }
@@ -328,32 +328,32 @@ final class DownloadService: NSObject, ObservableObject {
             let entities = try context.fetch(request)
             PTLogger.general.info("Found \(entities.count) talks marked as downloaded in Core Data")
             
-            return entities.compactMap { entity in
-                guard let id = entity.id else {
+            return entities.compactMap { entity -> DownloadedTalk? in
+                guard !entity.id.isEmpty else {
                     PTLogger.general.error("Downloaded talk entity has no ID")
                     return nil
                 }
                 
                 guard let localPath = entity.localAudioURL else {
-                    PTLogger.general.error("Downloaded talk \(id) has no localAudioURL")
+                    PTLogger.general.error("Downloaded talk \(entity.id) has no localAudioURL")
                     return nil
                 }
                 
                 let fileExists = FileManager.default.fileExists(atPath: localPath)
                 if !fileExists {
-                    PTLogger.general.error("Downloaded talk \(id) file does not exist at path: \(localPath)")
+                    PTLogger.general.error("Downloaded talk \(entity.id) file does not exist at path: \(localPath)")
                     // Mark as not downloaded if file doesn't exist
                     entity.isDownloaded = false
                     entity.localAudioURL = nil
                     return nil
                 }
                 
-                PTLogger.general.info("Successfully found downloaded talk: \(entity.title ?? id)")
+                PTLogger.general.info("Successfully found downloaded talk: \(entity.title.isEmpty ? entity.id : entity.title)")
                 
                 return DownloadedTalk(
-                    id: id,
-                    title: entity.title ?? "",
-                    speaker: entity.speaker ?? "",
+                    id: entity.id,
+                    title: entity.title.isEmpty ? "Downloaded Talk" : entity.title,
+                    speaker: entity.speaker?.isEmpty == false ? entity.speaker! : "Unknown Speaker",
                     series: entity.series,
                     duration: Int(entity.duration),
                     fileSize: entity.fileSize,
@@ -483,7 +483,7 @@ final class DownloadService: NSObject, ObservableObject {
                     entity.biblePassage = talk.biblePassage
                 } else {
                     // Enhanced metadata for offline files with better estimates
-                    if entity.title == nil || entity.title?.isEmpty == true {
+                    if entity.title.isEmpty {
                         entity.title = "Downloaded Talk"
                         // Try to extract meaningful info from talkID if it follows a pattern
                         if let titleFromID = self.extractTitleFromID(talkID) {
@@ -716,9 +716,9 @@ final class DownloadService: NSObject, ObservableObject {
                 let entities = try context.fetch(request)
                 return entities.map { entity in
                     DownloadTask(
-                        id: entity.id ?? "",
-                        talkID: entity.talkID ?? "",
-                        downloadURL: entity.downloadURL ?? "",
+                        id: entity.id,
+                        talkID: entity.talkID,
+                        downloadURL: entity.downloadURL,
                         status: DownloadStatus(rawValue: entity.status ?? "") ?? .pending,
                         totalBytes: entity.totalBytes,
                         downloadedBytes: entity.downloadedBytes,
@@ -1104,7 +1104,7 @@ struct DownloadTask: Identifiable, Equatable {
     let talkID: String
     let downloadURL: String
     var status: DownloadStatus
-    let totalBytes: Int64
+    var totalBytes: Int64
     var downloadedBytes: Int64
     var progress: Float
     let createdAt: Date

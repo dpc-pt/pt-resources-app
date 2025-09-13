@@ -11,7 +11,7 @@ import Combine
 import CryptoKit
 
 /// Comprehensive image caching service with memory and disk caching
-final class ImageCacheService {
+final class ImageCacheService: ImageCacheServiceProtocol {
     static let shared = ImageCacheService()
 
     private let memoryCache = NSCache<NSString, UIImage>()
@@ -44,6 +44,24 @@ final class ImageCacheService {
 
     // MARK: - Public API
 
+    /// Load image from cache or download from URL (Protocol requirement)
+    func loadImage(from url: URL) async -> UIImage? {
+        return try? await loadImage(from: url, targetSize: nil)
+    }
+    
+    /// Cache image for URL (Protocol requirement)
+    func cacheImage(_ image: UIImage, for url: URL) {
+        let cacheKey = cacheKeyForURL(url)
+        cacheImage(image, for: cacheKey)
+    }
+    
+    /// Clear all caches (Protocol requirement - synchronous)
+    func clearCache() {
+        Task {
+            await clearCacheAsync()
+        }
+    }
+    
     /// Load image from cache or download from URL
     @MainActor func loadImage(from url: URL, targetSize: CGSize? = nil) async throws -> UIImage {
         let cacheKey = cacheKeyForURL(url)
@@ -136,8 +154,8 @@ final class ImageCacheService {
         prefetchImages(urls: imageUrls, maxConcurrent: 2)
     }
 
-    /// Clear all caches
-    func clearCache() async {
+    /// Clear all caches (async version)
+    private func clearCacheAsync() async {
         // Clear memory cache
         memoryCache.removeAllObjects()
 

@@ -13,15 +13,7 @@ import Combine
 import SwiftUI
 
 // MARK: - Supporting Types
-
-enum FilterType {
-    case speaker
-    case conference
-    case bibleBook
-    case year
-    case collection
-    case conferenceType
-}
+// FilterType enum is now in FilteringService.swift
 
 @MainActor
 final class TalksViewModel: ObservableObject {
@@ -163,6 +155,11 @@ final class TalksViewModel: ObservableObject {
             selectedFilters.removeCollection(value)
         case .conferenceType:
             selectedFilters.removeConferenceType(value)
+        case .topic:
+            // Handle topic removal - could clear query or specific topic field
+            selectedFilters.query = ""
+        case .series:
+            selectedFilters.series = nil
         }
         
         Task {
@@ -256,7 +253,8 @@ final class TalksViewModel: ObservableObject {
                 entity.fileSize = talk.fileSize ?? 0
                 entity.updatedAt = Date()
                 
-                if entity.createdAt == nil {
+                // Set createdAt if it's nil or the default value (epoch time)
+                if entity.createdAt == nil || entity.createdAt?.timeIntervalSince1970 == 0 {
                     entity.createdAt = Date()
                 }
             }
@@ -284,8 +282,8 @@ final class TalksViewModel: ObservableObject {
                 
                 let entities = try context.fetch(request)
                 return entities.compactMap { entity -> Talk? in
-                    guard let id = entity.id,
-                          let title = entity.title,
+                    guard !entity.id.isEmpty,
+                          !entity.title.isEmpty,
                           let speaker = entity.speaker,
                           let dateRecorded = entity.dateRecorded else {
                         return nil
@@ -297,8 +295,8 @@ final class TalksViewModel: ObservableObject {
                     }
                     
                     return Talk(
-                        id: id,
-                        title: title,
+                        id: entity.id,
+                        title: entity.title,
                         description: entity.desc,
                         speaker: speaker,
                         series: entity.series,

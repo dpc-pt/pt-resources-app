@@ -13,7 +13,7 @@ import UIKit
 struct PT_ResourcesApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
-    let persistenceController = PersistenceController.shared
+    @StateObject private var serviceContainer = ServiceContainer()
     @State private var isShowingSplash = true
     
     var body: some Scene {
@@ -24,17 +24,20 @@ struct PT_ResourcesApp: App {
                         .transition(.opacity)
                 } else {
                     ContentView()
-                        .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                        .withServices(serviceContainer)
                         .transition(.opacity)
                 }
             }
             .animation(.easeInOut(duration: 0.5), value: isShowingSplash)
             .task {
+                // Setup service container in app delegate
+                appDelegate.setServiceContainer(serviceContainer)
+                
                 // Register PT fonts immediately
                 do {
                     try await FontManager.shared.registerFontsAsync()
                 } catch {
-                    print("⚠️ Font registration failed: \(error)")
+                    PTLogger.general.error("Font registration failed: \(error)")
                 }
                 
                 // Debug font availability
@@ -56,46 +59,38 @@ struct PT_ResourcesApp: App {
 }
 
 class AppDelegate: NSObject, UIApplicationDelegate {
+    private var serviceContainer: ServiceContainer?
+    
+    func setServiceContainer(_ container: ServiceContainer) {
+        self.serviceContainer = container
+    }
+    
     func applicationDidEnterBackground(_ application: UIApplication) {
-        // When app goes to background, ensure background task and audio session are active
-        Task { @MainActor in
-            let playerService = PlayerService.shared
-            if playerService.playbackState == .playing || playerService.playbackState == .paused {
-                // Ensure background task is active for background playback
-                playerService.startBackgroundTask()
-                
-                // Keep audio session active for continued playback and lock screen controls
-                do {
-                    try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
-                    print("App entered background - maintained active audio session and background task")
-                } catch {
-                    print("Failed to maintain audio session in background: \(error)")
-                }
-            }
+        serviceContainer?.enterBackground()
+        
+        // Handle background audio session
+        do {
+            try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
+            PTLogger.general.info("App entered background - maintained active audio session")
+        } catch {
+            PTLogger.general.error("Failed to maintain audio session in background: \(error)")
         }
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
-        // When app comes back to foreground, ensure audio session is still active
-        Task { @MainActor in
-            let playerService = PlayerService.shared
-            if playerService.playbackState == .playing || playerService.playbackState == .paused {
-                // Ensure audio session is still active
-                do {
-                    try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
-                    print("App entered foreground - verified audio session is active")
-                } catch {
-                    print("Failed to reactivate audio session on foreground: \(error)")
-                }
-            }
+        serviceContainer?.becomeActive()
+        
+        // Handle foreground audio session
+        do {
+            try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
+            PTLogger.general.info("App entered foreground - verified audio session is active")
+        } catch {
+            PTLogger.general.error("Failed to reactivate audio session on foreground: \(error)")
         }
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
-        // Clean up when app terminates
-        Task { @MainActor in
-            PlayerService.shared.stop()
-        }
-        print("App terminating - cleaned up audio resources")
+        serviceContainer?.cleanup()
+        PTLogger.general.info("App terminating - cleaned up resources")
     }
 }

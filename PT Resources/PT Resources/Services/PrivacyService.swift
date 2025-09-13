@@ -280,7 +280,7 @@ final class PrivacyService: ObservableObject {
             return entities.map { entity in
                 BookmarkExportData(
                     id: entity.id ?? UUID(),
-                    talkId: entity.talk?.id ?? "",
+                    talkId: entity.talk.id,
                     position: entity.position,
                     title: entity.title,
                     createdAt: entity.createdAt ?? Date()

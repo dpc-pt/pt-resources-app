@@ -8,54 +8,58 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @State private var selectedTab = 0
+    @EnvironmentObject private var navigationCoordinator: NavigationCoordinator
+    @EnvironmentObject private var serviceContainer: ServiceContainer
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: $navigationCoordinator.selectedTab) {
             // Home Tab
-            HomeView(selectedTab: $selectedTab)
+            HomeView(selectedTab: Binding(
+                get: { navigationCoordinator.selectedTab.rawValue },
+                set: { navigationCoordinator.selectedTab = TabSelection(rawValue: $0) ?? .home }
+            ))
                 .tabItem {
-                    Image(systemName: "house.fill")
-                    Text("Home")
+                    Image(systemName: TabSelection.home.iconName)
+                    Text(TabSelection.home.title)
                 }
-                .tag(0)
-                .accessibilityIdentifier(PTAccessibility.homeTab)
+                .tag(TabSelection.home)
+                .accessibilityIdentifier(TabSelection.home.accessibilityIdentifier)
 
             // Resources Tab
             TalksListView()
                 .tabItem {
-                    Image(systemName: "waveform.circle.fill")
-                    Text("Resources")
+                    Image(systemName: TabSelection.resources.iconName)
+                    Text(TabSelection.resources.title)
                 }
-                .tag(1)
-                .accessibilityIdentifier(PTAccessibility.talksTab)
+                .tag(TabSelection.resources)
+                .accessibilityIdentifier(TabSelection.resources.accessibilityIdentifier)
 
             // Conferences Tab  
             ConferencesListView()
                 .tabItem {
-                    Image(systemName: "calendar.badge.clock")
-                    Text("Conferences")
+                    Image(systemName: TabSelection.conferences.iconName)
+                    Text(TabSelection.conferences.title)
                 }
-                .tag(2)
-                .accessibilityIdentifier(PTAccessibility.conferencesTab)
+                .tag(TabSelection.conferences)
+                .accessibilityIdentifier(TabSelection.conferences.accessibilityIdentifier)
 
             // Blog Tab
             BlogListView()
                 .tabItem {
-                    Image(systemName: "quote.bubble")
-                    Text("Blog")
+                    Image(systemName: TabSelection.blog.iconName)
+                    Text(TabSelection.blog.title)
                 }
-                .tag(3)
-                .accessibilityIdentifier("BlogTab")
+                .tag(TabSelection.blog)
+                .accessibilityIdentifier(TabSelection.blog.accessibilityIdentifier)
 
             // Downloads Tab
             DownloadsView()
                 .tabItem {
-                    Image(systemName: "arrow.down.circle.fill")
-                    Text("Downloads")
+                    Image(systemName: TabSelection.downloads.iconName)
+                    Text(TabSelection.downloads.title)
                 }
-                .tag(4)
-                .accessibilityIdentifier("DownloadsTab")
+                .tag(TabSelection.downloads)
+                .accessibilityIdentifier(TabSelection.downloads.accessibilityIdentifier)
 
         }
         .tint(PTDesignTokens.Colors.tang)  // Using PT Tang for selected state

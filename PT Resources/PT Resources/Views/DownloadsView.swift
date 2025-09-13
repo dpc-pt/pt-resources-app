@@ -107,8 +107,8 @@ struct DownloadsView: View {
                     biblePassage: nil,
                     dateRecorded: downloadedTalk.createdAt,
                     duration: downloadedTalk.duration,
-                    audioURL: downloadedTalk.localAudioURL,
-                    imageURL: nil
+                    audioURL: nil, // Let PlayerService find the local file using talk ID
+                    imageURL: downloadedTalk.artworkURL
                 )
 
                 TalkDetailView(
@@ -241,8 +241,8 @@ struct DownloadsView: View {
             biblePassage: nil,
             dateRecorded: downloadedTalk.createdAt,
             duration: downloadedTalk.duration,
-            audioURL: downloadedTalk.localAudioURL,
-            imageURL: nil
+            audioURL: nil, // Let PlayerService find the local file using talk ID
+            imageURL: downloadedTalk.artworkURL
         )
         
         playerService.loadTalk(talk)

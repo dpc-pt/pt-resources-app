@@ -7,43 +7,41 @@
 
 import SwiftUI
 
-// MARK: - PT Font Manager (Matching Website Font System)
+// MARK: - PT Font Manager
 
 struct PTFonts {
     // PT Font Names (matching website font-face declarations)
     // Fields Display (for headings) - pt-heading font family
-    static let fieldsDisplayMedium = "FieldsDisplay-Medium"     // Medium weight
-    static let fieldsDisplayBlack = "FieldsDisplay-Black"       // Black weight
+    static let fieldsDisplayMedium = "FieldsDisplay-Medium"
+    static let fieldsDisplayBlack = "FieldsDisplay-Black"
     
     // Optima (for body text) - pt-body font family 
-    static let optimaRoman = "OptimaLTPro-Roman"                 // Regular weight
-    static let optimaBold = "OptimaLTPro-Bold"                   // Bold weight
-    static let optimaMedium = "OptimaLTPro-Medium"               // Medium weight
-    static let optimaItalic = "OptimaLTPro-Italic"               // Italic style
-    static let optimaBoldItalic = "OptimaLTPro-BoldItalic"       // Bold italic
+    static let optimaRoman = "OptimaLTPro-Roman"
+    static let optimaBold = "OptimaLTPro-Bold"
+    static let optimaMedium = "OptimaLTPro-Medium"
+    static let optimaItalic = "OptimaLTPro-Italic"
+    static let optimaBoldItalic = "OptimaLTPro-BoldItalic"
     
     // Agenda One (for special typography) - matching website
-    static let agendaMedium = "AgendaOne-Medium"                // Medium weight
-    static let agendaBold = "AgendaOne-Bold"                    // Bold weight
+    static let agendaMedium = "AgendaOne-Medium"
+    static let agendaBold = "AgendaOne-Bold"
     
-    // Font fallback system
+    // Font fallback system with proper error handling
     static func font(name: String, size: CGFloat, fallback: Font.Weight = .regular) -> Font {
-        if UIFont(name: name, size: size) != nil {
-            return Font.custom(name, size: size)
-        } else {
-            // Fallback to system font with equivalent weight
+        guard UIFont(name: name, size: size) != nil else {
+            PTLogger.general.warning("Font '\(name)' not available, using system fallback")
             return Font.system(size: size, weight: fallback, design: .default)
         }
+        return Font.custom(name, size: size)
     }
 
     // Dynamic Type support version
     static func dynamicFont(name: String, size: CGFloat, fallback: Font.Weight = .regular, maxSize: DynamicTypeSize = .xxxLarge) -> Font {
-        if UIFont(name: name, size: size) != nil {
-            return Font.custom(name, size: size)
-        } else {
-            // Fallback to system font with equivalent weight
+        guard UIFont(name: name, size: size) != nil else {
+            PTLogger.general.warning("Font '\(name)' not available, using system fallback")
             return Font.system(size: size, weight: fallback, design: .default)
         }
+        return Font.custom(name, size: size)
     }
 }
 
@@ -92,20 +90,25 @@ extension PTFont {
 class FontManager {
     static let shared = FontManager()
     
-    private var registeredFonts: Set<String> = []
+    private var isInitialized = false
+    private var availableFonts: Set<String> = []
     
     func registerFonts() {
-        // With Info.plist registration, fonts are automatically available
-        // Just verify they're loaded and log available fonts
+        guard !isInitialized else { return }
+        
+        // Fonts are automatically loaded via Info.plist
+        // Verify they're available for production use
         verifyFonts()
+        isInitialized = true
     }
 
     /// Async version of font registration for modern concurrency
-    func registerFontsAsync() async throws {
-        // Fonts are automatically loaded via Info.plist
-        // Just verify they're available
+    func registerFontsAsync() async {
+        guard !isInitialized else { return }
+        
         await MainActor.run {
             verifyFonts()
+            isInitialized = true
         }
     }
     
@@ -131,20 +134,20 @@ class FontManager {
         
         for fontName in expectedFonts {
             if UIFont(name: fontName, size: 17) != nil {
-                registeredFonts.insert(fontName)
-                print("✅ Font available: \(fontName)")
-            } else {
-                print("❌ Font not available: \(fontName)")
+                availableFonts.insert(fontName)
             }
+        }
+        
+        let missingFonts = expectedFonts.filter { !availableFonts.contains($0) }
+        if !missingFonts.isEmpty {
+            PTLogger.general.warning("Missing fonts: \(missingFonts.joined(separator: ", "))")
+        } else {
+            PTLogger.general.info("All PT fonts loaded successfully")
         }
     }
     
-    func listAvailableFonts() {
-        print("\n📝 Available PT Fonts:")
-        for fontName in registeredFonts.sorted() {
-            print("   • \(fontName)")
-        }
-        print()
+    func isFontAvailable(_ fontName: String) -> Bool {
+        return availableFonts.contains(fontName)
     }
 }
 
@@ -154,9 +157,6 @@ extension View {
     func registerPTFonts() -> some View {
         self.onAppear {
             FontManager.shared.registerFonts()
-            #if DEBUG
-            FontManager.shared.listAvailableFonts()
-            #endif
         }
     }
 }

@@ -11,7 +11,7 @@ import UserNotifications
 // MARK: - Podcast Service
 
 /// Service for handling podcast RSS feed integration
-/// TODO: Implement full RSS parsing and podcast episode management
+/// Future enhancement: Full RSS parsing and podcast episode management
 @MainActor
 final class PodcastService: ObservableObject {
     
@@ -33,7 +33,7 @@ final class PodcastService: ObservableObject {
         // 4. Map episodes to Talk model where applicable
         // 5. Cache episodes locally
         
-        print("TODO: Implement podcast RSS feed parsing from: \(Config.podcastFeedURL)")
+        PTLogger.general.info("Podcast RSS feed parsing not yet implemented for: \(Config.podcastFeedURL)")
         
         // Mock implementation for now
         isLoading = true
@@ -64,9 +64,9 @@ struct PodcastEpisode: Identifiable, Codable {
             id: "podcast-\(id)",
             title: title,
             description: description,
-            speaker: "Podcast", // TODO: Parse speaker from RSS
+            speaker: "Podcast", // Will be parsed from RSS when implemented
             series: "Podcast",
-            biblePassage: nil, // TODO: Extract from description if available
+            biblePassage: nil, // Will be extracted from description when RSS parsing is implemented
             dateRecorded: pubDate,
             duration: Int(duration ?? 0),
             audioURL: audioURL,
@@ -114,7 +114,7 @@ enum PodcastError: LocalizedError {
 // MARK: - Blog RSS Service
 
 /// Service for handling blog RSS feed integration
-/// TODO: Implement blog RSS parsing and display
+/// Future enhancement: Blog RSS parsing and display
 @MainActor
 final class BlogService: ObservableObject {
     
@@ -135,7 +135,7 @@ final class BlogService: ObservableObject {
         // 2. Parse JSON response and map to BlogPost model
         // 3. Cache posts locally
         
-        print("TODO: Implement blog post fetching from PT API: \(Config.APIEndpoint.blogPosts().url)")
+        PTLogger.general.info("Blog post fetching not yet implemented for: \(Config.APIEndpoint.blogPosts().url)")
         
         // Mock implementation for now
         isLoading = true
@@ -202,29 +202,29 @@ final class NotificationsService: ObservableObject {
     }
     
     func registerForRemoteNotifications() async {
-        // TODO: This needs to be called on the main thread from UIApplication
+        // Note: This should be called on the main thread from UIApplication
         // The actual registration happens in the app delegate
-        print("TODO: Register for remote notifications - call UIApplication.shared.registerForRemoteNotifications()")
+        PTLogger.general.info("Remote notifications registration not yet implemented")
     }
     
     func updateDeviceToken(_ tokenData: Data) {
         let token = tokenData.map { String(format: "%02.2hhx", $0) }.joined()
         deviceToken = token
         
-        // TODO: Send token to server
+        // Future: Send token to server when backend is ready
         Task {
             await registerTokenWithServer(token)
         }
     }
     
     func handleNotificationReceived(_ notification: UNNotification) {
-        // TODO: Handle incoming notifications
+        // Future implementation: Handle incoming notifications
         // 1. Parse notification payload
         // 2. Update app state if needed
         // 3. Refresh talks list if new content available
         
         let userInfo = notification.request.content.userInfo
-        print("Received notification: \(userInfo)")
+        PTLogger.general.info("Received notification with userInfo keys: \(Array(userInfo.keys).map { "\($0)" }.joined(separator: ", "))")
         
         // Example: Handle new talk notification
         if let talkID = userInfo["talk_id"] as? String {

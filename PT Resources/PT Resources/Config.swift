@@ -44,9 +44,16 @@ struct Config {
             return envKey
         }
         
-        // For now, use the key directly since the Secrets.xcconfig isn't in the bundle
-        // In a production setup, you'd configure this through Xcode build settings
+        if let configValue = getConfigValue("ESV_API_KEY") {
+            return configValue
+        }
+        
+        // Fallback to test key for development only
+        #if DEBUG
         return "b9674d6b97fecace2abcef4b26abae9b99bd30fe"
+        #else
+        return "YOUR_ESV_API_KEY_HERE"
+        #endif
     }()
     
     /// Server-side transcription service URL
@@ -76,16 +83,28 @@ struct Config {
     }()
     
     /// Podcast RSS feed URL
-    /// TODO: Replace with actual podcast feed URL
-    static let podcastFeedURL = "https://feeds.proctrust.org.uk/podcast.xml"
+    static let podcastFeedURL: String = {
+        if let configValue = getConfigValue("PODCAST_FEED_URL") {
+            return configValue
+        }
+        return "https://feeds.proctrust.org.uk/podcast.xml"
+    }()
     
     /// Blog RSS feed URL
-    /// TODO: Replace with actual blog RSS feed URL
-    static let blogFeedURL = "https://www.proctrust.org.uk/blog/rss.xml"
+    static let blogFeedURL: String = {
+        if let configValue = getConfigValue("BLOG_FEED_URL") {
+            return configValue
+        }
+        return "https://www.proctrust.org.uk/blog/rss.xml"
+    }()
     
     /// Push notification server endpoint
-    /// TODO: Configure your APNs token registration endpoint
-    static let pushServerEndpoint = "https://api.proctrust.org.uk/v1/push"
+    static let pushServerEndpoint: String = {
+        if let configValue = getConfigValue("PUSH_SERVER_ENDPOINT") {
+            return configValue
+        }
+        return "https://api.proctrust.org.uk/v1/push"
+    }()
     
     // MARK: - App Configuration
     
@@ -144,8 +163,12 @@ struct Config {
     static let urlScheme = "ptresources"
     
     /// Universal link domain
-    /// TODO: Configure your associated domain
-    static let universalLinkDomain = "proctrust.org.uk"
+    static let universalLinkDomain: String = {
+        if let configValue = getConfigValue("UNIVERSAL_LINK_DOMAIN") {
+            return configValue
+        }
+        return "proctrust.org.uk"
+    }()
     
     // MARK: - Cache Configuration
     
@@ -161,8 +184,12 @@ struct Config {
     // MARK: - Analytics
 
     /// Analytics service identifier
-    /// TODO: Configure your analytics service
-    static let analyticsServiceID = "pt-resources-analytics"
+    static let analyticsServiceID: String = {
+        if let configValue = getConfigValue("ANALYTICS_SERVICE_ID") {
+            return configValue
+        }
+        return "pt-resources-analytics"
+    }()
 
     /// Whether analytics is enabled (opt-in by default)
     static var analyticsEnabled: Bool {
@@ -233,10 +260,20 @@ struct Config {
     // MARK: - Privacy
 
     /// Privacy policy URL
-    static let privacyPolicyURL = "https://proctrust.org.uk/privacy"
+    static let privacyPolicyURL: String = {
+        if let configValue = getConfigValue("PRIVACY_POLICY_URL") {
+            return configValue
+        }
+        return "https://proctrust.org.uk/privacy"
+    }()
 
     /// Terms of service URL
-    static let termsOfServiceURL = "https://proctrust.org.uk/terms"
+    static let termsOfServiceURL: String = {
+        if let configValue = getConfigValue("TERMS_OF_SERVICE_URL") {
+            return configValue
+        }
+        return "https://proctrust.org.uk/terms"
+    }()
 }
 
 // MARK: - Environment Detection

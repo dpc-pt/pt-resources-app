@@ -185,7 +185,7 @@ struct PTCardStyle: ViewModifier {
     }
 }
 
-struct PTPrimaryButton: ViewModifier {
+struct PTPrimaryButtonStyle: ViewModifier {
     let isPressed: Bool
     let isDisabled: Bool
     
@@ -225,7 +225,7 @@ struct PTPrimaryButton: ViewModifier {
     }
 }
 
-struct PTSecondaryButton: ViewModifier {
+struct PTSecondaryButtonStyle: ViewModifier {
     let isPressed: Bool
     let isDisabled: Bool
     
@@ -325,11 +325,11 @@ extension View {
     }
     
     func ptPrimaryButton(isPressed: Bool = false, isDisabled: Bool = false) -> some View {
-        self.modifier(PTPrimaryButton(isPressed: isPressed, isDisabled: isDisabled))
+        self.modifier(PTPrimaryButtonStyle(isPressed: isPressed, isDisabled: isDisabled))
     }
     
     func ptSecondaryButton(isPressed: Bool = false, isDisabled: Bool = false) -> some View {
-        self.modifier(PTSecondaryButton(isPressed: isPressed, isDisabled: isDisabled))
+        self.modifier(PTSecondaryButtonStyle(isPressed: isPressed, isDisabled: isDisabled))
     }
     
     func ptOutlineButton(isPressed: Bool = false, isDisabled: Bool = false) -> some View {

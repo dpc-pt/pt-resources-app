@@ -92,6 +92,32 @@ struct ConferenceMedia: Codable, Identifiable {
     var fullURL: URL? {
         return URL(string: "https://www.proctrust.org.uk\(url)")
     }
+    
+    /// Converts ConferenceMedia to ConferenceInfo for compatibility
+    func toConferenceInfo() -> ConferenceInfo {
+        return ConferenceInfo(
+            id: conferenceId,
+            title: title,
+            year: extractYear(from: title),
+            imageURL: image,
+            resourceCount: 0, // Not available from ConferenceMedia
+            description: excerpt.isEmpty ? nil : excerpt,
+            conferenceType: nil // Not available from ConferenceMedia
+        )
+    }
+    
+    private func extractYear(from title: String) -> String {
+        // Simple regex to extract year from title
+        let yearRegex = try? NSRegularExpression(pattern: "\\b(20\\d{2})\\b")
+        let nsString = title as NSString
+        let results = yearRegex?.matches(in: title, range: NSRange(location: 0, length: nsString.length))
+        
+        if let match = results?.first {
+            return nsString.substring(with: match.range)
+        }
+        
+        return "2025" // Default year if not found
+    }
 }
 
 // MARK: - Mock Data

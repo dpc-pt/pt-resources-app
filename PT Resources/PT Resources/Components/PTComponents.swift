@@ -2,185 +2,17 @@
 //  PTComponents.swift
 //  PT Resources
 //
-//  Beautiful PT-styled UI components
+//  Core PT-styled UI components (now imports decomposed components)
 //
 
 import SwiftUI
 
-// MARK: - Search Bar
+// Re-export the decomposed components for backward compatibility
+// Note: Search components are now in PTSearchComponents.swift
+// Filter components are now in PTFilterComponents.swift 
+// Card components are now in PTCardComponents.swift
 
-struct PTSearchBar: View {
-    @Binding var text: String
-    let onSearchButtonClicked: () -> Void
-    @FocusState private var isFocused: Bool
-
-    var body: some View {
-        HStack(spacing: PTDesignTokens.Spacing.md) {
-            HStack(spacing: PTDesignTokens.Spacing.md) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(isFocused ? PTDesignTokens.Colors.kleinBlue : PTDesignTokens.Colors.medium)
-                    .font(PTFont.ptSectionTitle)
-                    .frame(width: 20, height: 20)
-
-                TextField("Search talks, speakers, series...", text: $text)
-                    .font(PTFont.ptBodyText)
-                    .foregroundColor(PTDesignTokens.Colors.ink)
-                    .focused($isFocused)
-                    .onSubmit {
-                        onSearchButtonClicked()
-                    }
-                    .submitLabel(.search)
-
-                if !text.isEmpty {
-                    Button(action: {
-                        text = ""
-                        isFocused = false
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(PTDesignTokens.Colors.medium)
-                            .font(PTFont.ptButtonText)
-                            .frame(width: 20, height: 20)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
-            }
-            .padding(.horizontal, PTDesignTokens.Spacing.lg)
-            .padding(.vertical, PTDesignTokens.Spacing.md)
-            .background(
-                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.input)
-                    .fill(PTDesignTokens.Colors.surface)
-                    .shadow(
-                        color: isFocused ? PTDesignTokens.Colors.tang.opacity(0.2) : Color.black.opacity(0.05),
-                        radius: isFocused ? 4 : 2,
-                        x: 0,
-                        y: isFocused ? 2 : 1
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.input)
-                    .stroke(isFocused ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.light.opacity(0.3), lineWidth: isFocused ? 2 : 1)
-            )
-            .animation(.easeInOut(duration: 0.2), value: isFocused)
-        }
-        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
-    }
-}
-
-// MARK: - Filter Bar
-
-struct PTFilterBar: View {
-    @Binding var showingFilters: Bool
-    let activeFiltersCount: Int
-    let activeFilters: [String]
-    let onClearFilter: (String) -> Void
-
-    var body: some View {
-        VStack(spacing: PTDesignTokens.Spacing.md) {
-            // Filter Button Row
-            HStack(spacing: PTDesignTokens.Spacing.md) {
-                // Filter Button
-                Button(action: { showingFilters = true }) {
-                    HStack(spacing: PTDesignTokens.Spacing.sm) {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
-                            .font(PTFont.ptButtonText)
-                        Text("Filter")
-                            .font(PTFont.ptButtonText)
-                        if activeFiltersCount > 0 {
-                            Text("(\(activeFiltersCount))")
-                                .font(PTFont.ptCaptionText)
-                                .foregroundColor(PTDesignTokens.Colors.tang)
-                        }
-                    }
-                    .foregroundColor(PTDesignTokens.Colors.ink)
-                    .padding(.horizontal, PTDesignTokens.Spacing.md)
-                    .padding(.vertical, PTDesignTokens.Spacing.sm)
-                    .background(
-                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
-                            .fill(activeFiltersCount > 0 ? PTDesignTokens.Colors.tang.opacity(0.1) : PTDesignTokens.Colors.surface)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
-                                    .stroke(activeFiltersCount > 0 ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.medium.opacity(0.3), lineWidth: 1)
-                            )
-                    )
-                }
-
-                Spacer()
-
-                // Clear All Button (only show if filters are active)
-                if activeFiltersCount > 0 {
-                    Button(action: { /* TODO: Implement clear all */ }) {
-                        HStack(spacing: PTDesignTokens.Spacing.xs) {
-                            Text("Clear All")
-                                .font(PTFont.ptCaptionText)
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 14))
-                        }
-                        .foregroundColor(PTDesignTokens.Colors.medium)
-                        .padding(.horizontal, PTDesignTokens.Spacing.sm)
-                        .padding(.vertical, PTDesignTokens.Spacing.xs)
-                        .background(
-                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.sm)
-                                .fill(PTDesignTokens.Colors.veryLight)
-                        )
-                    }
-                }
-            }
-
-            // Active Filters Row (only show if filters are active)
-            if activeFiltersCount > 0 {
-                HStack(spacing: PTDesignTokens.Spacing.sm) {
-                    Text("Active filters:")
-                        .font(PTFont.ptCaptionText)
-                        .foregroundColor(PTDesignTokens.Colors.medium)
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: PTDesignTokens.Spacing.sm) {
-                            ForEach(activeFilters, id: \.self) { filter in
-                                PTFilterChip(label: filter, onRemove: {
-                                    onClearFilter(filter)
-                                })
-                            }
-                        }
-                    }
-                }
-                .padding(.vertical, PTDesignTokens.Spacing.xs)
-            }
-        }
-    }
-}
-
-// MARK: - Filter Chip Component
-
-struct PTFilterChip: View {
-    let label: String
-    let onRemove: () -> Void
-
-    var body: some View {
-        HStack(spacing: PTDesignTokens.Spacing.xs) {
-            Text(label)
-                .font(PTFont.ptCaptionText)
-                .foregroundColor(PTDesignTokens.Colors.ink)
-
-            Button(action: onRemove) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(PTDesignTokens.Colors.medium)
-            }
-        }
-        .padding(.horizontal, PTDesignTokens.Spacing.sm)
-        .padding(.vertical, PTDesignTokens.Spacing.xs)
-        .background(
-            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.sm)
-                .fill(PTDesignTokens.Colors.tang.opacity(0.1))
-                .overlay(
-                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.sm)
-                        .stroke(PTDesignTokens.Colors.tang.opacity(0.3), lineWidth: 1)
-                )
-        )
-    }
-}
-
-// MARK: - Loading View
+// MARK: - Loading Components
 
 struct PTLoadingView: View {
     @State private var isAnimating = false
@@ -195,86 +27,359 @@ struct PTLoadingView: View {
                 }
             
             Text("Loading resources...")
-                .font(PTFont.ptSectionTitle)  // Using PT section title typography
-                .foregroundColor(PTDesignTokens.Colors.ink)      // Using PT Ink for primary text
-            
-            Text("Fetching the latest sermons and talks")
-                .font(PTFont.ptBodyText)      // Using PT body typography
-                .foregroundColor(PTDesignTokens.Colors.medium)
-                .multilineTextAlignment(.center)
+                .font(PTFont.ptSectionTitle)
+                .foregroundColor(PTDesignTokens.Colors.ink)
         }
-        .padding(PTDesignTokens.Spacing.xl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(PTDesignTokens.Colors.background)
     }
 }
 
-// MARK: - Empty State View
+// MARK: - Empty State Components
 
 struct PTEmptyStateView: View {
+    let title: String
+    let message: String
+    let iconName: String
+    let actionTitle: String?
+    let action: (() -> Void)?
+    
+    init(
+        title: String = "No Content",
+        message: String = "There's nothing here yet.",
+        iconName: String = "tray",
+        actionTitle: String? = nil,
+        action: (() -> Void)? = nil
+    ) {
+        self.title = title
+        self.message = message
+        self.iconName = iconName
+        self.actionTitle = actionTitle
+        self.action = action
+    }
+    
     var body: some View {
         VStack(spacing: PTDesignTokens.Spacing.lg) {
-            PTLogo(size: 64, showText: false)
-            
-            Text("No Resources Found")
-                .font(PTFont.ptSectionTitle)  // Using PT section title typography
-                .foregroundColor(PTDesignTokens.Colors.ink)      // Using PT Ink for primary text
-            
-            Text("Try adjusting your search terms or filters to find more content")
-                .font(PTFont.ptBodyText)      // Using PT body typography
+            Image(systemName: iconName)
+                .font(.system(size: 60))
                 .foregroundColor(PTDesignTokens.Colors.medium)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, PTDesignTokens.Spacing.lg)
+            
+            VStack(spacing: PTDesignTokens.Spacing.sm) {
+                Text(title)
+                    .font(PTFont.ptSectionTitle)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
+                
+                Text(message)
+                    .font(PTFont.ptBodyText)
+                    .foregroundColor(PTDesignTokens.Colors.medium)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+            }
+            
+            if let actionTitle = actionTitle, let action = action {
+                Button(actionTitle, action: action)
+                    .font(PTFont.ptButtonText)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, PTDesignTokens.Spacing.lg)
+                    .padding(.vertical, PTDesignTokens.Spacing.md)
+                    .background(
+                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                            .fill(PTDesignTokens.Colors.tang)
+                    )
+            }
         }
         .padding(PTDesignTokens.Spacing.xl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(PTDesignTokens.Colors.background)
     }
 }
 
-// MARK: - Previews
+// MARK: - Button Components
 
-struct PTComponents_Previews: PreviewProvider {
-    static var previews: some View {
-        VStack(spacing: PTDesignTokens.Spacing.xl) {
-            VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.sm) {
-                Text("Search Bar - Default")
-                    .font(PTFont.ptSectionTitle)
-                    .foregroundColor(PTDesignTokens.Colors.ink)
-                PTSearchBar(text: .constant(""), onSearchButtonClicked: {})
-
-                Text("Search Bar - With Text")
-                    .font(PTFont.ptSectionTitle)
-                    .foregroundColor(PTDesignTokens.Colors.ink)
-                PTSearchBar(text: .constant("John Piper"), onSearchButtonClicked: {})
+struct PTPrimaryButton: View {
+    let title: String
+    let action: () -> Void
+    let isEnabled: Bool
+    let isLoading: Bool
+    
+    init(
+        _ title: String,
+        action: @escaping () -> Void,
+        isEnabled: Bool = true,
+        isLoading: Bool = false
+    ) {
+        self.title = title
+        self.action = action
+        self.isEnabled = isEnabled
+        self.isLoading = isLoading
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: PTDesignTokens.Spacing.sm) {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(0.8)
+                } else {
+                    Text(title)
+                        .font(PTFont.ptButtonText)
+                }
             }
-
-            VStack(spacing: PTDesignTokens.Spacing.lg) {
-                Text("Filter Bar - No Active Filters")
-                    .font(PTFont.ptSectionTitle)
-                    .foregroundColor(PTDesignTokens.Colors.ink)
-
-                PTFilterBar(
-                    showingFilters: .constant(false),
-                    activeFiltersCount: 0,
-                    activeFilters: [],
-                    onClearFilter: { _ in }
-                )
-
-                Text("Filter Bar - With Active Filters")
-                    .font(PTFont.ptSectionTitle)
-                    .foregroundColor(PTDesignTokens.Colors.ink)
-
-                PTFilterBar(
-                    showingFilters: .constant(false),
-                    activeFiltersCount: 3,
-                    activeFilters: ["John Piper", "Romans Series", "2024"],
-                    onClearFilter: { _ in }
-                )
-            }
-
-            PTLoadingView()
-
-            PTEmptyStateView()
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, PTDesignTokens.Spacing.md)
+            .background(
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                    .fill(isEnabled ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.medium)
+            )
         }
-        .padding(PTDesignTokens.Spacing.xl)
-        .background(PTDesignTokens.Colors.background)
-        .previewLayout(.sizeThatFits)
+        .disabled(!isEnabled || isLoading)
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct PTSecondaryButton: View {
+    let title: String
+    let action: () -> Void
+    let isEnabled: Bool
+    
+    init(
+        _ title: String,
+        action: @escaping () -> Void,
+        isEnabled: Bool = true
+    ) {
+        self.title = title
+        self.action = action
+        self.isEnabled = isEnabled
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(PTFont.ptButtonText)
+                .foregroundColor(isEnabled ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.medium)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, PTDesignTokens.Spacing.md)
+                .background(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                        .fill(Color.clear)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                        .stroke(isEnabled ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.medium, lineWidth: 1)
+                )
+        }
+        .disabled(!isEnabled)
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Divider Components
+
+struct PTDivider: View {
+    let thickness: CGFloat
+    let color: Color
+    
+    init(thickness: CGFloat = 1, color: Color = PTDesignTokens.Colors.light.opacity(0.3)) {
+        self.thickness = thickness
+        self.color = color
+    }
+    
+    var body: some View {
+        Rectangle()
+            .fill(color)
+            .frame(height: thickness)
+    }
+}
+
+struct PTSectionDivider: View {
+    let title: String?
+    
+    init(_ title: String? = nil) {
+        self.title = title
+    }
+    
+    var body: some View {
+        HStack {
+            PTDivider()
+            
+            if let title = title {
+                Text(title)
+                    .font(PTFont.ptCaptionText)
+                    .foregroundColor(PTDesignTokens.Colors.medium)
+                    .padding(.horizontal, PTDesignTokens.Spacing.sm)
+                
+                PTDivider()
+            }
+        }
+        .padding(.vertical, PTDesignTokens.Spacing.md)
+    }
+}
+
+// MARK: - Progress Components
+// PTProgressBar is defined in NowPlayingView.swift
+
+// MARK: - Welcome Components
+
+struct PTWelcomeHeader: View {
+    let onSettingsTap: () -> Void
+    
+    var body: some View {
+        VStack(spacing: PTDesignTokens.Spacing.lg) {
+            // Top row with welcome text and settings
+            HStack {
+                VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
+                    Text("Welcome to")
+                        .font(PTFont.ptBodyText)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                    
+                    Text("the Proclamation Trust")
+                        .font(PTFont.ptSectionTitle)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+                }
+                
+                Spacer()
+                
+                Button(action: onSettingsTap) {
+                    Image(systemName: "gearshape.fill")
+                        .font(.title2)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                        .padding(PTDesignTokens.Spacing.sm)
+                        .background(
+                            Circle()
+                                .fill(PTDesignTokens.Colors.light.opacity(0.3))
+                        )
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            
+            // Logo section with enhanced presentation
+            HStack {
+                Spacer()
+                
+                VStack(spacing: PTDesignTokens.Spacing.sm) {
+                    PTLogo(size: 48, showText: false)
+                        .shadow(color: PTDesignTokens.Colors.tang.opacity(0.2), radius: 8, x: 0, y: 4)
+                }
+                
+                Spacer()
+            }
+        }
+        .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+        .padding(.vertical, PTDesignTokens.Spacing.lg)
+        .background(
+            LinearGradient(
+                colors: [
+                    PTDesignTokens.Colors.background,
+                    PTDesignTokens.Colors.surface.opacity(0.3)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+    }
+}
+
+struct PTWelcomeLoadingView: View {
+    let onSettingsTap: () -> Void
+    
+    var body: some View {
+        VStack(spacing: PTDesignTokens.Spacing.xl) {
+            PTWelcomeHeader(onSettingsTap: onSettingsTap)
+            
+            Spacer()
+            
+            PTLoadingView()
+            
+            Spacer()
+        }
+    }
+}
+
+// MARK: - Blog Artwork
+
+private struct BlogArtwork: View {
+    let blogPost: BlogPost
+
+    var body: some View {
+        AsyncImage(url: URL(string: blogPost.image ?? "")) { image in
+            image
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(height: 160)
+                .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.md))
+        } placeholder: {
+            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.md)
+                .fill(PTDesignTokens.Colors.light.opacity(0.3))
+                .frame(height: 160)
+                .overlay(
+                    Image(systemName: "doc.text")
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                        .font(.title2)
+                )
+        }
+    }
+}
+
+// MARK: - Featured Components
+
+struct PTFeaturedBlogCard: View {
+    let blogPost: BlogPost
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.md) {
+                Text("Latest from the Blog")
+                    .font(PTFont.ptCaptionText)
+                    .foregroundColor(PTDesignTokens.Colors.tang)
+                    .textCase(.uppercase)
+
+                // Blog image if available
+                if let image = blogPost.image, !image.isEmpty {
+                    BlogArtwork(blogPost: blogPost)
+                }
+
+                Text(blogPost.title)
+                    .font(PTFont.ptSectionTitle)
+                    .foregroundColor(PTDesignTokens.Colors.ink)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+
+                if let excerpt = blogPost.excerpt {
+                    Text(excerpt)
+                        .font(PTFont.ptBodyText)
+                        .foregroundColor(PTDesignTokens.Colors.medium)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                }
+
+                HStack {
+                    Text("Read More")
+                        .font(PTFont.ptButtonText)
+                        .foregroundColor(PTDesignTokens.Colors.tang)
+
+                    Image(systemName: "arrow.right")
+                        .font(.caption)
+                        .foregroundColor(PTDesignTokens.Colors.tang)
+
+                    Spacer()
+                }
+            }
+            .padding(PTDesignTokens.Spacing.lg)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.lg)
+                    .fill(PTDesignTokens.Colors.surface)
+                    .shadow(
+                        color: Color.black.opacity(0.05),
+                        radius: 8,
+                        x: 0,
+                        y: 2
+                    )
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }

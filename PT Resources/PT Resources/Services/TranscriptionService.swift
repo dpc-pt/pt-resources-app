@@ -240,14 +240,14 @@ final class TranscriptionService: ObservableObject {
                 
                 let entities = try context.fetch(request)
                 return entities.compactMap { entity -> TranscriptionQueueItem? in
-                    guard let talkID = entity.talkID,
+                    guard !entity.talkID.isEmpty,
                           let statusString = entity.status,
                           let status = TranscriptionStatus(rawValue: statusString) else {
                         return nil
                     }
                     
                     return TranscriptionQueueItem(
-                        talkID: talkID,
+                        talkID: entity.talkID,
                         jobID: entity.jobID,
                         priority: .normal, // Default priority for existing items
                         status: status
