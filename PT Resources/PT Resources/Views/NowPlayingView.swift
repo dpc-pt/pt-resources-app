@@ -2,746 +2,1330 @@
 //  NowPlayingView.swift
 //  PT Resources
 //
-//  Stunning now playing screen with immersive experience and PT branding
+//  Enhanced Now Playing view with transcription integration and PT brand design
 //
 
 import SwiftUI
 import MediaPlayer
 import AVKit
 
+#if canImport(AVFoundation)
+typealias ActivePlayerService = PlayerService
+#else
+typealias ActivePlayerService = PreviewPlayerService
+#endif
+
+// MARK: - Supporting Extensions
+
+extension View {
+    func glassEffect(_ style: Any..., in shape: Any? = nil) -> some View { self }
+    func symbolEffect(_ effect: Any..., value: Any? = nil) -> some View { self }
+}
+
 struct NowPlayingView: View {
-    @ObservedObject var playerService = PlayerService.shared
+    @ObservedObject var playerService = ActivePlayerService.shared
+    @ObservedObject var artworkService = MediaArtworkService.shared
+    @ObservedObject var transcriptionService = TranscriptionService.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
-    
-    // Animation and interaction state
-    @State private var dragOffset: CGSize = .zero
+    @Environment(\.horizontalSizeClass) private var hSize
+
+    // Interaction and UI State
+    @GestureState private var dragOffset: CGSize = .zero
     @State private var showingQueue = false
     @State private var showingSpeed = false
     @State private var showingChapters = false
     @State private var showingSleepTimer = false
+    @State private var showingMore = false
+    @State private var showingTranscript = false
     @State private var controlsVisible = true
-    @State private var artworkScale: CGFloat = 1.0
     @State private var backgroundIntensity: Double = 0.7
-    
-    // Gesture state
+    @State private var hasProvidedDragFeedback = false
     @GestureState private var magnification: CGFloat = 1.0
-    
+    @State private var animateBars: Bool = false
+    @State private var currentTranscript: Transcript?
+    @State private var streamingTranscript: StreamingTranscript?
+
+    // Computed properties
+    private var currentTalk: Talk? { playerService.currentTalk }
+    private var isPlaying: Bool { playerService.isPlaying }
+    private var currentTime: TimeInterval { playerService.currentTime }
+    private var duration: TimeInterval { playerService.duration }
+    private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
+
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // Immersive background
-                backgroundView
-                    .ignoresSafeArea()
-                
-                // Main content
+        ZStack {
+            brandAwareBackgroundView
+                .ignoresSafeArea()
+
+            GeometryReader { geometry in
+                let containerWidth = geometry.size.width
+                let safeHeight = max(geometry.size.height, 1)
+
                 VStack(spacing: 0) {
-                    // Header
-                    headerView
-                        .padding(.top, max(geometry.safeAreaInsets.top, 20))
+                    enhancedHeaderView(geometry: geometry)
+                        .padding(.top, geometry.safeAreaInsets.top > 0 ? geometry.safeAreaInsets.top + 8 : 16)
+                        .padding(.horizontal, 16)
                         .opacity(controlsVisible ? 1 : 0)
-                    
-                    Spacer(minLength: 20)
-                    
-                    // Artwork section - takes center stage
-                    artworkSection
-                        .frame(maxHeight: min(geometry.size.width - 80, 320))
-                        .scaleEffect(artworkScale * magnification)
-                    
-                    Spacer(minLength: 30)
-                    
-                    // Track information and controls
-                    VStack(spacing: 32) {
-                        // Track info
-                        trackInfoSection
-                            .opacity(controlsVisible ? 1 : 0.7)
-                        
-                        // Progress section
-                        progressSection
-                            .opacity(controlsVisible ? 1 : 0.8)
-                        
-                        // Main playback controls
-                        mainControlsSection
-                            .opacity(controlsVisible ? 1 : 0.6)
-                        
-                        // Additional controls
-                        additionalControlsSection
-                            .opacity(controlsVisible ? 1 : 0.4)
-                    }
-                    .padding(.horizontal, 20)
-                    
-                    Spacer(minLength: max(geometry.safeAreaInsets.bottom, 20))
+                        .animation(.easeInOut(duration: 0.3), value: controlsVisible)
+
+                    Spacer(minLength: 12)
+
+                    let estHeader: CGFloat = 72 + (geometry.safeAreaInsets.top > 0 ? geometry.safeAreaInsets.top : 0)
+                    let estPanel: CGFloat = 320
+                    let estBottom: CGFloat = max(geometry.safeAreaInsets.bottom, 12)
+                    let vMargins: CGFloat = 48
+                    let availableHeight = max(200, safeHeight - estHeader - estPanel - estBottom - vMargins)
+                    let availableWidth = containerWidth - 64
+
+                    // Ensure artwork is proportionally constrained and never exceeds reasonable bounds
+                    let maxArtworkSize = min(availableWidth, availableHeight)
+                    let minArtworkSize: CGFloat = isPad ? 250 : 200
+                    let preferredSize: CGFloat = isPad ? min(400, maxArtworkSize) : min(320, maxArtworkSize)
+                    let artworkSize = max(minArtworkSize, min(preferredSize, maxArtworkSize))
+
+                    enhancedArtworkSection(size: artworkSize, geometry: geometry)
+                        .scaleEffect(magnification)
+                        .scaleEffect(isPlaying ? 1.0 : 0.99)
+                        .shadow(
+                            color: PTDesignTokens.Colors.tang.opacity(isPlaying ? 0.3 : 0.15),
+                            radius: isPlaying ? 24 : 16,
+                            x: 0,
+                            y: isPlaying ? 12 : 8
+                        )
+                        .animation(.easeInOut(duration: 0.4), value: isPlaying)
+                        .onTapGesture {
+                            PTHapticFeedbackService.shared.mediumImpact()
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                                controlsVisible.toggle()
+                            }
+                        }
+                        .gesture(
+                            MagnificationGesture()
+                                .updating($magnification) { value, state, _ in state = value }
+                                .onChanged { scale in
+                                    if scale > 1.2 { PTHapticFeedbackService.shared.selection() }
+                                }
+                        )
+
+                    Spacer(minLength: 12)
+
+                    enhancedBottomControlPanel(geometry: geometry)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .bottom).combined(with: .opacity),
+                            removal: .move(edge: .bottom).combined(with: .opacity)
+                        ))
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, max(geometry.safeAreaInsets.bottom + 8, 16))
+                        .opacity(controlsVisible ? 1 : 0)
+                        .animation(.easeInOut(duration: 0.3), value: controlsVisible)
                 }
                 .offset(y: dragOffset.height)
-                .scaleEffect(1 - abs(dragOffset.height) / 1000)
+                .scaleEffect(1 - abs(dragOffset.height) / 1500)
             }
-        }
-        .navigationBarHidden(true)
-        .onAppear {
-            setupView()
+            .clipped()
         }
         .gesture(
             DragGesture()
-                .onChanged(handleDrag)
+                .updating($dragOffset) { value, state, _ in
+                    state = value.translation
+                    updateBackgroundIntensity(for: value.translation.height)
+                    provideDragFeedbackIfNeeded(for: value.translation.height)
+                }
                 .onEnded(handleDragEnd)
         )
-        .simultaneousGesture(
-            TapGesture()
-                .onEnded {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        controlsVisible.toggle()
+        .registerPTFonts()
+        .preferredColorScheme(.dark)
+        .sheet(isPresented: $showingQueue) { queueSheet }
+        .sheet(isPresented: $showingSpeed) { speedSheet }
+        .sheet(isPresented: $showingChapters) { chaptersSheet }
+        .sheet(isPresented: $showingSleepTimer) { sleepTimerSheet }
+        .sheet(isPresented: $showingMore) { moreOptionsSheet }
+        .sheet(isPresented: $showingTranscript) { transcriptSheet }
+        .onAppear { setupView() }
+        .onChange(of: playerService.currentTalk) { _ in
+            Task { await generateArtworkForCurrentTalk() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .transcriptionCompleted)) { notification in
+            if let transcript = notification.userInfo?["transcript"] as? Transcript {
+                currentTranscript = transcript
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .transcriptionSegmentAdded)) { notification in
+            if let streamingTranscript = notification.userInfo?["streamingTranscript"] as? StreamingTranscript {
+                self.streamingTranscript = streamingTranscript
+            }
+        }
+        .accessibilityAction(.magicTap) {
+            isPlaying ? playerService.pause() : playerService.play()
+        }
+    }
+
+    // MARK: - Enhanced Background
+
+    private var brandAwareBackgroundView: some View {
+        ZStack {
+            if let artwork = artworkService.currentArtwork {
+                Image(uiImage: artwork)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .scaleEffect(1.15)
+                    .blur(radius: 80)
+                    .overlay(
+                        Rectangle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        PTDesignTokens.Colors.ink.opacity(0.85),
+                                        PTDesignTokens.Colors.kleinBlue.opacity(0.75),
+                                        PTDesignTokens.Colors.tang.opacity(0.65)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    )
+                    .opacity(backgroundIntensity)
+            } else {
+                enhancedBrandGradientBackground
+                    .opacity(backgroundIntensity)
+            }
+
+            // Subtle PT brand pattern overlay
+            GeometryReader { geometry in
+                Canvas { context, size in
+                    let dotSize: CGFloat = 2
+                    let spacing: CGFloat = 40
+
+                    context.opacity = 0.08
+                    context.fill(Path(ellipseIn: CGRect(x: 0, y: 0, width: dotSize, height: dotSize)),
+                                with: .color(.white))
+
+                    for x in stride(from: 0, through: size.width, by: spacing) {
+                        for y in stride(from: 0, through: size.height, by: spacing) {
+                            let rect = CGRect(x: x, y: y, width: dotSize, height: dotSize)
+                            context.fill(Path(ellipseIn: rect), with: .color(.white))
+                        }
                     }
                 }
-        )
-        .sheet(isPresented: $showingQueue) {
-            PlaybackQueueView()
+            }
         }
-        .sheet(isPresented: $showingSpeed) {
-            PlaybackSpeedView(
-                currentSpeed: playerService.playbackSpeed,
-                onSpeedSelected: { speed in
-                    playerService.setPlaybackSpeed(speed)
-                }
+    }
+
+    private var enhancedBrandGradientBackground: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    PTDesignTokens.Colors.ink,
+                    PTDesignTokens.Colors.kleinBlue.opacity(0.9),
+                    PTDesignTokens.Colors.tang.opacity(0.8)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            RadialGradient(
+                colors: [
+                    PTDesignTokens.Colors.tang.opacity(0.3),
+                    Color.clear
+                ],
+                center: .topTrailing,
+                startRadius: 50,
+                endRadius: 400
             )
         }
-        .sheet(isPresented: $showingChapters) {
-            if !playerService.chapters.isEmpty {
-                ChaptersView(
-                    chapters: playerService.chapters,
-                    currentTime: playerService.currentTime
-                )
-            }
-        }
-        .sheet(isPresented: $showingSleepTimer) {
-            SleepTimerView()
-        }
     }
-    
-    // MARK: - Background View
-    
-    private var backgroundView: some View {
-        ZStack {
-            // Dynamic background based on artwork or brand colors
-            if let artworkURL = playerService.currentTalk?.artworkURL,
-               let url = URL(string: artworkURL) {
-                PTAsyncImage(
-                    url: url,
-                    targetSize: CGSize(width: 600, height: 400)
-                ) {
-                    brandGradientBackground
-                }
-                .scaleEffect(1.2) // Subtle zoom for depth
-                .blur(radius: 50)
-                .opacity(backgroundIntensity)
-            } else {
-                brandGradientBackground
-            }
-            
-            // Overlay for readability
-            Rectangle()
-                .fill(
-                    colorScheme == .dark 
-                    ? Color.black.opacity(0.4)
-                    : Color.white.opacity(0.2)
-                )
-        }
-    }
-    
-    private var brandGradientBackground: some View {
-        LinearGradient(
-            colors: [
-                PTDesignTokens.Colors.kleinBlue.opacity(0.8),
-                PTDesignTokens.Colors.tang.opacity(0.6),
-                PTDesignTokens.Colors.ink.opacity(0.9)
-            ],
-            startPoint: .topTrailing,
-            endPoint: .bottomLeading
-        )
-        .overlay(
-            // Subtle pattern overlay
-            PTPatternView()
-                .opacity(0.1)
-        )
-    }
-    
-    // MARK: - Header
-    
-    private var headerView: some View {
+
+    // MARK: - Enhanced Header
+
+    private func enhancedHeaderView(geometry: GeometryProxy) -> some View {
         HStack {
-            // Dismiss button
             Button(action: {
-                HapticFeedbackService.shared.lightImpact()
+                PTHapticFeedbackService.shared.lightImpact()
                 dismiss()
             }) {
                 Image(systemName: "chevron.down")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                    .frame(width: 44, height: 44)
-                    .background(.ultraThinMaterial, in: Circle())
-                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 48, height: 48)
+                    .background(
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.8))
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(.white.opacity(0.2), lineWidth: 1)
+                            )
+                    )
+                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
             }
-            .buttonStyle(ScaleButtonStyle())
-            
+            .buttonStyle(EnhancedScaleButtonStyle())
+            .accessibilityLabel("Close Now Playing")
+
             Spacer()
-            
-            // Now Playing indicator
-            VStack(spacing: 4) {
+
+            VStack(spacing: 6) {
                 Text("NOW PLAYING")
-                    .font(.caption2)
+                    .font(PTFont.ptCaptionText)
                     .fontWeight(.bold)
-                    .foregroundColor(.secondary)
-                    .tracking(1.0)
-                
-                HStack(spacing: 3) {
+                    .foregroundStyle(.white.opacity(0.9))
+                    .tracking(1.2)
+
+                HStack(spacing: 4) {
                     ForEach(0..<3, id: \.self) { index in
-                        RoundedRectangle(cornerRadius: 1)
+                        RoundedRectangle(cornerRadius: 2)
                             .fill(PTDesignTokens.Colors.tang)
-                            .frame(width: 3, height: playerService.isPlaying ? 12 : 4)
+                            .frame(width: 4, height: isPlaying ? CGFloat.random(in: 8...16) : 4)
                             .animation(
-                                .easeInOut(duration: 0.5 + Double(index) * 0.1)
-                                .repeatForever(autoreverses: true),
-                                value: playerService.isPlaying
+                                isPlaying
+                                    ? .easeInOut(duration: 0.6 + Double(index) * 0.1).repeatForever(autoreverses: true)
+                                    : .easeInOut(duration: 0.3),
+                                value: animateBars
                             )
                     }
                 }
-                .frame(height: 12)
+                .frame(height: 16)
+                .onAppear { animateBars = true }
             }
-            
+
             Spacer()
-            
-            // More options
+
             Button(action: {
-                HapticFeedbackService.shared.lightImpact()
-                // TODO: Show more options
+                PTHapticFeedbackService.shared.lightImpact()
+                showingMore = true
             }) {
                 Image(systemName: "ellipsis")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                    .frame(width: 44, height: 44)
-                    .background(.ultraThinMaterial, in: Circle())
-                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 48, height: 48)
+                    .background(
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.8))
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(.white.opacity(0.2), lineWidth: 1)
+                            )
+                    )
+                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
             }
-            .buttonStyle(ScaleButtonStyle())
+            .buttonStyle(EnhancedScaleButtonStyle())
+            .accessibilityLabel("More Options")
         }
-        .padding(.horizontal, 20)
     }
-    
-    // MARK: - Artwork Section
-    
-    private var artworkSection: some View {
-        ZStack {
-            // Drop shadow
-            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
-                .fill(.black.opacity(0.3))
-                .frame(width: 280, height: 280)
-                .offset(x: 0, y: 12)
-                .blur(radius: 24)
-            
-            // Main artwork container
-            Group {
-                if let artworkURL = playerService.currentTalk?.artworkURL,
-                   let url = URL(string: artworkURL) {
-                    PTAsyncImage(
-                        url: url,
-                        targetSize: CGSize(width: 280, height: 280)
-                    ) {
-                        artworkPlaceholder
-                    }
-                } else {
-                    artworkPlaceholder
-                }
+
+    // MARK: - Enhanced Artwork Section
+
+    private func enhancedArtworkSection(size: CGFloat, geometry: GeometryProxy) -> some View {
+        Group {
+            if let artwork = artworkService.currentArtwork {
+                Image(uiImage: artwork)
+                    .resizable()
+                    .aspectRatio(1.0, contentMode: .fit)
+                    .frame(width: size, height: size)
+                    .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xxl, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xxl, style: .continuous)
+                            .strokeBorder(
+                                LinearGradient(
+                                    colors: [
+                                        .white.opacity(0.4),
+                                        .white.opacity(0.1),
+                                        PTDesignTokens.Colors.tang.opacity(0.3)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ), lineWidth: 2
+                            )
+                    )
+            } else {
+                enhancedArtworkPlaceholder(size: size)
             }
-            .frame(width: 280, height: 280)
-            .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl))
-            .overlay(
-                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
-                    .stroke(.white.opacity(0.2), lineWidth: 1)
-            )
-            .onTapGesture {
-                HapticFeedbackService.shared.mediumImpact()
-            }
-            .scaleEffect(playerService.isPlaying ? 1.0 : 0.98)
-            .animation(.easeInOut(duration: 0.3), value: playerService.isPlaying)
         }
-        .gesture(
-            MagnificationGesture()
-                .updating($magnification) { currentScale, gestureScale, _ in
-                    gestureScale = currentScale
+        .frame(maxWidth: size, maxHeight: size)
+        .padding(.horizontal, 16)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Album Artwork")
+        .accessibilityAddTraits(.isImage)
+    }
+
+    private func enhancedArtworkPlaceholder(size: CGFloat) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xxl, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            PTDesignTokens.Colors.kleinBlue.opacity(0.8),
+                            PTDesignTokens.Colors.tang.opacity(0.6)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xxl, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [.white.opacity(0.4), .white.opacity(0.1)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ), lineWidth: 2
+                        )
+                )
+
+            VStack(spacing: 16) {
+                Image(systemName: "waveform")
+                    .font(.system(size: size * 0.15, weight: .light))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .symbolEffect(.pulse.byLayer)
+
+                VStack(spacing: 4) {
+                    Text("PT")
+                        .font(.system(size: size * 0.08, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text("RESOURCES")
+                        .font(.system(size: size * 0.03, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.8))
+                        .tracking(2)
                 }
-                .onChanged { _ in
-                    HapticFeedbackService.shared.selection()
-                }
+            }
+        }
+        .frame(width: size, height: size)
+    }
+
+    // MARK: - Enhanced Bottom Control Panel
+
+    private func enhancedBottomControlPanel(geometry: GeometryProxy) -> some View {
+        VStack(spacing: 20) {
+            enhancedTrackInfoSection(geometry: geometry)
+                .opacity(controlsVisible ? 1 : 0.8)
+
+            enhancedProgressSection(geometry: geometry)
+                .opacity(controlsVisible ? 1 : 0.9)
+
+            enhancedMainControlsSection(geometry: geometry)
+                .opacity(controlsVisible ? 1 : 0.8)
+
+            enhancedAdditionalControlsSection(geometry: geometry)
+
+            enhancedVolumeAndAirPlaySection(geometry: geometry)
+        }
+        .padding(.vertical, isPad ? 24 : 20)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xxxl, style: .continuous)
+                    .fill(.ultraThinMaterial.opacity(0.9))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xxxl, style: .continuous)
+                            .strokeBorder(
+                                LinearGradient(
+                                    colors: [.white.opacity(0.3), .white.opacity(0.05)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ), lineWidth: 1
+                            )
+                    )
+                    .shadow(color: .black.opacity(0.3), radius: 24, x: 0, y: 12)
+            }
         )
     }
-    
-    private var artworkPlaceholder: some View {
-        RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl)
-            .fill(PTDesignTokens.Colors.kleinBlue)
-            .overlay(
-                Image("pt-resources")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(maxWidth: 120, maxHeight: 120)
-                    .foregroundColor(.primary.opacity(0.8))
-            )
-    }
-    
-    // MARK: - Track Information
-    
-    private var trackInfoSection: some View {
-        VStack(spacing: 12) {
-            Text(playerService.currentTalk?.title ?? "No Track")
+
+    // MARK: - Enhanced Track Info Section
+
+    private func enhancedTrackInfoSection(geometry: GeometryProxy) -> some View {
+        VStack(spacing: 10) {
+            Text(currentTalk?.title ?? "No Track")
                 .font(PTFont.ptDisplaySmall)
                 .fontWeight(.bold)
-                .foregroundColor(.primary)
+                .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
-                .minimumScaleFactor(0.8)
-            
-            Text(playerService.currentTalk?.speaker ?? "Unknown Speaker")
+                .minimumScaleFactor(0.85)
+                .accessibilityAddTraits(.isHeader)
+
+            Text(currentTalk?.speaker ?? "Unknown Speaker")
                 .font(PTFont.ptSectionTitle)
                 .fontWeight(.medium)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.white.opacity(0.85))
                 .multilineTextAlignment(.center)
-            
-            if let series = playerService.currentTalk?.series, !series.isEmpty {
+                .accessibilityLabel("Speaker: \(currentTalk?.speaker ?? "Unknown Speaker")")
+
+            if let series = currentTalk?.series, !series.isEmpty {
                 Text(series)
                     .font(PTFont.ptCardSubtitle)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.white.opacity(0.7))
                     .padding(.top, 4)
+                    .accessibilityLabel("Series: \(series)")
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: playerService.currentTalk?.title)
+        .frame(maxWidth: .infinity)
+        .animation(.easeInOut(duration: 0.4), value: currentTalk?.title)
     }
-    
-    // MARK: - Progress Section
-    
-    private var progressSection: some View {
+
+    // MARK: - Enhanced Progress Section
+
+    private func enhancedProgressSection(geometry: GeometryProxy) -> some View {
         VStack(spacing: 16) {
-            // Enhanced progress bar
-            PTProgressBar(
-                value: playerService.duration > 0 ? playerService.currentTime / playerService.duration : 0,
-                onChanged: { newValue in
-                    let newTime = newValue * playerService.duration
-                    playerService.seek(to: newTime)
+            VStack {
+                GeometryReader { proxy in
+                    let progress = duration > 0 ? CGFloat(currentTime / duration) : 0
+                    let trackWidth = proxy.size.width
+                    let progressWidth = trackWidth * progress
+
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(.white.opacity(0.2))
+                            .frame(height: 8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                    .strokeBorder(.white.opacity(0.1), lineWidth: 0.5)
+                            )
+
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        PTDesignTokens.Colors.tang,
+                                        PTDesignTokens.Colors.turmeric
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: max(progressWidth, 8), height: 8)
+                            .shadow(color: PTDesignTokens.Colors.tang.opacity(0.6), radius: 4, x: 0, y: 2)
+
+                        Circle()
+                            .fill(.white)
+                            .frame(width: 24, height: 24)
+                            .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 3)
+                            .overlay(
+                                Circle()
+                                    .fill(PTDesignTokens.Colors.tang)
+                                    .frame(width: 12, height: 12)
+                            )
+                            .offset(x: max(progressWidth - 12, 0))
+                            .scaleEffect(isPlaying ? 1.1 : 1.0)
+                            .animation(.easeInOut(duration: 0.2), value: isPlaying)
+                    }
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                let newProgress = max(0, min(1, value.location.x / proxy.size.width))
+                                let newTime = newProgress * duration
+                                playerService.seek(to: newTime)
+                            }
+                    )
                 }
-            )
-            
-            // Time labels
+                .frame(height: 24)
+            }
+            .accessibilityElement()
+            .accessibilityLabel("Track Progress")
+            .accessibilityValue("\(duration > 0 ? Int((currentTime / duration) * 100) : 0)% complete")
+
             HStack {
-                Text(formatTime(playerService.currentTime))
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.secondary)
+                Text(formatTime(currentTime))
+                    .font(PTFont.ptCaptionText)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.white.opacity(0.8))
                     .monospacedDigit()
-                
                 Spacer()
-                
-                if playerService.duration > 0 {
-                    Text("-\(formatTime(playerService.duration - playerService.currentTime))")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.secondary)
+                if duration > 0 {
+                    Text("-\(formatTime(duration - currentTime))")
+                        .font(PTFont.ptCaptionText)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white.opacity(0.8))
                         .monospacedDigit()
                 }
             }
         }
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity)
     }
-    
-    // MARK: - Main Controls
-    
-    private var mainControlsSection: some View {
-        HStack(spacing: 60) {
-            // Skip backward
-            PTMediaButton(
-                icon: "gobackward.15",
-                size: 52,
-                style: .secondary
-            ) {
+
+    // MARK: - Enhanced Main Controls Section
+
+    private func enhancedMainControlsSection(geometry: GeometryProxy) -> some View {
+        let maxW = geometry.size.width - 32
+        let primary: CGFloat = maxW >= 320 ? 110 : 96
+        let secondary: CGFloat = maxW >= 320 ? 72 : 64
+        let isWide = hSize == .regular && isPad
+
+        return HStack(spacing: isWide ? 40 : 32) {
+            Button(action: {
+                PTHapticFeedbackService.shared.lightImpact()
                 playerService.skipBackward()
+            }) {
+                Image(systemName: "gobackward.15")
+                    .font(.system(size: secondary * 0.35, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(width: secondary, height: secondary)
+                    .background(
+                        Circle()
+                            .fill(.white.opacity(0.15))
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(.white.opacity(0.2), lineWidth: 1)
+                            )
+                    )
+                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
             }
-            
-            // Play/Pause - main action
-            PTMediaButton(
-                icon: playerService.isPlaying ? "pause.fill" : "play.fill",
-                size: 88,
-                style: .primary(isActive: playerService.isPlaying)
-            ) {
-                if playerService.isPlaying {
+            .buttonStyle(EnhancedScaleButtonStyle())
+            .accessibilityLabel("Skip back 15 seconds")
+
+            Button(action: {
+                PTHapticFeedbackService.shared.mediumImpact()
+                if isPlaying {
                     playerService.pause()
                 } else {
                     playerService.play()
                 }
+            }) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    PTDesignTokens.Colors.tang,
+                                    PTDesignTokens.Colors.turmeric
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: primary, height: primary)
+                        .overlay(
+                            Circle()
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: [.white.opacity(0.4), .white.opacity(0.1)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ), lineWidth: 3
+                                )
+                        )
+                        .shadow(color: PTDesignTokens.Colors.tang.opacity(0.4), radius: 20, x: 0, y: 10)
+
+                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: primary * 0.32, weight: .bold))
+                        .foregroundStyle(.white)
+                        .symbolEffect(.bounce, value: isPlaying)
+                        .offset(x: isPlaying ? 0 : 3)
+                }
             }
-            
-            // Skip forward
-            PTMediaButton(
-                icon: "goforward.30",
-                size: 52,
-                style: .secondary
-            ) {
+            .buttonStyle(EnhancedScaleButtonStyle())
+            .accessibilityLabel(isPlaying ? "Pause" : "Play")
+
+            Button(action: {
+                PTHapticFeedbackService.shared.lightImpact()
                 playerService.skipForward()
+            }) {
+                Image(systemName: "goforward.30")
+                    .font(.system(size: secondary * 0.35, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(width: secondary, height: secondary)
+                    .background(
+                        Circle()
+                            .fill(.white.opacity(0.15))
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(.white.opacity(0.2), lineWidth: 1)
+                            )
+                    )
+                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
             }
+            .buttonStyle(EnhancedScaleButtonStyle())
+            .accessibilityLabel("Skip forward 30 seconds")
         }
+        .frame(maxWidth: .infinity)
     }
-    
-    // MARK: - Additional Controls
-    
-    private var additionalControlsSection: some View {
-        HStack(spacing: 0) {
-            // Sleep timer
-            PTControlPill(
+
+    // MARK: - Enhanced Additional Controls Section
+
+    private func enhancedAdditionalControlsSection(geometry: GeometryProxy) -> some View {
+        HStack(spacing: 8) {
+            controlPill(
                 icon: "moon.fill",
                 text: sleepTimerText,
-                isActive: playerService.sleepTimerMinutes != nil
-            ) {
-                showingSleepTimer = true
-            }
-            
-            Spacer()
-            
-            // Playback speed
-            PTControlPill(
+                isActive: playerService.sleepTimerMinutes != nil,
+                action: { showingSleepTimer = true }
+            )
+            .layoutPriority(1)
+
+            Spacer(minLength: 4)
+
+            controlPill(
+                icon: "text.quote",
+                text: "Transcript",
+                isActive: hasTranscript,
+                showBadge: streamingTranscript != nil,
+                action: { showingTranscript = true }
+            )
+            .layoutPriority(1)
+
+            Spacer(minLength: 4)
+
+            controlPill(
                 icon: "speedometer",
-                text: String(format: "%.1fx", playerService.playbackSpeed)
-            ) {
-                showingSpeed = true
-            }
-            
-            Spacer()
-            
-            // Queue
-            PTControlPill(
+                text: String(format: "%.1fx", playerService.playbackSpeed),
+                isActive: playerService.playbackSpeed != 1.0,
+                action: { showingSpeed = true }
+            )
+            .layoutPriority(1)
+
+            Spacer(minLength: 4)
+
+            controlPill(
                 icon: "list.bullet.below.rectangle",
                 text: "Queue",
-                badge: playerService.playQueue.count > 0 ? "\(playerService.playQueue.count)" : nil
-            ) {
-                showingQueue = true
+                isActive: playerService.playQueue.count > 0,
+                badgeCount: playerService.playQueue.count > 0 ? playerService.playQueue.count : nil,
+                action: { showingQueue = true }
+            )
+            .layoutPriority(1)
+        }
+    }
+
+    private func controlPill(
+        icon: String,
+        text: String,
+        isActive: Bool = false,
+        showBadge: Bool = false,
+        badgeCount: Int? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: {
+            PTHapticFeedbackService.shared.lightImpact()
+            action()
+        }) {
+            HStack(spacing: 8) {
+                ZStack {
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(isActive ? PTDesignTokens.Colors.tang : .white.opacity(0.8))
+
+                    if showBadge || badgeCount != nil {
+                        VStack {
+                            HStack {
+                                Spacer()
+                                Circle()
+                                    .fill(PTDesignTokens.Colors.tang)
+                                    .frame(width: 8, height: 8)
+                                    .overlay(
+                                        badgeCount.map { count in
+                                            Text("\(count)")
+                                                .font(.caption2)
+                                                .fontWeight(.bold)
+                                                .foregroundStyle(.white)
+                                                .scaleEffect(0.7)
+                                        }
+                                    )
+                            }
+                            Spacer()
+                        }
+                        .frame(width: 20, height: 20)
+                    }
+                }
+
+                Text(text)
+                    .font(PTFont.ptCaptionText)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(isActive ? PTDesignTokens.Colors.tang : .white.opacity(0.8))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                Capsule()
+                    .fill(isActive ? PTDesignTokens.Colors.tang.opacity(0.2) : .white.opacity(0.1))
+                    .overlay(
+                        Capsule()
+                            .strokeBorder(
+                                isActive ? PTDesignTokens.Colors.tang.opacity(0.5) : .white.opacity(0.2),
+                                lineWidth: 1
+                            )
+                    )
+            )
+        }
+        .buttonStyle(EnhancedScaleButtonStyle())
+    }
+
+    // MARK: - Enhanced AirPlay Section
+
+    private func enhancedVolumeAndAirPlaySection(geometry: GeometryProxy) -> some View {
+        HStack {
+            Spacer()
+            
+            Button(action: {
+                PTHapticFeedbackService.shared.lightImpact()
+            }) {
+                Image(systemName: "airplayaudio")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .frame(width: 48, height: 48)
+                    .background(
+                        Circle()
+                            .fill(.white.opacity(0.1))
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(.white.opacity(0.2), lineWidth: 1)
+                            )
+                    )
+            }
+            .buttonStyle(EnhancedScaleButtonStyle())
+        }
+        .padding(.top, 8)
+    }
+
+    // MARK: - Computed Properties
+
+    private var hasTranscript: Bool {
+        currentTranscript != nil || streamingTranscript != nil
+    }
+
+    private var sleepTimerText: String {
+        if let min = playerService.sleepTimerMinutes { return "\(min)m" }
+        return "Timer"
+    }
+
+    // MARK: - Helper Methods
+
+    private func setupView() {
+        if let talk = currentTalk {
+            Task {
+                await generateArtworkForCurrentTalk()
+                await loadTranscriptForCurrentTalk(talk)
             }
         }
     }
-    
-    // MARK: - Helper Properties
-    
-    private var sleepTimerText: String {
-        if let minutes = playerService.sleepTimerMinutes {
-            return "\(minutes)m"
-        }
-        return "Timer"
+
+    private func generateArtworkForCurrentTalk() async {
+        guard let talk = currentTalk else { return }
+        _ = await artworkService.generateArtwork(for: talk)
     }
-    
-    // MARK: - Helper Methods
-    
-    private func setupView() {
-        // Setup any initial view state if needed
-    }
-    
-    private func handleDrag(_ value: DragGesture.Value) {
-        dragOffset = value.translation
-        
-        // Adjust background intensity based on drag
-        let dragProgress = min(abs(value.translation.height) / 200, 1.0)
-        backgroundIntensity = 0.7 - (dragProgress * 0.2)
-        
-        // Provide haptic feedback at certain thresholds
-        if abs(dragOffset.height) > 150 && !hasProvidedFeedback {
-            HapticFeedbackService.shared.mediumImpact()
-            hasProvidedFeedback = true
+
+    private func loadTranscriptForCurrentTalk(_ talk: Talk) async {
+        do {
+            currentTranscript = try await transcriptionService.getTranscript(for: talk.id)
+            streamingTranscript = transcriptionService.streamingTranscripts[talk.id]
+        } catch {
+            print("Failed to load transcript: \(error)")
         }
     }
-    
-    @State private var hasProvidedFeedback = false
-    
+
+    private func updateBackgroundIntensity(for dragHeight: CGFloat) {
+        let p = min(abs(dragHeight) / 250, 1.0)
+        backgroundIntensity = 0.7 - (p * 0.15)
+    }
+
+    private func provideDragFeedbackIfNeeded(for dragHeight: CGFloat) {
+        if abs(dragHeight) > 150 && !hasProvidedDragFeedback {
+            PTHapticFeedbackService.shared.mediumImpact()
+            hasProvidedDragFeedback = true
+        }
+    }
+
     private func handleDragEnd(_ value: DragGesture.Value) {
-        hasProvidedFeedback = false
-        
-        if abs(dragOffset.height) > 150 {
-            // Dismiss with heavy haptic
-            HapticFeedbackService.shared.heavyImpact()
+        hasProvidedDragFeedback = false
+        if abs(value.translation.height) > 150 {
+            PTHapticFeedbackService.shared.heavyImpact()
             dismiss()
         } else {
-            // Bounce back
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                dragOffset = .zero
                 backgroundIntensity = 0.7
             }
         }
     }
-    
-    private func formatTime(_ time: TimeInterval) -> String {
-        let minutes = Int(time) / 60
-        let seconds = Int(time) % 60
-        return String(format: "%d:%02d", minutes, seconds)
+
+    private func formatTime(_ t: TimeInterval) -> String {
+        let h = Int(t) / 3600
+        let m = Int(t) % 3600 / 60
+        let s = Int(t) % 60
+        if h > 0 {
+            return String(format: "%d:%02d:%02d", h, m, s)
+        } else {
+            return String(format: "%d:%02d", m, s)
+        }
     }
 }
 
-// MARK: - Custom Components
+// MARK: - Enhanced Button Style
 
-struct PTProgressBar: View {
-    let value: Double
-    let onChanged: (Double) -> Void
-    
-    @State private var isDragging = false
-    @State private var tempValue: Double = 0
-    
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                // Track
-                Capsule()
-                    .fill(.tertiary.opacity(0.3))
-                    .frame(height: 6)
-                
-                // Progress
-                Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [PTDesignTokens.Colors.tang, PTDesignTokens.Colors.kleinBlue],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(
-                        width: max(0, CGFloat(isDragging ? tempValue : value) * geometry.size.width),
-                        height: 6
-                    )
-                
-                // Thumb
-                Circle()
-                    .fill(.white)
-                    .frame(width: isDragging ? 20 : 16, height: isDragging ? 20 : 16)
-                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
-                    .offset(x: CGFloat(isDragging ? tempValue : value) * geometry.size.width - (isDragging ? 10 : 8))
-            }
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { gesture in
-                        if !isDragging {
-                            isDragging = true
-                            HapticFeedbackService.shared.selection()
+struct EnhancedScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
+            .opacity(configuration.isPressed ? 0.8 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Sheet Views
+
+extension NowPlayingView {
+    private var queueSheet: some View {
+        NavigationView {
+            VStack {
+                Text("Playback Queue")
+                    .font(PTFont.ptSectionTitle)
+                    .fontWeight(.bold)
+                    .padding()
+
+                if playerService.playQueue.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "list.bullet")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.secondary)
+                        Text("No items in queue")
+                            .font(PTFont.ptSubheading)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding()
+                } else {
+                    List {
+                        ForEach(playerService.playQueue, id: \.id) { talk in
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(talk.title)
+                                        .font(PTFont.ptCardTitle)
+                                        .fontWeight(.medium)
+                                    Text(talk.speaker)
+                                        .font(PTFont.ptCaptionText)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                            }
+                            .padding(.vertical, 4)
                         }
-                        
-                        let percent = max(0, min(1, gesture.location.x / geometry.size.width))
-                        tempValue = percent
-                    }
-                    .onEnded { _ in
-                        onChanged(tempValue)
-                        isDragging = false
-                        HapticFeedbackService.shared.lightImpact()
-                    }
-            )
-        }
-        .frame(height: 20)
-        .animation(.easeOut(duration: 0.1), value: isDragging)
-    }
-}
-
-struct PTMediaButton: View {
-    let icon: String
-    let size: CGFloat
-    let style: Style
-    let action: () -> Void
-    
-    enum Style {
-        case primary(isActive: Bool = false)
-        case secondary
-    }
-    
-    var body: some View {
-        Button(action: {
-            HapticFeedbackService.shared.mediumImpact()
-            action()
-        }) {
-            Image(systemName: icon)
-                .font(.system(size: iconSize, weight: .medium))
-                .foregroundColor(foregroundColor)
-                .frame(width: size, height: size)
-                .background {
-                    switch style {
-                    case .primary:
-                        Circle().fill(backgroundColor)
-                    case .secondary:
-                        Circle().fill(.ultraThinMaterial)
                     }
                 }
-                .overlay(
-                    Circle()
-                        .stroke(strokeColor, lineWidth: strokeWidth)
-                )
-                .shadow(color: shadowColor, radius: shadowRadius, x: 0, y: shadowY)
-        }
-        .buttonStyle(ScaleButtonStyle())
-    }
-    
-    private var iconSize: CGFloat {
-        size * 0.35
-    }
-    
-    private var foregroundColor: Color {
-        switch style {
-        case .primary(let isActive):
-            return isActive ? .white : PTDesignTokens.Colors.tang
-        case .secondary:
-            return .primary
-        }
-    }
-    
-    private var backgroundColor: Color {
-        switch style {
-        case .primary(let isActive):
-            return isActive ? PTDesignTokens.Colors.tang : .clear
-        case .secondary:
-            return .clear // Will use .background(.ultraThinMaterial) in the view
-        }
-    }
-    
-    private var strokeColor: Color {
-        switch style {
-        case .primary:
-            return PTDesignTokens.Colors.tang
-        case .secondary:
-            return .clear
-        }
-    }
-    
-    private var strokeWidth: CGFloat {
-        switch style {
-        case .primary:
-            return 2
-        case .secondary:
-            return 0
-        }
-    }
-    
-    private var shadowColor: Color {
-        .black.opacity(0.15)
-    }
-    
-    private var shadowRadius: CGFloat {
-        size * 0.1
-    }
-    
-    private var shadowY: CGFloat {
-        size * 0.05
-    }
-}
 
-struct PTControlPill: View {
-    let icon: String
-    let text: String
-    let badge: String?
-    let isActive: Bool
-    let action: () -> Void
-    
-    init(icon: String, text: String, badge: String? = nil, isActive: Bool = false, action: @escaping () -> Void) {
-        self.icon = icon
-        self.text = text
-        self.badge = badge
-        self.isActive = isActive
-        self.action = action
-    }
-    
-    var body: some View {
-        Button(action: {
-            HapticFeedbackService.shared.lightImpact()
-            action()
-        }) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.caption)
-                    .foregroundColor(isActive ? PTDesignTokens.Colors.tang : .secondary)
-                
-                Text(text)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(isActive ? PTDesignTokens.Colors.tang : .secondary)
-                
-                if let badge = badge {
-                    Text(badge)
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(PTDesignTokens.Colors.tang, in: Capsule())
-                }
+                Spacer()
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(isActive ? PTDesignTokens.Colors.tang.opacity(0.5) : .clear, lineWidth: 1)
-            )
-        }
-        .buttonStyle(ScaleButtonStyle())
-    }
-}
-
-// ScaleButtonStyle is defined in EnhancedMediaPlayerView.swift
-
-struct PTPatternView: View {
-    var body: some View {
-        Canvas { context, size in
-            // Create subtle PT pattern
-            let step: CGFloat = 40
-            context.opacity = 0.1
-            
-            for x in stride(from: 0, through: size.width, by: step) {
-                for y in stride(from: 0, through: size.height, by: step) {
-                    let rect = CGRect(x: x, y: y, width: 2, height: 2)
-                    context.fill(Path(roundedRect: rect, cornerRadius: 1), with: .color(.primary))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { showingQueue = false }
                 }
             }
         }
+        .presentationDetents([.medium, .large])
+    }
+
+    private var speedSheet: some View {
+        PlaybackSpeedSheet(
+            currentSpeed: playerService.playbackSpeed,
+            onSpeedSelected: { speed in
+                playerService.setPlaybackSpeed(speed)
+                showingSpeed = false
+            }
+        )
+    }
+
+    private var chaptersSheet: some View {
+        NavigationView {
+            VStack {
+                Text("Chapters")
+                    .font(PTFont.ptSectionTitle)
+                    .fontWeight(.bold)
+                    .padding()
+
+                if playerService.chapters.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "book.closed")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.secondary)
+                        Text("No chapters available")
+                            .font(PTFont.ptSubheading)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding()
+                } else {
+                    List {
+                        ForEach(playerService.chapters, id: \.title) { chapter in
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(chapter.title)
+                                        .font(PTFont.ptCardTitle)
+                                        .fontWeight(.medium)
+                                    Text(formatTime(chapter.startTime))
+                                        .font(PTFont.ptCaptionText)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                            }
+                            .padding(.vertical, 4)
+                            .onTapGesture {
+                                playerService.seek(to: chapter.startTime)
+                                showingChapters = false
+                            }
+                        }
+                    }
+                }
+
+                Spacer()
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { showingChapters = false }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private var sleepTimerSheet: some View {
+        SleepTimerSheet(
+            currentMinutes: playerService.sleepTimerMinutes,
+            onTimeSelected: { minutes in
+                playerService.setSleepTimer(minutes: minutes ?? 0)
+                showingSleepTimer = false
+            }
+        )
+    }
+
+    private var moreOptionsSheet: some View {
+        MoreOptionsSheet()
+    }
+
+    private var transcriptSheet: some View {
+        TranscriptView(
+            transcript: currentTranscript,
+            streamingTranscript: streamingTranscript,
+            currentTime: currentTime,
+            onSeek: { time in
+                playerService.seek(to: time)
+            },
+            onRequestTranscription: {
+                guard let talk = currentTalk else { return }
+                Task {
+                    try? await transcriptionService.requestTranscription(for: talk)
+                }
+            }
+        )
     }
 }
 
-// MARK: - Supporting Views
-// PlaybackQueueView, PlaybackSpeedView, and ChaptersView are defined in EnhancedMediaPlayerView.swift
+// MARK: - Enhanced Transcript View
 
-struct SleepTimerView: View {
+struct TranscriptView: View {
+    let transcript: Transcript?
+    let streamingTranscript: StreamingTranscript?
+    let currentTime: TimeInterval
+    let onSeek: (TimeInterval) -> Void
+    let onRequestTranscription: () -> Void
+
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var playerService = PlayerService.shared
-    
-    private let timerOptions = [5, 10, 15, 30, 45, 60]
-    
+    @State private var scrollToCurrentSegment = false
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                if let transcript = transcript {
+                    completedTranscriptView(transcript)
+                } else if let streamingTranscript = streamingTranscript {
+                    streamingTranscriptView(streamingTranscript)
+                } else {
+                    noTranscriptView
+                }
+            }
+            .navigationTitle("Transcript")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Close") { dismiss() }
+                }
+
+                if transcript != nil || streamingTranscript != nil {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: { scrollToCurrentSegment.toggle() }) {
+                            Image(systemName: "location")
+                        }
+                    }
+                }
+            }
+        }
+        .presentationDetents([.large])
+        .registerPTFonts()
+    }
+
+    private func completedTranscriptView(_ transcript: Transcript) -> some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 16) {
+                    ForEach(transcript.segments, id: \.id) { segment in
+                        transcriptSegmentView(segment, isActive: isSegmentActive(segment))
+                            .id(segment.id)
+                            .onTapGesture {
+                                onSeek(segment.startTime)
+                            }
+                    }
+                }
+                .padding()
+            }
+            .onChange(of: scrollToCurrentSegment) { _ in
+                if let activeSegment = transcript.segments.first(where: { isSegmentActive($0) }) {
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        proxy.scrollTo(activeSegment.id, anchor: .center)
+                    }
+                }
+            }
+        }
+    }
+
+    private func streamingTranscriptView(_ streamingTranscript: StreamingTranscript) -> some View {
+        VStack(spacing: 20) {
+            // Progress indicator
+            VStack(spacing: 12) {
+                HStack {
+                    Image(systemName: "waveform")
+                        .foregroundStyle(PTDesignTokens.Colors.tang)
+                        .symbolEffect(.pulse)
+                    Text("Generating transcript...")
+                        .font(PTFont.ptSubheading)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+
+                ProgressView(value: streamingTranscript.progress)
+                    .progressViewStyle(LinearProgressViewStyle(tint: PTDesignTokens.Colors.tang))
+
+                Text("\(Int(streamingTranscript.progress * 100))% complete")
+                    .font(PTFont.ptCaptionText)
+                    .foregroundStyle(.secondary)
+            }
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.lg)
+                    .fill(.ultraThinMaterial)
+            )
+            .padding(.horizontal)
+
+            // Live segments
+            if !streamingTranscript.segments.isEmpty {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 16) {
+                        ForEach(streamingTranscript.segments, id: \.id) { segment in
+                            transcriptSegmentView(segment, isActive: isSegmentActive(segment))
+                                .onTapGesture {
+                                    onSeek(segment.startTime)
+                                }
+                        }
+                    }
+                    .padding()
+                }
+            }
+
+            Spacer()
+        }
+    }
+
+    private var noTranscriptView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            VStack(spacing: 16) {
+                Image(systemName: "text.quote")
+                    .font(.system(size: 64))
+                    .foregroundStyle(PTDesignTokens.Colors.tang.opacity(0.6))
+
+                Text("No Transcript Available")
+                    .font(PTFont.ptSectionTitle)
+                    .fontWeight(.bold)
+
+                Text("Generate a transcript to follow along with the talk")
+                    .font(PTFont.ptBodyText)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+
+            Button(action: onRequestTranscription) {
+                HStack {
+                    Image(systemName: "waveform")
+                    Text("Generate Transcript")
+                        .font(PTFont.ptButtonText)
+                        .fontWeight(.semibold)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 32)
+                .padding(.vertical, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.lg)
+                        .fill(
+                            LinearGradient(
+                                colors: [PTDesignTokens.Colors.tang, PTDesignTokens.Colors.turmeric],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                )
+                .shadow(color: PTDesignTokens.Colors.tang.opacity(0.3), radius: 8, x: 0, y: 4)
+            }
+            .buttonStyle(EnhancedScaleButtonStyle())
+
+            Spacer()
+        }
+        .padding()
+    }
+
+    private func transcriptSegmentView(_ segment: TranscriptSegment, isActive: Bool) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(formatTime(segment.startTime))
+                .font(PTFont.ptCaptionText)
+                .foregroundStyle(isActive ? PTDesignTokens.Colors.tang : .secondary)
+                .monospacedDigit()
+                .frame(width: 60, alignment: .leading)
+
+            Text(segment.text)
+                .font(PTFont.ptBodyText)
+                .foregroundStyle(isActive ? .primary : .secondary)
+                .opacity(isActive ? 1.0 : 0.8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.md)
+                .fill(isActive ? PTDesignTokens.Colors.tang.opacity(0.1) : .clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.md)
+                .strokeBorder(
+                    isActive ? PTDesignTokens.Colors.tang.opacity(0.3) : .clear,
+                    lineWidth: 1
+                )
+        )
+        .animation(.easeInOut(duration: 0.2), value: isActive)
+    }
+
+    private func isSegmentActive(_ segment: TranscriptSegment) -> Bool {
+        currentTime >= segment.startTime && currentTime < segment.endTime
+    }
+
+    private func formatTime(_ t: TimeInterval) -> String {
+        let m = Int(t) / 60
+        let s = Int(t) % 60
+        return String(format: "%d:%02d", m, s)
+    }
+}
+
+// MARK: - Existing Sheet Views (Updated with PT Fonts)
+
+struct MoreOptionsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var playerService = ActivePlayerService.shared
+
     var body: some View {
         NavigationView {
             List {
-                Section {
-                    ForEach(timerOptions, id: \.self) { minutes in
-                        HStack {
-                            Text("\(minutes) minutes")
-                                .font(PTFont.ptCardTitle)
-                            Spacer()
-                            if playerService.sleepTimerMinutes == minutes {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(PTDesignTokens.Colors.tang)
-                            }
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            playerService.setSleepTimer(minutes: minutes)
-                            dismiss()
-                        }
+                Section(header: Text("Playback").font(PTFont.ptCaptionText)) {
+                    Button(action: {
+                        playerService.isShuffling.toggle()
+                        dismiss()
+                    }) {
+                        Label("Shuffle", systemImage: playerService.isShuffling ? "shuffle.circle.fill" : "shuffle")
+                            .font(PTFont.ptBodyText)
+                            .foregroundStyle(playerService.isShuffling ? PTDesignTokens.Colors.tang : .primary)
+                    }
+                    Button(action: {
+                        playerService.isRepeating.toggle()
+                        dismiss()
+                    }) {
+                        Label(playerService.isRepeating ? "Repeat One" : "Repeat",
+                              systemImage: playerService.isRepeating ? "repeat.1" : "repeat")
+                            .font(PTFont.ptBodyText)
+                            .foregroundStyle(playerService.isRepeating ? PTDesignTokens.Colors.tang : .primary)
                     }
                 }
-                
-                if playerService.sleepTimerMinutes != nil {
-                    Section {
-                        Button("Cancel Sleep Timer") {
-                            playerService.cancelSleepTimer()
-                            dismiss()
-                        }
-                        .foregroundColor(.red)
+                Section(header: Text("Actions").font(PTFont.ptCaptionText)) {
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Label("Favorite", systemImage: "heart")
+                            .font(PTFont.ptBodyText)
                     }
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                            .font(PTFont.ptBodyText)
+                    }
+                }
+                Section(header: Text("More").font(PTFont.ptCaptionText)) {
+                    Button("Download for Offline") {
+                        dismiss()
+                    }
+                    .font(PTFont.ptBodyText)
+                }
+                Section {
+                    Button("Cancel", role: .cancel) { dismiss() }
+                        .font(PTFont.ptBodyText)
                 }
             }
-            .navigationTitle("Sleep Timer")
+            .navigationTitle("More Options")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .presentationDetents([.medium, .large])
+        .registerPTFonts()
+    }
+}
+
+struct PlaybackSpeedSheet: View {
+    let currentSpeed: Float
+    let onSpeedSelected: (Float) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    private let speeds: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                Text("Playback Speed")
+                    .font(PTFont.ptSectionTitle)
+                    .fontWeight(.bold)
+                    .padding(.top)
+
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 16) {
+                    ForEach(speeds, id: \.self) { speed in
+                        Button(action: {
+                            PTHapticFeedbackService.shared.lightImpact()
+                            onSpeedSelected(speed)
+                        }) {
+                            VStack(spacing: 8) {
+                                Text("\(speed, specifier: "%.1f")×")
+                                    .font(PTFont.ptSubheading)
+                                    .fontWeight(.semibold)
+
+                                if speed == 1.0 {
+                                    Text("Normal")
+                                        .font(PTFont.ptCaptionText)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(
+                                currentSpeed == speed
+                                    ? PTDesignTokens.Colors.tang.opacity(0.2)
+                                    : Color.clear,
+                                in: RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.lg, style: .continuous)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.lg, style: .continuous)
+                                    .strokeBorder(
+                                        currentSpeed == speed
+                                            ? PTDesignTokens.Colors.tang
+                                            : .clear,
+                                        lineWidth: 2
+                                    )
+                            )
+                            .foregroundStyle(currentSpeed == speed ? PTDesignTokens.Colors.tang : .primary)
+                        }
+                        .buttonStyle(EnhancedScaleButtonStyle())
+                    }
+                }
+                .padding(.horizontal)
+
+                Spacer()
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -749,31 +1333,131 @@ struct SleepTimerView: View {
                 }
             }
         }
+        .presentationDetents([.medium])
+        .registerPTFonts()
     }
 }
 
-// MARK: - Preview
+struct SleepTimerSheet: View {
+    let currentMinutes: Int?
+    let onTimeSelected: (Int?) -> Void
+    @Environment(\.dismiss) private var dismiss
 
-struct NowPlayingView_Previews: PreviewProvider {
-    static var previews: some View {
-        NowPlayingView()
-            .onAppear {
-                // Mock data for preview
-                let mockTalk = Talk(
-                    id: "preview",
-                    title: "The Greatest Story Ever Told",
-                    description: "A powerful message about hope and redemption",
-                    speaker: "John Stott",
-                    series: "Keswick Convention 2023",
-                    biblePassage: "Romans 8:28-39",
-                    dateRecorded: Date(),
-                    duration: 2400,
-                    audioURL: nil,
-                    videoURL: nil,
-                    imageURL: nil
-                )
-                PlayerService.shared.loadTalk(mockTalk)
-                PlayerService.shared.play()
+    private let timeOptions = [5, 10, 15, 30, 45, 60]
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                Text("Sleep Timer")
+                    .font(PTFont.ptSectionTitle)
+                    .fontWeight(.bold)
+                    .padding(.top)
+
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 16) {
+                    ForEach(timeOptions, id: \.self) { minutes in
+                        Button(action: {
+                            PTHapticFeedbackService.shared.lightImpact()
+                            onTimeSelected(minutes)
+                        }) {
+                            VStack(spacing: 8) {
+                                Image(systemName: "moon.fill")
+                                    .font(PTFont.ptSubheading)
+
+                                Text("\(minutes) min")
+                                    .font(PTFont.ptSubheading)
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 20)
+                            .background(
+                                currentMinutes == minutes
+                                    ? PTDesignTokens.Colors.tang.opacity(0.2)
+                                    : Color.clear,
+                                in: RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl, style: .continuous)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl, style: .continuous)
+                                    .strokeBorder(
+                                        currentMinutes == minutes
+                                            ? PTDesignTokens.Colors.tang
+                                            : .clear,
+                                        lineWidth: 2
+                                    )
+                            )
+                            .foregroundStyle(currentMinutes == minutes ? PTDesignTokens.Colors.tang : .primary)
+                        }
+                        .buttonStyle(EnhancedScaleButtonStyle())
+                    }
+
+                    Button(action: {
+                        PTHapticFeedbackService.shared.lightImpact()
+                        onTimeSelected(nil)
+                    }) {
+                        VStack(spacing: 8) {
+                            Image(systemName: "moon.zzz")
+                                .font(PTFont.ptSubheading)
+
+                            Text("Off")
+                                .font(PTFont.ptSubheading)
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 20)
+                        .background(
+                            currentMinutes == nil
+                                ? PTDesignTokens.Colors.tang.opacity(0.2)
+                                : Color.clear,
+                            in: RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl, style: .continuous)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl, style: .continuous)
+                                .strokeBorder(
+                                    currentMinutes == nil
+                                        ? PTDesignTokens.Colors.tang
+                                        : .clear,
+                                    lineWidth: 2
+                                )
+                        )
+                        .foregroundStyle(currentMinutes == nil ? PTDesignTokens.Colors.tang : .primary)
+                    }
+                    .buttonStyle(EnhancedScaleButtonStyle())
+                }
+                .padding(.horizontal)
+
+                Spacer()
             }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .registerPTFonts()
     }
+}
+
+// MARK: - Extensions for PlayerService Properties
+
+extension ActivePlayerService {
+    var isShuffling: Bool {
+        get { false }
+        set { }
+    }
+
+    var isRepeating: Bool {
+        get { false }
+        set { }
+    }
+}
+
+// MARK: - TranscriptionService Singleton Extension
+
+extension TranscriptionService {
+    static let shared = TranscriptionService()
+}
+
+#Preview {
+    NowPlayingView()
 }

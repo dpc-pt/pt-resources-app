@@ -29,7 +29,7 @@ struct SettingsView: View {
 
     // MARK: - Constants
 
-    private let playbackSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+    private let playbackSpeeds = Config.playbackSpeedOptions.map { Double($0) }
     private let skipIntervals = [10, 15, 30, 60]
     private let autoDeleteOptions = [30, 60, 90, 180, 365]
     private let storageOptions = [1, 2, 5, 10, 25, 50]

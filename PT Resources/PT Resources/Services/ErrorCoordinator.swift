@@ -331,16 +331,16 @@ final class ErrorCoordinator: ObservableObject, ErrorCoordinatorProtocol {
         // Note: This will be updated to use MediaManager once singleton is removed
         switch severity {
         case .low:
-            HapticFeedbackService.shared.lightImpact()
+            PTHapticFeedbackService.shared.lightImpact()
         case .medium:
-            HapticFeedbackService.shared.warning()
+            PTHapticFeedbackService.shared.warning()
         case .high:
-            HapticFeedbackService.shared.error()
+            PTHapticFeedbackService.shared.error()
         case .critical:
-            HapticFeedbackService.shared.error()
+            PTHapticFeedbackService.shared.error()
             // Double error feedback for critical issues
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                HapticFeedbackService.shared.error()
+                PTHapticFeedbackService.shared.error()
             }
         }
     }

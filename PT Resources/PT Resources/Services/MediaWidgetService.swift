@@ -117,32 +117,32 @@ final class MediaWidgetService: ObservableObject {
         
         // Play/Pause command
         remoteCommandCenter.playCommand.addTarget { _ in
-            HapticFeedbackService.shared.playButtonPress()
+            PTHapticFeedbackService.shared.playButtonPress()
             onPlayPause()
             return .success
         }
         
         remoteCommandCenter.pauseCommand.addTarget { _ in
-            HapticFeedbackService.shared.pauseButtonPress()
+            PTHapticFeedbackService.shared.pauseButtonPress()
             onPlayPause()
             return .success
         }
         
         remoteCommandCenter.togglePlayPauseCommand.addTarget { _ in
-            HapticFeedbackService.shared.playButtonPress()
+            PTHapticFeedbackService.shared.playButtonPress()
             onPlayPause()
             return .success
         }
         
         // Skip commands
         remoteCommandCenter.nextTrackCommand.addTarget { _ in
-            HapticFeedbackService.shared.skipAction()
+            PTHapticFeedbackService.shared.skipAction()
             onNext()
             return .success
         }
         
         remoteCommandCenter.previousTrackCommand.addTarget { _ in
-            HapticFeedbackService.shared.skipAction()
+            PTHapticFeedbackService.shared.skipAction()
             onPrevious()
             return .success
         }
@@ -150,7 +150,7 @@ final class MediaWidgetService: ObservableObject {
         // Skip intervals
         remoteCommandCenter.skipForwardCommand.addTarget { event in
             if let skipEvent = event as? MPSkipIntervalCommandEvent {
-                HapticFeedbackService.shared.skipAction()
+                PTHapticFeedbackService.shared.skipAction()
                 onSeek(skipEvent.interval)
                 return .success
             }
@@ -159,7 +159,7 @@ final class MediaWidgetService: ObservableObject {
         
         remoteCommandCenter.skipBackwardCommand.addTarget { event in
             if let skipEvent = event as? MPSkipIntervalCommandEvent {
-                HapticFeedbackService.shared.skipAction()
+                PTHapticFeedbackService.shared.skipAction()
                 onSeek(-skipEvent.interval)
                 return .success
             }
@@ -169,7 +169,7 @@ final class MediaWidgetService: ObservableObject {
         // Playback position
         remoteCommandCenter.changePlaybackPositionCommand.addTarget { event in
             if let positionEvent = event as? MPChangePlaybackPositionCommandEvent {
-                HapticFeedbackService.shared.seekingFeedback()
+                PTHapticFeedbackService.shared.seekingFeedback()
                 onSeek(positionEvent.positionTime)
                 return .success
             }
@@ -179,7 +179,7 @@ final class MediaWidgetService: ObservableObject {
         // Playback rate
         remoteCommandCenter.changePlaybackRateCommand.addTarget { event in
             if let rateEvent = event as? MPChangePlaybackRateCommandEvent {
-                HapticFeedbackService.shared.speedChange()
+                PTHapticFeedbackService.shared.speedChange()
                 onChangePlaybackRate(rateEvent.playbackRate)
                 return .success
             }
@@ -362,19 +362,19 @@ extension MediaWidgetService {
     ) {
         
         remoteCommandCenter.likeCommand.addTarget { _ in
-            HapticFeedbackService.shared.success()
+            PTHapticFeedbackService.shared.success()
             onToggleFavorite()
             return .success
         }
         
         remoteCommandCenter.bookmarkCommand.addTarget { _ in
-            HapticFeedbackService.shared.mediumImpact()
+            PTHapticFeedbackService.shared.mediumImpact()
             onBookmark()
             return .success
         }
         
         remoteCommandCenter.enableLanguageOptionCommand.addTarget { _ in
-            HapticFeedbackService.shared.selection()
+            PTHapticFeedbackService.shared.selection()
             onToggleTranscript()
             return .success
         }

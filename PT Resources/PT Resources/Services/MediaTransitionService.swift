@@ -50,7 +50,7 @@ final class MediaTransitionService: ObservableObject {
         SimpleHapticService.shared.videoTransition()
         
         // Configure audio session for media playback
-        EnhancedAudioSessionService.shared.configureForMediaPlayback()
+        PTEnhancedAudioSessionService.shared.configureForMediaPlayback()
         
         await performTransitionAnimation()
         
@@ -90,7 +90,7 @@ final class MediaTransitionService: ObservableObject {
         SimpleHapticService.shared.videoTransition()
         
         // Configure audio session for video playback
-        EnhancedAudioSessionService.shared.configureForVideoPlayback()
+        PTEnhancedAudioSessionService.shared.configureForVideoPlayback()
         
         await performTransitionAnimation()
         

@@ -248,56 +248,6 @@ private struct TalkActions: View {
     }
 }
 
-// MARK: - Download Status Indicator
-
-private struct DownloadStatusIndicator: View {
-    let isDownloaded: Bool
-    
-    var body: some View {
-        HStack(spacing: PTDesignTokens.Spacing.xs) {
-            Image(systemName: isDownloaded ? "arrow.down.circle.fill" : "arrow.down.circle")
-                .font(.caption)
-                .foregroundColor(isDownloaded ? PTDesignTokens.Colors.kleinBlue : PTDesignTokens.Colors.light)
-            
-            Text(isDownloaded ? "Downloaded" : "Online")
-                .font(PTFont.ptCaptionText)
-                .foregroundColor(PTDesignTokens.Colors.medium)
-        }
-    }
-}
-
-// MARK: - Favorite Button
-
-private struct FavoriteButton: View {
-    let isFavorite: Bool
-    let onTap: () -> Void
-    
-    var body: some View {
-        Button(action: onTap) {
-            Image(systemName: isFavorite ? "heart.fill" : "heart")
-                .font(.caption)
-                .foregroundColor(isFavorite ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.medium)
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-// MARK: - Download Button
-
-private struct DownloadButton: View {
-    let isDownloaded: Bool
-    let onTap: () -> Void
-    
-    var body: some View {
-        Button(action: onTap) {
-            Image(systemName: isDownloaded ? "checkmark.circle.fill" : "arrow.down.circle")
-                .font(.caption)
-                .foregroundColor(isDownloaded ? PTDesignTokens.Colors.kleinBlue : PTDesignTokens.Colors.medium)
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
 // MARK: - Conference Artwork
 
 private struct ConferenceArtwork: View {

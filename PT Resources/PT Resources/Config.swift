@@ -52,7 +52,7 @@ struct Config {
         #if DEBUG
         return "b9674d6b97fecace2abcef4b26abae9b99bd30fe"
         #else
-        return "YOUR_ESV_API_KEY_HERE"
+        return ""
         #endif
     }()
     

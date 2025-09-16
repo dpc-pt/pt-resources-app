@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UIKit
+import WebKit
 import Combine
 import CryptoKit
 
@@ -215,12 +216,16 @@ final class ImageCacheService: ImageCacheServiceProtocol {
                    String(data: data.prefix(100), encoding: .utf8)?.contains("<svg") == true
         
         if isSVG {
-            PTLogger.general.info("Detected SVG file, using local PT Resources logo as fallback: \(url.absoluteString)")
-            // For SVG files, use the local PT Resources logo
-            guard let ptLogo = UIImage(named: "pt-resources") else {
-                throw ImageCacheError.invalidImageData
+            PTLogger.general.info("Detected SVG file, rasterizing: \(url.absoluteString)")
+            if let image = await rasterizeSVGData(data, preferredSize: CGSize(width: 512, height: 512)) {
+                return image
+            } else {
+                PTLogger.general.warning("SVG rasterization failed, falling back to placeholder logo")
+                guard let ptLogo = UIImage(named: "pt-resources") else {
+                    throw ImageCacheError.invalidImageData
+                }
+                return ptLogo
             }
-            return ptLogo
         }
 
         guard let image = UIImage(data: data) else {
@@ -229,6 +234,38 @@ final class ImageCacheService: ImageCacheServiceProtocol {
         }
 
         return image
+    }
+
+    // MARK: - SVG Rasterization
+    @MainActor
+    private func rasterizeSVGData(_ data: Data, preferredSize: CGSize) async -> UIImage? {
+        guard let svgString = String(data: data, encoding: .utf8) else { return nil }
+        let webView = WKWebView(frame: CGRect(origin: .zero, size: preferredSize))
+        webView.isOpaque = false
+        webView.backgroundColor = .clear
+        let html = """
+        <html><head><meta name='viewport' content='initial-scale=1.0' />
+        <style>html,body{margin:0;padding:0;background:transparent;overflow:hidden;}</style>
+        </head><body>
+        <div id='container' style='width:100%;height:100%;display:flex;align-items:center;justify-content:center;'>
+        \(svgString)
+        </div>
+        </body></html>
+        """
+        webView.loadHTMLString(html, baseURL: nil)
+
+        // Wait a moment for layout
+        try? await Task.sleep(nanoseconds: 150_000_000)
+
+        let config = WKSnapshotConfiguration()
+        config.afterScreenUpdates = true
+        config.rect = CGRect(origin: .zero, size: preferredSize)
+
+        return await withCheckedContinuation { continuation in
+            webView.takeSnapshot(with: config) { image, _ in
+                continuation.resume(returning: image)
+            }
+        }
     }
 
     private func processImageForSize(_ image: UIImage, targetSize: CGSize?) -> UIImage {

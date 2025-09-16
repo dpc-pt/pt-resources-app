@@ -48,7 +48,7 @@ extension Color {
 
 // MARK: - Typography (Matching Website Scale)
 
-struct PTFont {
+struct PTFontSizes {
     // Font Sizes (matching website tailwind.config.js fontSize scale)
     static let text9: CGFloat = 9       // '9': '9px'
     static let text10: CGFloat = 10     // '10': '10px'
@@ -84,7 +84,7 @@ struct PTFont {
         return .system(size: size, weight: weight, design: .default)
     }
     
-    // Branded Typography (will be enhanced by PTTypography.swift)
+    // Legacy branded typography (use PTFont from PTTypography.swift instead)
     static let brandTitle = Font.system(size: text28, weight: .bold, design: .default)      // H1 equivalent
     static let sectionTitle = Font.system(size: text22, weight: .semibold, design: .default) // H2 equivalent  
     static let cardTitle = Font.system(size: text17, weight: .semibold, design: .default)   // H3 equivalent
@@ -99,7 +99,7 @@ struct PTFont {
     static let displayMedium = Font.system(size: text32, weight: .bold, design: .default)
     static let displaySmall = Font.system(size: text28, weight: .bold, design: .default)
     
-    // These will be overridden by authentic PT fonts in PTTypography.swift if available
+    // These are superseded by authentic PT fonts in PTTypography.swift
 }
 
 // MARK: - Spacing (Matching Website Scale)
@@ -196,7 +196,7 @@ struct PTPrimaryButtonStyle: ViewModifier {
     
     func body(content: Content) -> some View {
         content
-            .font(PTFont.buttonText)
+            .font(PTFontSizes.buttonText)
             .foregroundColor(isDisabled ? .white.opacity(0.7) : .white)
             .padding(.horizontal, PTDesignTokens.Spacing.buttonPaddingHorizontal)
             .padding(.vertical, PTDesignTokens.Spacing.buttonPaddingVertical)
@@ -236,7 +236,7 @@ struct PTSecondaryButtonStyle: ViewModifier {
     
     func body(content: Content) -> some View {
         content
-            .font(PTFont.buttonText)
+            .font(PTFontSizes.buttonText)
             .foregroundColor(buttonTextColor)
             .padding(.horizontal, PTDesignTokens.Spacing.buttonPaddingHorizontal)
             .padding(.vertical, PTDesignTokens.Spacing.buttonPaddingVertical)
@@ -285,7 +285,7 @@ struct PTOutlineButton: ViewModifier {
     
     func body(content: Content) -> some View {
         content
-            .font(PTFont.buttonText)
+            .font(PTFontSizes.buttonText)
             .foregroundColor(buttonTextColor)
             .padding(.horizontal, PTDesignTokens.Spacing.buttonPaddingHorizontal)
             .padding(.vertical, PTDesignTokens.Spacing.buttonPaddingVertical)

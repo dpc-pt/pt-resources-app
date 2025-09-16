@@ -218,7 +218,51 @@ struct PTSectionDivider: View {
 }
 
 // MARK: - Progress Components
-// PTProgressBar is defined in NowPlayingView.swift
+
+struct PTProgressBar: View {
+    let value: Double
+    let onChanged: (Double) -> Void
+    
+    @State private var isDragging = false
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                // Background track
+                Rectangle()
+                    .fill(PTDesignTokens.Colors.light)
+                    .frame(height: 4)
+                    .cornerRadius(2)
+                
+                // Progress track
+                Rectangle()
+                    .fill(PTDesignTokens.Colors.primary)
+                    .frame(width: geometry.size.width * value, height: 4)
+                    .cornerRadius(2)
+                
+                // Thumb
+                Circle()
+                    .fill(PTDesignTokens.Colors.primary)
+                    .frame(width: 16, height: 16)
+                    .offset(x: geometry.size.width * value - 8)
+                    .scaleEffect(isDragging ? 1.2 : 1.0)
+            }
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { gesture in
+                        isDragging = true
+                        let newValue = max(0, min(1, gesture.location.x / geometry.size.width))
+                        onChanged(newValue)
+                    }
+                    .onEnded { _ in
+                        isDragging = false
+                    }
+            )
+        }
+        .frame(height: 16)
+    }
+}
 
 // MARK: - Welcome Components
 

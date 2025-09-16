@@ -142,8 +142,13 @@ final class MediaArtworkService: ObservableObject {
             
             if isSVG {
                 PTLogger.general.info("Detected SVG file, falling back to local PT Resources logo: \(url)")
-                // For SVG files, fall back to the local PT Resources logo
-                return generateSimplePTArtwork()
+                // For SVG files, fall back to the local PT Resources logo and resize it
+                if let ptArtwork = generateSimplePTArtwork() {
+                    let resizedImage = await resizeImage(ptArtwork, to: artworkSize)
+                    PTLogger.general.info("Successfully created and resized PT Resources artwork for SVG fallback")
+                    return resizedImage
+                }
+                return nil
             }
             
             guard let image = UIImage(data: data) else {

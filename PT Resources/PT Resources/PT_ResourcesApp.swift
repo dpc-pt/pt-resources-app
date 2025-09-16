@@ -67,6 +67,9 @@ struct PT_ResourcesApp: App {
                         isShowingSplash = false
                     }
                 }
+
+                // Restore last playback (if any) so mini player is available on launch
+                await PlayerService.shared.restoreLastPlaybackIfAvailable()
             }
         }
     }

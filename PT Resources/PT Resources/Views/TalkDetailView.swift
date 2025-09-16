@@ -36,45 +36,56 @@ struct TalkDetailView: View {
     @State private var isStartingTranscription = false
     
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Hero Section with Talk Art & Info
-                    heroSection
-                    
-                    // Media Type Toggle (if multiple types available)
-                    if talk.hasMultipleMediaTypes {
-                        mediaTypeToggleSection
-                            .padding(.horizontal, PTDesignTokens.Spacing.md)
-                            .padding(.bottom, PTDesignTokens.Spacing.md)
+        GeometryReader { geometry in
+            NavigationStack {
+                ZStack(alignment: .bottom) {
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            // Hero Section with Talk Art & Info
+                            heroSection(geometry: geometry)
+                            
+                            // Media Type Toggle (if multiple types available)
+                            if talk.hasMultipleMediaTypes {
+                                mediaTypeToggleSection
+                                    .padding(.horizontal, PTDesignTokens.Spacing.md)
+                                    .padding(.bottom, PTDesignTokens.Spacing.md)
+                            }
+                            
+                            // Media Player Controls
+                            mediaPlayerSection
+                                .padding(.horizontal, PTDesignTokens.Spacing.md)
+                                .padding(.bottom, PTDesignTokens.Spacing.lg)
+                                .frame(maxWidth: .infinity)
+                            
+                            // Talk Information Card
+                            talkInfoSection
+                                .padding(.horizontal, PTDesignTokens.Spacing.md)
+                                .padding(.bottom, PTDesignTokens.Spacing.lg)
+                                .frame(maxWidth: .infinity)
+                            
+                            // Action Buttons
+                            actionButtonsSection
+                                .padding(.horizontal, PTDesignTokens.Spacing.md)
+                                .padding(.bottom, playerService.currentTalk != nil ? 100 : PTDesignTokens.Spacing.xl)
+                                .frame(maxWidth: .infinity)
+                        }
                     }
+                    .background(PTDesignTokens.Colors.background)
                     
-                    // Media Player Controls
-                    mediaPlayerSection
-                        .padding(.horizontal, PTDesignTokens.Spacing.md)
-                        .padding(.bottom, PTDesignTokens.Spacing.lg)
-                    
-                    // Talk Information Card
-                    talkInfoSection
-                        .padding(.horizontal, PTDesignTokens.Spacing.md)
-                        .padding(.bottom, PTDesignTokens.Spacing.lg)
-                    
-                    // Action Buttons
-                    actionButtonsSection
-                        .padding(.horizontal, PTDesignTokens.Spacing.md)
-                        .padding(.bottom, PTDesignTokens.Spacing.xl)
+                    // Mini Player - Fixed at bottom
+                    if playerService.currentTalk != nil {
+                        VStack {
+                            Spacer()
+                            MiniPlayerView(playerService: playerService)
+                                .background(PTDesignTokens.Colors.surface)
+                                .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -4)
+                                .transition(.move(edge: .bottom))
+                        }
+                        .ignoresSafeArea(.keyboard, edges: .bottom)
+                    }
                 }
-                
-                // Mini Player
-                if playerService.currentTalk != nil {
-                    MiniPlayerView(playerService: playerService)
-                        .transition(.move(edge: .bottom))
-                        .background(PTDesignTokens.Colors.surface)
-                        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -4)
-                }
+                .navigationBarHidden(true)
             }
-            .background(PTDesignTokens.Colors.background)
-            .navigationBarHidden(true)
         }
         .onAppear {
             loadBiblePassage()
@@ -132,7 +143,7 @@ struct TalkDetailView: View {
     
     // MARK: - Hero Section
 
-    private var heroSection: some View {
+    private func heroSection(geometry: GeometryProxy) -> some View {
         VStack(spacing: PTDesignTokens.Spacing.xl) {
             // Navigation Bar
             HStack {
@@ -190,12 +201,15 @@ struct TalkDetailView: View {
 
             // Album Art Style Hero
             ZStack {
-                // Artwork Container - Square with rounded corners
+                // Artwork Container - Responsive with proper aspect ratio constraints
                 PTAsyncImage(url: talk.artworkURL.flatMap(URL.init)) {
                     defaultArtworkView
                 }
                 .aspectRatio(1, contentMode: .fill)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(
+                    width: min(geometry.size.width * 0.85, 400), // Use 85% of screen width up to 400pt
+                    height: min(geometry.size.width * 0.85, 400)
+                )
                 .clipShape(RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.xl))
                 .shadow(color: PTDesignTokens.Colors.ink.opacity(0.15), radius: 12, x: 0, y: 6)
 
@@ -265,10 +279,10 @@ struct TalkDetailView: View {
                     .padding(PTDesignTokens.Spacing.lg)
                 }
             }
-            .aspectRatio(1, contentMode: .fit)
+            .frame(maxWidth: .infinity)
             .padding(.horizontal, PTDesignTokens.Spacing.md)
         }
-        .padding(.top, PTDesignTokens.Spacing.md)
+        .padding(.top, max(geometry.safeAreaInsets.top, PTDesignTokens.Spacing.md))
     }
     
     private var defaultArtworkView: some View {

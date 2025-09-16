@@ -18,7 +18,7 @@ struct ResourceNavigationItem: Identifiable {
 struct TalksListView: View {
     
     @StateObject private var viewModel: TalksViewModel
-    @ObservedObject private var playerService = PlayerService.shared
+    @ObservedObject private var playerService: PlayerService = PlayerService.shared
     @EnvironmentObject private var downloadService: DownloadService
     @StateObject private var networkMonitor = NetworkMonitor()
     @StateObject private var filtersAPIService: FiltersAPIService
@@ -96,7 +96,7 @@ struct TalksListView: View {
                                                 .scaleEffect(0.8)
                                             Text("Loading more...")
                                                 .font(PTFont.ptCaptionText)
-                                                .foregroundColor(PTDesignTokens.Colors.medium)
+                                                .foregroundColor(Color(PTDesignTokens.Colors.medium))
                                         }
                                         .padding()
                                         .onAppear {
@@ -306,11 +306,11 @@ struct TalksListView: View {
             VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
                 Text("Resources")
                     .font(PTFont.ptDisplaySmall)
-                    .foregroundColor(PTDesignTokens.Colors.ink)
+                    .foregroundColor(Color(PTDesignTokens.Colors.ink))
 
                 Text("Sermons and talks from Proclamation Trust")
                     .font(PTFont.ptBodyText)
-                    .foregroundColor(PTDesignTokens.Colors.medium)
+                    .foregroundColor(Color(PTDesignTokens.Colors.medium))
             }
 
             Spacer()
@@ -444,11 +444,11 @@ private extension TalksListView {
     var offlineModeHeader: some View {
         HStack {
             Image(systemName: networkMonitor.isOfflineMode ? "wifi.slash" : "wifi")
-                .foregroundColor(PTDesignTokens.Colors.tang)
+                .foregroundColor(Color(PTDesignTokens.Colors.tang))
             
             Text(networkMonitor.connectionStatusDescription)
                 .font(PTFont.ptCardTitle)
-                .foregroundColor(PTDesignTokens.Colors.ink)
+                .foregroundColor(Color(PTDesignTokens.Colors.ink))
             
             Spacer()
             
@@ -457,17 +457,17 @@ private extension TalksListView {
                     networkMonitor.disableOfflineMode()
                 }
                 .font(PTFont.ptCaptionText)
-                .foregroundColor(PTDesignTokens.Colors.kleinBlue)
+                .foregroundColor(Color(PTDesignTokens.Colors.kleinBlue))
             }
         }
         .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
         .padding(.vertical, PTDesignTokens.Spacing.sm)
         .background(
             RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                .fill(PTDesignTokens.Colors.surface)
+                .fill(Color(PTDesignTokens.Colors.surface))
                 .overlay(
                     RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                        .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
+                        .stroke(Color(PTDesignTokens.Colors.light).opacity(0.2), lineWidth: 0.5)
                 )
         )
         .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
@@ -477,21 +477,21 @@ private extension TalksListView {
         VStack(spacing: PTDesignTokens.Spacing.lg) {
             Image(systemName: "arrow.down.circle")
                 .font(PTFont.ptDisplayLarge)
-                .foregroundColor(PTDesignTokens.Colors.medium)
+                .foregroundColor(Color(PTDesignTokens.Colors.medium))
             
             Text("No Downloaded Talks")
                 .font(PTFont.ptSectionTitle)
-                .foregroundColor(PTDesignTokens.Colors.ink)
+                .foregroundColor(Color(PTDesignTokens.Colors.ink))
             
             Text("Download talks when you're online to listen offline")
                 .font(PTFont.ptBodyText)
-                .foregroundColor(PTDesignTokens.Colors.medium)
+                .foregroundColor(Color(PTDesignTokens.Colors.medium))
                 .multilineTextAlignment(.center)
             
             if !networkMonitor.isConnected {
                 Text("You're currently offline")
                     .font(PTFont.ptCaptionText)
-                    .foregroundColor(PTDesignTokens.Colors.turmeric)
+                    .foregroundColor(Color(PTDesignTokens.Colors.turmeric))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -515,7 +515,7 @@ struct FilterSortBar: View {
                     Text("Filter")
                     if activeFiltersCount > 0 {
                         Text("(\(activeFiltersCount))")
-                            .foregroundColor(PTDesignTokens.Colors.kleinBlue)
+                            .foregroundColor(Color(PTDesignTokens.Colors.kleinBlue))
                     }
                 }
             }
@@ -573,3 +573,4 @@ struct TalksListView_Previews: PreviewProvider {
         TalksListView(apiService: MockTalksAPIService())
     }
 }
+

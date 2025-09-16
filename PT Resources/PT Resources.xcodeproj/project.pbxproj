@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A63693022E795FEC00B8D592 /* app.icon in Resources */ = {isa = PBXBuildFile; fileRef = A63693012E795FEC00B8D592 /* app.icon */; };
+		A63693042E7964FB00B8D592 /* ResponsiveArtworkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A63693032E7964FB00B8D592 /* ResponsiveArtworkView.swift */; };
 		A647FF3D2E61FBF30000A431 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = A647FF3C2E61FBF30000A431 /* WhisperKit */; };
 		A647FF3F2E61FBF30000A431 /* whisperkit-cli in Frameworks */ = {isa = PBXBuildFile; productRef = A647FF3E2E61FBF30000A431 /* whisperkit-cli */; };
 /* End PBXBuildFile section */
@@ -29,6 +31,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		A63692FD2E795DE900B8D592 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		A63693012E795FEC00B8D592 /* app.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = app.icon; sourceTree = "<group>"; };
+		A63693032E7964FB00B8D592 /* ResponsiveArtworkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResponsiveArtworkView.swift; sourceTree = "<group>"; };
 		A6837A8B2E53BC6F0053B246 /* PT Resources.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "PT Resources.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A6837A9A2E53BC710053B246 /* PT ResourcesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "PT ResourcesTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A6837AA42E53BC710053B246 /* PT ResourcesUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "PT ResourcesUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -82,10 +87,13 @@
 		A6837A822E53BC6F0053B246 = {
 			isa = PBXGroup;
 			children = (
+				A63692FD2E795DE900B8D592 /* Secrets.xcconfig */,
 				A6837A8D2E53BC6F0053B246 /* PT Resources */,
 				A6837A9D2E53BC710053B246 /* PT ResourcesTests */,
 				A6837AA72E53BC710053B246 /* PT ResourcesUITests */,
 				A6837A8C2E53BC6F0053B246 /* Products */,
+				A63693012E795FEC00B8D592 /* app.icon */,
+				A63693032E7964FB00B8D592 /* ResponsiveArtworkView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -225,6 +233,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A63693022E795FEC00B8D592 /* app.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -249,6 +258,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A63693042E7964FB00B8D592 /* ResponsiveArtworkView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -404,15 +414,16 @@
 		A6837AAF2E53BC710053B246 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = app;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = VM2G7FCJ7J;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "PT-Resources-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "PT Resources";
+				INFOPLIST_KEY_CFBundleDisplayName = ProcTrust;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "This app streams audio content and downloads talks from the Proclamation Trust servers.";
 				INFOPLIST_KEY_NSUserTrackingUsageDescription = "This app does not track users. This permission is requested to comply with iOS requirements.";
@@ -439,8 +450,9 @@
 		A6837AB02E53BC710053B246 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = app;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -448,7 +460,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "PT-Resources-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "PT Resources";
+				INFOPLIST_KEY_CFBundleDisplayName = ProcTrust;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "This app streams audio content and downloads talks from the Proclamation Trust servers.";
 				INFOPLIST_KEY_NSUserTrackingUsageDescription = "This app does not track users. This permission is requested to comply with iOS requirements.";

@@ -9,11 +9,11 @@ import UIKit
 import AVFoundation
 
 @MainActor
-final class HapticFeedbackService: ObservableObject {
+final class PTHapticFeedbackService: ObservableObject {
     
     // MARK: - Singleton Instance
     
-    static let shared = HapticFeedbackService()
+    static let shared = PTHapticFeedbackService()
     
     // MARK: - Published Properties
     
@@ -257,11 +257,11 @@ final class HapticFeedbackService: ObservableObject {
 // MARK: - Enhanced Audio Session Service
 
 @MainActor
-final class EnhancedAudioSessionService: NSObject, ObservableObject {
+final class PTEnhancedAudioSessionService: NSObject, ObservableObject {
     
     // MARK: - Singleton Instance
     
-    static let shared = EnhancedAudioSessionService()
+    static let shared = PTEnhancedAudioSessionService()
     
     // MARK: - Published Properties
     
@@ -367,7 +367,7 @@ final class EnhancedAudioSessionService: NSObject, ObservableObject {
         switch type {
         case .began:
             PTLogger.general.info("Audio interruption began")
-            HapticFeedbackService.shared.warning()
+            PTHapticFeedbackService.shared.warning()
             
         case .ended:
             guard let options = options else { return }
@@ -376,7 +376,7 @@ final class EnhancedAudioSessionService: NSObject, ObservableObject {
                 do {
                     try audioSession.setActive(true)
                     PTLogger.general.info("Audio session resumed after interruption")
-                    HapticFeedbackService.shared.lightImpact()
+                    PTHapticFeedbackService.shared.lightImpact()
                 } catch {
                     PTLogger.general.error("Failed to resume audio session: \(error.localizedDescription)")
                 }
@@ -430,11 +430,11 @@ final class EnhancedAudioSessionService: NSObject, ObservableObject {
         switch reason {
         case .newDeviceAvailable:
             PTLogger.general.info("New audio device available")
-            HapticFeedbackService.shared.lightImpact()
+            PTHapticFeedbackService.shared.lightImpact()
             
         case .oldDeviceUnavailable:
             PTLogger.general.info("Audio device disconnected")
-            HapticFeedbackService.shared.mediumImpact()
+            PTHapticFeedbackService.shared.mediumImpact()
             
         case .categoryChange:
             PTLogger.general.info("Audio category changed")

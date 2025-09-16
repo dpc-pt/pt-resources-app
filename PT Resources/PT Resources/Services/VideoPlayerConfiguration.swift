@@ -59,7 +59,7 @@ struct VideoPlayerConfiguration {
         allowsPictureInPicturePlayback: true,
         canStartPictureInPictureAutomaticallyFromInline: false,
         allowsExternalPlayback: true,
-        availablePlaybackSpeeds: [0.5, 0.75, 1.0, 1.25, 1.5, 2.0],
+        availablePlaybackSpeeds: Config.playbackSpeedOptions,
         allowsBackgroundAudio: false, // Video doesn't continue in background by default
         resumesAfterInterruption: true,
         showsPlaybackControls: true,
@@ -73,7 +73,7 @@ struct VideoPlayerConfiguration {
         allowsPictureInPicturePlayback: false,
         canStartPictureInPictureAutomaticallyFromInline: false,
         allowsExternalPlayback: true,
-        availablePlaybackSpeeds: [0.5, 0.75, 1.0, 1.25, 1.5, 2.0],
+        availablePlaybackSpeeds: Config.playbackSpeedOptions,
         allowsBackgroundAudio: true,
         resumesAfterInterruption: true,
         showsPlaybackControls: true,

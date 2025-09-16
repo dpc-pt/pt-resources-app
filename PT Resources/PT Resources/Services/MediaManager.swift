@@ -14,6 +14,7 @@ import Combine
 
 // MARK: - Media Manager Protocol
 
+@MainActor
 protocol MediaManagerProtocol {
     // Artwork
     func generateArtwork(for talk: Talk) async -> UIImage?

@@ -113,7 +113,7 @@ class PTVideoPlayerViewController: AVPlayerViewController {
         
         // Enable speed controls
         if #available(iOS 16.0, *) {
-            speeds = [AVPlaybackSpeed(rate: 0.5, localizedName: "0.5x"), AVPlaybackSpeed(rate: 0.75, localizedName: "0.75x"), AVPlaybackSpeed(rate: 1.0, localizedName: "1x"), AVPlaybackSpeed(rate: 1.25, localizedName: "1.25x"), AVPlaybackSpeed(rate: 1.5, localizedName: "1.5x"), AVPlaybackSpeed(rate: 2.0, localizedName: "2x")]
+            speeds = Config.playbackSpeedOptions.map { AVPlaybackSpeed(rate: $0, localizedName: "\($0)x") }
         }
         
         // Configure delegate

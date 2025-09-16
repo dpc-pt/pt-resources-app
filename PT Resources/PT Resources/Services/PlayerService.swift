@@ -68,6 +68,12 @@ final class PlayerService: NSObject, ObservableObject {
         // Defer audio session setup until first audio playback
         setupRemoteTransportControls()
         setupNotificationObservers()
+
+        // Initialize playback speed from Settings default if available
+        let defaultSpeed = UserDefaults.standard.double(forKey: "playbackSpeed")
+        if defaultSpeed >= 0.5 && defaultSpeed <= 3.0 {
+            playbackSpeed = Float(defaultSpeed)
+        }
     }
     
     deinit {
@@ -100,9 +106,100 @@ final class PlayerService: NSObject, ObservableObject {
             return
         }
 
-        // Setup player and load metadata first
-        setupPlayer(with: audioURL, startTime: startTime)
-        updateNowPlayingInfo()
+        // If no explicit start time, attempt to restore from last saved playback state
+        if startTime <= 0 {
+            Task { @MainActor in
+                let restored = await self.loadSavedPlaybackState(for: talk.id)
+                let resumeTime = restored?.position ?? 0
+                if resumeTime > 1 { // avoid tiny offsets
+                    self.playbackSpeed = restored?.playbackSpeed ?? self.playbackSpeed
+                    self.currentTime = resumeTime
+                    self.setupPlayer(with: audioURL, startTime: resumeTime)
+                    // Ensure widget shows paused (not playing) until user presses play
+                    self.playbackState = .paused
+                    self.updateNowPlayingInfo()
+                    return
+                }
+                // No saved state; respect Settings default playback speed
+                let defaultSpeed = UserDefaults.standard.double(forKey: "playbackSpeed")
+                if defaultSpeed >= 0.5 && defaultSpeed <= 3.0 {
+                    self.playbackSpeed = Float(defaultSpeed)
+                }
+                self.setupPlayer(with: audioURL, startTime: 0)
+                self.playbackState = .paused
+                self.updateNowPlayingInfo()
+            }
+        } else {
+            // Respect provided explicit start time
+            setupPlayer(with: audioURL, startTime: startTime)
+            // Default to paused until user explicitly starts
+            playbackState = .paused
+            updateNowPlayingInfo()
+        }
+    }
+
+    /// Restore the most recently played, not-completed talk into the player without auto-playing.
+    /// This enables the mini player to appear on app launch when a session was in progress.
+    func restoreLastPlaybackIfAvailable() async {
+        // If something is already loaded, do nothing
+        if currentTalk != nil { return }
+        do {
+            let result = try await persistenceController.performBackgroundTask { context -> (Talk, TimeInterval, Float)? in
+                // Fetch most recent in-progress playback state
+                let request: NSFetchRequest<PlaybackStateEntity> = PlaybackStateEntity.fetchRequest()
+                request.predicate = NSPredicate(format: "isCompleted == NO")
+                request.sortDescriptors = [NSSortDescriptor(key: "lastPlayedAt", ascending: false)]
+                request.fetchLimit = 1
+
+                guard let state = try context.fetch(request).first else { return nil }
+
+                // Try to get TalkEntity to build a Talk model for UI
+                let talkRequest: NSFetchRequest<TalkEntity> = TalkEntity.fetchRequest()
+                talkRequest.predicate = NSPredicate(format: "id == %@", state.talkID)
+                talkRequest.fetchLimit = 1
+                let talkEntity = try context.fetch(talkRequest).first
+
+                // Build a lightweight Talk from TalkEntity if available; otherwise fall back to minimal talk using IDs
+                guard let t = talkEntity else {
+                    // Without full metadata, we cannot construct a safe Talk for UI; skip restore
+                    return nil
+                }
+                
+                let talk = Talk(
+                    id: t.id,
+                    title: t.title,
+                    description: t.desc,
+                    speaker: t.speaker ?? "",
+                    series: t.series,
+                    biblePassage: t.biblePassage,
+                    dateRecorded: t.dateRecorded ?? Date(),
+                    duration: Int(t.duration),
+                    audioURL: t.audioURL,
+                    videoURL: t.videoURL,
+                    imageURL: t.imageURL,
+                    conferenceImageURL: t.conferenceImageURL,
+                    defaultImageURL: t.defaultImageURL,
+                    fileSize: t.fileSize,
+                    category: nil,
+                    scriptureReference: t.biblePassage,
+                    conferenceId: nil,
+                    speakerIds: nil,
+                    bookIds: nil
+                )
+                
+                return (talk, state.position, state.playbackSpeed)
+            }
+
+            if let (talk, position, speed) = result {
+                await MainActor.run {
+                    self.playbackSpeed = speed
+                    self.loadTalk(talk, startTime: position)
+                    // Do not auto-play; user can resume
+                }
+            }
+        } catch {
+            PTLogger.general.error("Failed to restore last playback: \(error)")
+        }
     }
     
     /// Load a ResourceDetail for audio playback (converts to Talk-compatible format)
@@ -129,13 +226,13 @@ final class PlayerService: NSObject, ObservableObject {
         guard let player = player else { return }
 
         // Configure audio session using the enhanced service only
-        EnhancedAudioSessionService.shared.configureForMediaPlayback()
+        PTEnhancedAudioSessionService.shared.configureForMediaPlayback()
         
         // Prepare haptic feedback
-        HapticFeedbackService.shared.prepareForMediaInteraction()
+        PTHapticFeedbackService.shared.prepareForMediaInteraction()
         
         // Generate play haptic feedback
-        HapticFeedbackService.shared.playButtonPress()
+        PTHapticFeedbackService.shared.playButtonPress()
 
         // Start background task for playback
         startBackgroundTask()
@@ -155,7 +252,7 @@ final class PlayerService: NSObject, ObservableObject {
         guard let player = player else { return }
         
         // Generate pause haptic feedback
-        HapticFeedbackService.shared.pauseButtonPress()
+        PTHapticFeedbackService.shared.pauseButtonPress()
 
         player.pause()
         playbackState = .paused
@@ -197,14 +294,14 @@ final class PlayerService: NSObject, ObservableObject {
     
     func skipForward() {
         let newTime = min(currentTime + Config.skipInterval, duration)
-        HapticFeedbackService.shared.skipAction()
+        PTHapticFeedbackService.shared.skipAction()
         seek(to: newTime)
         PTLogger.general.debug("Skipped forward to \(newTime)")
     }
     
     func skipBackward() {
         let newTime = max(currentTime - Config.skipInterval, 0)
-        HapticFeedbackService.shared.skipAction()
+        PTHapticFeedbackService.shared.skipAction()
         seek(to: newTime)
         PTLogger.general.debug("Skipped backward to \(newTime)")
     }
@@ -213,7 +310,7 @@ final class PlayerService: NSObject, ObservableObject {
         guard speed >= 0.5 && speed <= 3.0 else { return }
         
         // Generate speed change haptic feedback
-        HapticFeedbackService.shared.speedChange()
+        PTHapticFeedbackService.shared.speedChange()
         
         playbackSpeed = speed
         
@@ -229,7 +326,7 @@ final class PlayerService: NSObject, ObservableObject {
     }
     
     func jumpToChapter(_ chapter: Chapter) {
-        HapticFeedbackService.shared.chapterTransition()
+        PTHapticFeedbackService.shared.chapterTransition()
         seek(to: chapter.startTime)
         PTLogger.general.info("Jumped to chapter: \(chapter.title)")
     }
@@ -324,10 +421,14 @@ final class PlayerService: NSObject, ObservableObject {
     private func endBackgroundTask() {
         if backgroundTaskIdentifier != .invalid {
             let taskDuration = backgroundTaskStartTime.map { Date().timeIntervalSince($0) } ?? 0
-            UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
-            PTLogger.general.info("Ended background task for audio playback: \(self.backgroundTaskIdentifier.rawValue) (duration: \(String(format: "%.1f", taskDuration))s)")
+
+            // Ensure we don't try to end an already invalid task
+            let taskToEnd = backgroundTaskIdentifier
             backgroundTaskIdentifier = .invalid
             backgroundTaskStartTime = nil
+
+            UIApplication.shared.endBackgroundTask(taskToEnd)
+            PTLogger.general.info("Ended background task for audio playback: \(taskToEnd.rawValue) (duration: \(String(format: "%.1f", taskDuration))s)")
         }
         stopBackgroundTaskRenewal()
     }
@@ -336,9 +437,9 @@ final class PlayerService: NSObject, ObservableObject {
         // Stop any existing renewal timer
         stopBackgroundTaskRenewal()
         
-        // Start a timer to renew the background task every 20 seconds
-        // Background tasks typically expire after 30 seconds, so we renew at 20 seconds for safety
-        backgroundTaskRenewalTimer = Timer.scheduledTimer(withTimeInterval: 20.0, repeats: true) { [weak self] _ in
+        // Start a timer to renew the background task every 15 seconds
+        // Background tasks typically expire after 30 seconds, so we renew at 15 seconds for extra safety
+        backgroundTaskRenewalTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self = self else { return }
                 
@@ -363,17 +464,14 @@ final class PlayerService: NSObject, ObservableObject {
     }
     
     private func renewBackgroundTask() {
-        // End the current background task
-        if backgroundTaskIdentifier != .invalid {
-            UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
-            PTLogger.general.info("Ended previous background task: \(self.backgroundTaskIdentifier.rawValue)")
-        }
-        
-        // Start a new background task immediately
-        backgroundTaskIdentifier = UIApplication.shared.beginBackgroundTask(withName: "AudioPlayback") { [weak self] in
+        // Store the old task identifier
+        let oldTaskIdentifier = backgroundTaskIdentifier
+
+        // Start a new background task first
+        let newTaskIdentifier = UIApplication.shared.beginBackgroundTask(withName: "AudioPlayback") { [weak self] in
             Task { @MainActor in
                 guard let self = self else { return }
-                
+
                 PTLogger.general.warning("Renewed background task expired - system ended task automatically")
                 self.backgroundTaskIdentifier = .invalid
                 self.stopBackgroundTaskRenewal()
@@ -385,10 +483,18 @@ final class PlayerService: NSObject, ObservableObject {
                 }
             }
         }
-        
-        if backgroundTaskIdentifier != .invalid {
+
+        if newTaskIdentifier != .invalid {
+            // Update to the new task identifier
+            backgroundTaskIdentifier = newTaskIdentifier
             backgroundTaskStartTime = Date()
-            PTLogger.general.info("Successfully renewed background task for audio playback: \(self.backgroundTaskIdentifier.rawValue)")
+            PTLogger.general.info("Successfully started new background task for audio playback: \(self.backgroundTaskIdentifier.rawValue)")
+
+            // Now end the old background task
+            if oldTaskIdentifier != .invalid {
+                UIApplication.shared.endBackgroundTask(oldTaskIdentifier)
+                PTLogger.general.info("Ended previous background task: \(oldTaskIdentifier.rawValue)")
+            }
         } else {
             PTLogger.general.error("Failed to renew background task - system may be terminating background tasks")
             stopBackgroundTaskRenewal()
@@ -416,6 +522,8 @@ final class PlayerService: NSObject, ObservableObject {
         // Configure player for audio-only AirPlay (prevents video AirPlay behavior)
         player?.allowsExternalPlayback = true
         player?.usesExternalPlaybackWhileExternalScreenIsActive = false
+        // Ensure initial state is paused at system level
+        player?.rate = 0.0
         
         // Explicitly set the player item as audio-only to prevent video behavior on AirPlay
         if #available(iOS 16.0, *) {
@@ -460,7 +568,11 @@ final class PlayerService: NSObject, ObservableObject {
     private func setupAudioEngineWithSpeed(_ speed: Float) {
         // TODO: Implement AVAudioEngine setup for pitch-corrected speed control
         // For now, use basic rate control
-        player?.rate = speed
+        if playbackState == .playing {
+            player?.rate = speed
+        } else {
+            player?.rate = 0.0
+        }
     }
     
     private func startTimeObserver() {
@@ -780,6 +892,23 @@ final class PlayerService: NSObject, ObservableObject {
                 entity.lastPlayedAt = Date()
                 entity.isCompleted = self.currentTime >= self.duration * 0.95 // Consider 95% as completed
             }
+        }
+    }
+
+    private func loadSavedPlaybackState(for talkID: String) async -> (position: TimeInterval, playbackSpeed: Float)? {
+        do {
+            return try await persistenceController.performBackgroundTask { context in
+                let request: NSFetchRequest<PlaybackStateEntity> = PlaybackStateEntity.fetchRequest()
+                request.predicate = NSPredicate(format: "talkID == %@", talkID)
+                request.fetchLimit = 1
+                if let entity = try context.fetch(request).first {
+                    return (position: entity.position, playbackSpeed: entity.playbackSpeed)
+                }
+                return nil
+            }
+        } catch {
+            PTLogger.general.error("Failed to load saved playback state: \(error)")
+            return nil
         }
     }
     
