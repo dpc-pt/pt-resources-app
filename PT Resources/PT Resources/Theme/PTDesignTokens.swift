@@ -171,6 +171,13 @@ enum PTDesignTokens {
         static let easeInOut = SwiftUI.Animation.easeInOut(duration: normal)
         static let easeOut = SwiftUI.Animation.easeOut(duration: normal)
         static let bouncy = SwiftUI.Animation.spring(response: 0.3, dampingFraction: 0.7)
+        
+        // Media player specific animations
+        static let playButtonPress = SwiftUI.Animation.spring(response: 0.2, dampingFraction: 0.6)
+        static let miniPlayerDismiss = SwiftUI.Animation.spring(response: 0.4, dampingFraction: 0.8)
+        static let artworkRotation = SwiftUI.Animation.linear(duration: 20).repeatForever(autoreverses: false)
+        static let progressGlow = SwiftUI.Animation.easeInOut(duration: 2).repeatForever(autoreverses: true)
+        static let liveIndicator = SwiftUI.Animation.easeInOut(duration: 1).repeatForever(autoreverses: true)
     }
     
     // MARK: - Z-Index (Layout stacking)

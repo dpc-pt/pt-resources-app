@@ -1,0 +1,6 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+Always ensure that the XCode build is not broken by any changes we make.

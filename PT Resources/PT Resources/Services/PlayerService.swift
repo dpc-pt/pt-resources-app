@@ -278,6 +278,44 @@ final class PlayerService: NSObject, ObservableObject {
         endBackgroundTask()
     }
     
+    /// Completely stop playback and clear all persistence data
+    /// Used when user explicitly dismisses the player (e.g., taps 'x' button)
+    func stopAndClearPersistence() {
+        guard let talk = currentTalk else {
+            stop()
+            return
+        }
+        
+        let talkID = talk.id
+        
+        // Stop playback first
+        stop()
+        
+        // Clear playback persistence
+        clearPlaybackPersistence(for: talkID)
+        
+        // Generate dismissal haptic feedback
+        PTHapticFeedbackService.shared.mediumImpact()
+        
+        PTLogger.general.info("Playback stopped and persistence cleared for talk: \(talkID)")
+    }
+    
+    /// Clear playback persistence for a specific talk
+    func clearPlaybackPersistence(for talkID: String) {
+        Task {
+            try? await persistenceController.performBackgroundTask { context in
+                let request: NSFetchRequest<PlaybackStateEntity> = PlaybackStateEntity.fetchRequest()
+                request.predicate = NSPredicate(format: "talkID == %@", talkID)
+                
+                if let entities = try? context.fetch(request) {
+                    for entity in entities {
+                        context.delete(entity)
+                    }
+                }
+            }
+        }
+    }
+    
     func seek(to time: TimeInterval) {
         guard let player = player else { return }
         
