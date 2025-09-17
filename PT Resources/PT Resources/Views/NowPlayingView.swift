@@ -45,6 +45,8 @@ struct NowPlayingView: View {
     @State private var animateBars: Bool = false
     @State private var currentTranscript: Transcript?
     @State private var streamingTranscript: StreamingTranscript?
+    @State private var isDraggingProgress = false
+    @State private var dragProgress: CGFloat = 0
 
     // Computed properties
     private var currentTalk: Talk? { playerService.currentTalk }
@@ -371,22 +373,12 @@ struct NowPlayingView: View {
                         )
                 )
 
-            VStack(spacing: 16) {
-                Image(systemName: "waveform")
-                    .font(.system(size: size * 0.15, weight: .light))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .symbolEffect(.pulse.byLayer)
-
-                VStack(spacing: 4) {
-                    Text("PT")
-                        .font(.system(size: size * 0.08, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
-                    Text("RESOURCES")
-                        .font(.system(size: size * 0.03, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.8))
-                        .tracking(2)
-                }
-            }
+            // PT Resources logo with correct proportions
+            Image("pt-resources")
+                .resizable()
+                .aspectRatio(600/425, contentMode: .fit) // Correct SVG aspect ratio from viewBox
+                .frame(width: size * 0.7, height: size * 0.7 * (425/600)) // Maintain proportions within 70% of container
+                .opacity(0.9)
         }
         .frame(width: size, height: size)
     }
@@ -464,80 +456,121 @@ struct NowPlayingView: View {
 
     private func enhancedProgressSection(geometry: GeometryProxy) -> some View {
         VStack(spacing: 16) {
-            VStack {
-                GeometryReader { proxy in
-                    let progress = duration > 0 ? CGFloat(currentTime / duration) : 0
-                    let trackWidth = proxy.size.width
-                    let progressWidth = trackWidth * progress
+            // Progress bar with proper spacing and centering
+            HStack {
+                Spacer(minLength: 24) // Left spacing
+                
+                VStack {
+                    GeometryReader { proxy in
+                        let progress = duration > 0 ? CGFloat(currentTime / duration) : 0
+                        let trackWidth = proxy.size.width
+                        let progressWidth = trackWidth * progress
 
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(.white.opacity(0.2))
-                            .frame(height: 8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                    .strokeBorder(.white.opacity(0.1), lineWidth: 0.5)
-                            )
-
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        PTDesignTokens.Colors.tang,
-                                        PTDesignTokens.Colors.turmeric
-                                    ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
+                        ZStack(alignment: .leading) {
+                            // Background track
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(.white.opacity(0.2))
+                                .frame(height: 8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                        .strokeBorder(.white.opacity(0.1), lineWidth: 0.5)
                                 )
-                            )
-                            .frame(width: max(progressWidth, 8), height: 8)
-                            .shadow(color: PTDesignTokens.Colors.tang.opacity(0.6), radius: 4, x: 0, y: 2)
 
-                        Circle()
-                            .fill(.white)
-                            .frame(width: 24, height: 24)
-                            .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 3)
-                            .overlay(
-                                Circle()
-                                    .fill(PTDesignTokens.Colors.tang)
-                                    .frame(width: 12, height: 12)
-                            )
-                            .offset(x: max(progressWidth - 12, 0))
-                            .scaleEffect(isPlaying ? 1.1 : 1.0)
-                            .animation(.easeInOut(duration: 0.2), value: isPlaying)
+                            // Progress fill
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            PTDesignTokens.Colors.tang,
+                                            PTDesignTokens.Colors.turmeric
+                                        ],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(width: max(isDraggingProgress ? dragProgress * trackWidth : progressWidth, 8), height: 8)
+                                .shadow(color: PTDesignTokens.Colors.tang.opacity(0.6), radius: 4, x: 0, y: 2)
+                                .animation(.linear(duration: isDraggingProgress ? 0 : 0.1), value: progressWidth)
+
+                            // Thumb/knob - fixed positioning to prevent jumping
+                            let thumbSize: CGFloat = isDraggingProgress ? 28 : 24
+                            let thumbRadius = thumbSize / 2
+                            let thumbPosition = max((isDraggingProgress ? dragProgress * trackWidth : progressWidth), thumbRadius)
+                            
+                            Circle()
+                                .fill(.white)
+                                .frame(width: thumbSize, height: thumbSize)
+                                .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 3)
+                                .overlay(
+                                    Circle()
+                                        .fill(PTDesignTokens.Colors.tang)
+                                        .frame(width: isDraggingProgress ? 14 : 12, height: isDraggingProgress ? 14 : 12)
+                                        .scaleEffect(isPlaying ? 1.05 : 1.0) // Scale only the inner circle
+                                )
+                                .offset(x: thumbPosition - thumbRadius, y: 0)
+                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDraggingProgress)
+                                .animation(.easeInOut(duration: 0.2), value: isPlaying)
+                        }
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { value in
+                                    if !isDraggingProgress {
+                                        isDraggingProgress = true
+                                        PTHapticFeedbackService.shared.lightImpact()
+                                    }
+                                    dragProgress = max(0, min(1, value.location.x / proxy.size.width))
+                                }
+                                .onEnded { value in
+                                    let finalProgress = max(0, min(1, value.location.x / proxy.size.width))
+                                    let newTime = finalProgress * duration
+                                    playerService.seek(to: newTime)
+                                    isDraggingProgress = false
+                                    PTHapticFeedbackService.shared.mediumImpact()
+                                }
+                        )
                     }
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { value in
-                                let newProgress = max(0, min(1, value.location.x / proxy.size.width))
-                                let newTime = newProgress * duration
-                                playerService.seek(to: newTime)
-                            }
-                    )
+                    .frame(height: 32) // Increased height for better touch target
                 }
-                .frame(height: 24)
+                
+                Spacer(minLength: 24) // Right spacing
             }
             .accessibilityElement()
             .accessibilityLabel("Track Progress")
             .accessibilityValue("\(duration > 0 ? Int((currentTime / duration) * 100) : 0)% complete")
+            .accessibilityAdjustableAction { direction in
+                let increment: TimeInterval = 15 // 15 second increments
+                switch direction {
+                case .increment:
+                    playerService.seek(to: min(currentTime + increment, duration))
+                case .decrement:
+                    playerService.seek(to: max(currentTime - increment, 0))
+                @unknown default:
+                    break
+                }
+            }
 
+            // Time labels with proper spacing
             HStack {
                 Text(formatTime(currentTime))
                     .font(PTFont.ptCaptionText)
                     .fontWeight(.semibold)
                     .foregroundStyle(.white.opacity(0.8))
                     .monospacedDigit()
+                    .frame(minWidth: 60, alignment: .leading)
+                
                 Spacer()
+                
                 if duration > 0 {
                     Text("-\(formatTime(duration - currentTime))")
                         .font(PTFont.ptCaptionText)
                         .fontWeight(.semibold)
                         .foregroundStyle(.white.opacity(0.8))
                         .monospacedDigit()
+                        .frame(minWidth: 60, alignment: .trailing)
                 }
             }
+            .padding(.horizontal, 24) // Match the progress bar spacing
         }
-        .padding(.horizontal, 16)
         .frame(maxWidth: .infinity)
     }
 
