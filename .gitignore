@@ -16,7 +16,6 @@
 # Swift Package Manager
 .build/
 Packages/
-Package.resolved
 
 # CocoaPods
 Pods/
@@ -65,7 +64,6 @@ Thumbs.db
 Secrets.xcconfig
 
 # Swift Package Manager
-Package.resolved
 
 # Testing
 *.xcresult/
