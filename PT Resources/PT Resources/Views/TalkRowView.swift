@@ -2,7 +2,7 @@
 //  TalkRowView.swift
 //  PT Resources
 //
-//  Beautiful talk row with PT branding
+//  Beautiful talk row with PT branding using enhanced components
 //
 
 import SwiftUI
@@ -14,9 +14,7 @@ struct TalkRowView: View {
     let onTalkTap: () -> Void
     let onPlayTap: () -> Void
     let onDownloadTap: () -> Void
-    
-    @State private var isPressed = false
-    
+
     // Only show download option for talks with downloadable audio content
     private var hasDownloadableAudio: Bool {
         guard let audioURL = talk.audioURL, !audioURL.isEmpty else {
@@ -27,9 +25,14 @@ struct TalkRowView: View {
     }
     
     var body: some View {
-        Button(action: onTalkTap) {
+        PTEnhancedCard(
+            style: .standard,
+            size: .medium,
+            isInteractive: false,
+            onTap: onTalkTap
+        ) {
             HStack(spacing: PTDesignTokens.Spacing.md) {
-                // Artwork/Thumbnail with PT styling and caching using priority order
+                // Artwork/Thumbnail with enhanced styling
                 PTAsyncImage(url: talk.artworkURL.flatMap(URL.init),
                            targetSize: CGSize(width: 72, height: 72)) {
                     RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.image)
@@ -62,125 +65,109 @@ struct TalkRowView: View {
                     }
                     .padding(4)
                 )
-                
+
                 // Talk Information
                 VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
                     Text(talk.title)
-                        .font(PTFont.ptCardTitle)  // Using PT typography
-                        .foregroundColor(PTDesignTokens.Colors.ink)  // Using PT Ink for primary text
+                        .font(PTFont.ptCardTitle)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
-                    
+
                     Text(talk.speaker)
-                        .font(PTFont.ptCardSubtitle)  // Using PT typography
-                        .foregroundColor(PTDesignTokens.Colors.tang)  // Using PT Tang for speaker names
-                    
+                        .font(PTFont.ptCardSubtitle)
+                        .foregroundColor(PTDesignTokens.Colors.tang)
+
                     // Series and Scripture Reference
                     VStack(alignment: .leading, spacing: 2) {
                         if let series = talk.series, !series.isEmpty {
                             Text(series)
-                                .font(PTFont.ptCaptionText)  // Using PT typography
-                                .foregroundColor(PTDesignTokens.Colors.medium)  // Using consistent gray
+                                .font(PTFont.ptCaptionText)
+                                .foregroundColor(PTDesignTokens.Colors.medium)
                         }
-                        
+
                         if let scripture = talk.scriptureReference, !scripture.isEmpty {
                             Text(scripture)
-                                .font(PTFont.ptCaptionText)  // Using PT typography
-                                .foregroundColor(PTDesignTokens.Colors.kleinBlue)  // Using Klein Blue for scripture
+                                .font(PTFont.ptCaptionText)
+                                .foregroundColor(PTDesignTokens.Colors.kleinBlue)
                         } else if let biblePassage = talk.biblePassage, !biblePassage.isEmpty {
                             Text(biblePassage)
-                                .font(PTFont.ptCaptionText)  // Using PT typography
-                                .foregroundColor(PTDesignTokens.Colors.kleinBlue)  // Using Klein Blue for scripture
+                                .font(PTFont.ptCaptionText)
+                                .foregroundColor(PTDesignTokens.Colors.kleinBlue)
                         }
                     }
-                    
+
                     // Date and metadata
                     HStack(spacing: PTDesignTokens.Spacing.xs) {
                         if talk.duration > 0 {
                             Text(talk.formattedDuration)
-                                .font(PTFont.ptSmallText)  // Using PT typography
+                                .font(PTFont.ptSmallText)
                                 .foregroundColor(PTDesignTokens.Colors.medium)
-                            
+
                             Text("•")
                                 .font(PTFont.ptSmallText)
                                 .foregroundColor(PTDesignTokens.Colors.light)
                         }
-                        
+
                         Text(talk.formattedDate)
-                            .font(PTFont.ptSmallText)  // Using PT typography
+                            .font(PTFont.ptSmallText)
                             .foregroundColor(PTDesignTokens.Colors.medium)
-                        
+
                         Spacer()
                     }
                 }
-                
+
                 Spacer()
-                
-                // Action Buttons with PT styling
+
+                // Enhanced Action Buttons
                 HStack(spacing: PTDesignTokens.Spacing.sm) {
-                    // Play Button
-                    Button(action: onPlayTap) {
-                        Image(systemName: "play.circle.fill")
-                            .font(PTFont.ptSectionTitle)
-                            .foregroundColor(PTDesignTokens.Colors.tang)  // Using PT Tang
-                    }
-                    .accessibilityPlayButton(isPlaying: false) // TODO: Pass actual playing state
-                    
-                    // Download Button - only show for talks with audio content
+                    // Enhanced Play Button
+                    PTEnhancedButton(
+                        "",
+                        style: .ghost,
+                        size: .small,
+                        leftIcon: Image(systemName: "play.circle.fill"),
+                        action: onPlayTap
+                    )
+                    .accessibilityPlayButton(isPlaying: false)
+
+                    // Enhanced Download Button
                     if hasDownloadableAudio {
-                        Button(action: onDownloadTap) {
-                            if isDownloaded {
-                                // Prioritize showing checkmark when downloaded
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(PTFont.ptCardTitle)
-                                    .foregroundColor(PTDesignTokens.Colors.success)  // Using PT success color
-                            } else if let progress = downloadProgress {
-                                // Show progress only if not downloaded
-                                ZStack {
-                                    Circle()
-                                        .stroke(PTDesignTokens.Colors.tang.opacity(0.3), lineWidth: 2)
-                                    
-                                    Circle()
-                                        .trim(from: 0, to: CGFloat(progress))
-                                        .stroke(PTDesignTokens.Colors.tang, lineWidth: 2)
-                                        .rotationEffect(.degrees(-90))
-                                    
-                                    Text("\(Int(progress * 100))%")
-                                        .font(PTFont.ptCaptionText)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(PTDesignTokens.Colors.tang)
+                        PTEnhancedButton(
+                            "",
+                            style: isDownloaded ? .success : .outline,
+                            size: .small,
+                            leftIcon: isDownloaded ? Image(systemName: "checkmark.circle.fill") :
+                                     (downloadProgress != nil ? nil : Image(systemName: "arrow.down.circle")),
+                            action: onDownloadTap
+                        )
+                        .overlay(
+                            // Progress overlay for downloading state
+                            Group {
+                                if !isDownloaded, let progress = downloadProgress {
+                                    ZStack {
+                                        Circle()
+                                            .stroke(PTDesignTokens.Colors.primary.opacity(0.3), lineWidth: 2)
+
+                                        Circle()
+                                            .trim(from: 0, to: CGFloat(progress))
+                                            .stroke(PTDesignTokens.Colors.primary, lineWidth: 2)
+                                            .rotationEffect(.degrees(-90))
+
+                                        Text("\(Int(progress * 100))%")
+                                            .font(PTFont.ptCaptionText)
+                                            .foregroundColor(PTDesignTokens.Colors.primary)
+                                    }
+                                    .frame(width: 28, height: 28)
                                 }
-                                .frame(width: 28, height: 28)
-                            } else {
-                                // Default download button
-                                Image(systemName: "arrow.down.circle")
-                                    .font(PTFont.ptCardTitle)
-                                    .foregroundColor(PTDesignTokens.Colors.medium)  // Using consistent gray
                             }
-                        }
+                        )
                         .accessibilityDownloadButton(isDownloaded: isDownloaded, downloadProgress: downloadProgress)
                     }
                 }
             }
         }
-        .buttonStyle(PlainButtonStyle())
-        .padding(.horizontal, PTDesignTokens.Spacing.md)
-        .padding(.vertical, PTDesignTokens.Spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                .fill(PTDesignTokens.Colors.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
-                        .stroke(PTDesignTokens.Colors.light.opacity(0.2), lineWidth: 0.5)
-                )
-        )
-        .scaleEffect(isPressed ? 0.98 : 1.0)
         .accessibilityTalkRow(talk, isDownloaded: isDownloaded, downloadProgress: downloadProgress)
-        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
-            withAnimation(.easeInOut(duration: 0.1)) {
-                isPressed = pressing
-            }
-        }, perform: {})
     }
 }
 

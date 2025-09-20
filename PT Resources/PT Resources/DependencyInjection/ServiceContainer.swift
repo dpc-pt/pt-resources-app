@@ -11,15 +11,18 @@ import Combine
 
 // MARK: - Service Container Protocol
 
+@MainActor
 protocol ServiceContainerProtocol {
     // Configuration
     var configuration: ConfigurationProviding { get }
-    
+
     // Core Services
     var mediaManager: MediaManagerProtocol { get }
     var errorCoordinator: any ErrorCoordinatorProtocol { get }
     var filteringService: any FilteringServiceProtocol { get }
     var navigationCoordinator: any NavigationCoordinatorProtocol { get }
+    var securityService: any SecurityServiceProtocol { get }
+    var latestContentService: LatestContentServiceProtocol { get }
     
     // API Services
     var talksAPIService: TalksAPIServiceProtocol { get }
@@ -62,6 +65,14 @@ final class ServiceContainer: ObservableObject, ServiceContainerProtocol {
     
     lazy var navigationCoordinator: any NavigationCoordinatorProtocol = {
         NavigationCoordinator()
+    }()
+
+    lazy var securityService: any SecurityServiceProtocol = {
+        SecurityService()
+    }()
+
+    lazy var latestContentService: LatestContentServiceProtocol = {
+        LatestContentService()
     }()
     
     // MARK: - API Services
@@ -210,6 +221,8 @@ extension View {
             .environmentObject(container.errorCoordinator as! ErrorCoordinator)
             .environmentObject(container.filteringService as! FilteringService)
             .environmentObject(container.navigationCoordinator as! NavigationCoordinator)
+            .environmentObject(container.securityService as! SecurityService)
+            .environmentObject(container.latestContentService as! LatestContentService)
             .environmentObject(container.downloadService)
             .environment(\.serviceContainer, container)
     }
@@ -230,6 +243,7 @@ protocol ImageCacheServiceProtocol {
     func loadImage(from url: URL) async -> UIImage?
     func cacheImage(_ image: UIImage, for url: URL)
     func clearCache()
+    func preloadImages(for urls: [URL]) async
 }
 
 // Protocol declarations are in their respective service files

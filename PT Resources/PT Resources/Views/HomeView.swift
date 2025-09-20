@@ -20,7 +20,7 @@ struct BlogPostNavigationItem: Identifiable {
 }
 
 struct HomeView: View {
-    @StateObject private var latestContentService = LatestContentService()
+    @EnvironmentObject private var serviceContainer: ServiceContainer
     @ObservedObject private var playerService = PlayerService.shared
     @State private var latestContent: LatestContentResponse?
     @State private var isLoading = false
@@ -131,11 +131,16 @@ struct HomeView: View {
     }
     
     private func loadLatestContent() async {
+        let timingToken = PerformanceMonitor.shared.startTiming("load_latest_content")
+
         isLoading = true
         error = nil
-        
+
         do {
-            let content = try await latestContentService.fetchLatestContent()
+            let content = try await PerformanceMonitor.measureTime("fetch_latest_content") {
+                try await serviceContainer.latestContentService.fetchLatestContent()
+            }
+
             await MainActor.run {
                 latestContent = content
             }
@@ -148,8 +153,9 @@ struct HomeView: View {
                 self.error = APIError.networkError(error)
             }
         }
-        
+
         isLoading = false
+        PerformanceMonitor.shared.endTiming(timingToken)
     }
 }
 

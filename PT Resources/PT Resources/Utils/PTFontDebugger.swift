@@ -18,20 +18,6 @@ class PTFontDebugger {
         print("\n🔍 PT Font Debug Report")
         print("========================")
         
-        // Check all expected PT fonts
-        let ptFonts = [
-            ("Agenda-One-Bold", "Agenda One Bold"),
-            ("Agenda-One-Medium", "Agenda One Medium"),
-            ("Fields-Display-Black", "Fields Display Black"),
-            ("fields-display-medium", "Fields Display Medium"),
-            ("OptimaLTPro-BlackItalic", "Optima LT Pro Black Italic"),
-            ("OptimaLTPro-Bold", "Optima LT Pro Bold"),
-            ("OptimaLTPro-BoldItalic", "Optima LT Pro Bold Italic"),
-            ("OptimaLTPro-Italic", "Optima LT Pro Italic"),
-            ("OptimaLTPro-Medium", "Optima LT Pro Medium"),
-            ("OptimaLTPro-MediumItalic", "Optima LT Pro Medium Italic"),
-            ("OptimaLTPro-Roman", "Optima LT Pro Roman")
-        ]
         
     }
     

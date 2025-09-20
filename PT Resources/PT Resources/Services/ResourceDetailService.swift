@@ -47,8 +47,23 @@ final class ResourceDetailService: ObservableObject, ResourceDetailServiceProtoc
                 throw APIError.invalidResponse
             }
             
-            guard httpResponse.statusCode == 200 else {
-                throw APIError.httpError(httpResponse.statusCode)
+            switch httpResponse.statusCode {
+            case 200:
+                break
+            case 400:
+                throw APIError.badRequest(data)
+            case 401:
+                throw APIError.unauthorized
+            case 403:
+                throw APIError.forbidden
+            case 404:
+                throw APIError.notFound
+            case 429:
+                throw APIError.rateLimited
+            case 500...599:
+                throw APIError.serverError
+            default:
+                throw APIError.unknown(statusCode: httpResponse.statusCode, data: data)
             }
             
             let resourceDetail = try decoder.decode(ResourceDetailResponse.self, from: data)

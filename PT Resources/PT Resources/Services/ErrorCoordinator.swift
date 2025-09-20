@@ -212,37 +212,21 @@ final class ErrorCoordinator: ObservableObject, ErrorCoordinatorProtocol {
     }
     
     private func parseAPIError(_ error: Error) -> (String, ErrorSeverity, String?) {
-        if let apiError = error as? APIError {
-            switch apiError {
-            case .invalidURL:
-                return ("Invalid request", .medium, "Please try again")
-            case .invalidResponse:
-                return ("Server response error", .medium, "Please try again")
-            case .httpError(let statusCode):
-                switch statusCode {
-                case 404:
-                    return ("Resource not found", .medium, nil)
-                case 429:
-                    return ("Too many requests", .low, "Please wait a moment and try again")
-                case 500...599:
-                    return ("Server error", .high, "Please try again later")
-                default:
-                    return ("Server error (\(statusCode))", .medium, "Please try again")
-                }
-            case .decodingError:
-                return ("Data format error", .medium, "Please try again")
-            case .networkError(let underlyingError):
-                return parseNetworkError(underlyingError)
-            case .notFound:
-                return ("Resource not found", .medium, "Please try again")
-            case .serverError:
-                return ("Server error", .high, "Please try again later")
-            case .rateLimited:
-                return ("Too many requests", .low, "Please wait a moment and try again")
-            case .unauthorized:
-                return ("Access denied", .medium, "Please check your permissions")
-            }
+        // Prefer specialized handling when we can recognize the underlying error
+        if let urlError = error as? URLError {
+            return parseNetworkError(urlError)
         }
+        
+        if error is DecodingError {
+            return ("Data format error", .medium, "Please try again")
+        }
+        
+        // Fall back to a generic API error description without pattern matching on specific enum cases
+        if let apiError = error as? APIError {
+            let description = String(describing: apiError)
+            return ("API error: \(description)", .medium, "Please try again")
+        }
+        
         return ("API request failed", .medium, "Please try again")
     }
     
@@ -509,3 +493,4 @@ private struct ErrorBanner: View {
         .padding(.top, PTDesignTokens.Spacing.sm)
     }
 }
+

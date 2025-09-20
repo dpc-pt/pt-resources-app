@@ -41,21 +41,23 @@ final class TalksViewModel: ObservableObject {
     private let filtersAPIService: FiltersAPIServiceProtocol
     private let persistenceController: PersistenceController
     private let filteringService: FilteringService
+    private let imageCacheService: ImageCacheServiceProtocol
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Initialization
     
-    init(apiService: TalksAPIServiceProtocol, filtersAPIService: FiltersAPIServiceProtocol = FiltersAPIService(), persistenceController: PersistenceController = .shared, filteringService: FilteringService? = nil, initialFilters: TalkSearchFilters? = nil) {
+    init(apiService: TalksAPIServiceProtocol, filtersAPIService: FiltersAPIServiceProtocol = FiltersAPIService(), persistenceController: PersistenceController = .shared, filteringService: FilteringService? = nil, imageCacheService: ImageCacheServiceProtocol = ImageCacheService.shared, initialFilters: TalkSearchFilters? = nil) {
         self.apiService = apiService
         self.filtersAPIService = filtersAPIService
         self.persistenceController = persistenceController
         self.filteringService = filteringService ?? FilteringService()
-        
+        self.imageCacheService = imageCacheService
+
         // Set initial filters if provided
         if let initialFilters = initialFilters {
             self.selectedFilters = initialFilters
         }
-        
+
         setupBindings()
         loadTalks()
         loadFilterOptions()
@@ -71,9 +73,23 @@ final class TalksViewModel: ObservableObject {
     
     func loadMoreTalks() {
         guard !isLoading && hasMorePages else { return }
-        
+
         Task {
             await fetchTalks(page: currentPage + 1, resetList: false)
+
+            // Preload images for the next few items to improve scroll performance
+            let visibleCount = min(talks.count, 20) // Last 20 items
+            if visibleCount > 0 {
+                let urlsToPreload = talks.suffix(visibleCount).compactMap { talk -> URL? in
+                    guard let artworkURL = talk.artworkURL, !artworkURL.isEmpty else { return nil }
+                    return URL(string: artworkURL)
+                }
+                if !urlsToPreload.isEmpty {
+                    Task {
+                        await imageCacheService.preloadImages(for: urlsToPreload)
+                    }
+                }
+            }
         }
     }
     
@@ -189,9 +205,11 @@ final class TalksViewModel: ObservableObject {
     }
     
     private func fetchTalks(page: Int, resetList: Bool) async {
+        let timingToken = PerformanceMonitor.shared.startTiming("fetchTalks_page_\(page)")
+
         isLoading = true
         error = nil
-        
+
         do {
             let response = try await apiService.fetchTalks(
                 filters: selectedFilters,
@@ -232,13 +250,14 @@ final class TalksViewModel: ObservableObject {
             
         } catch {
             self.error = APIError.networkError(error)
-            
+
             if resetList {
                 await loadCachedTalks()
             }
         }
-        
+
         isLoading = false
+        PerformanceMonitor.shared.endTiming(timingToken)
     }
     
     private func cacheTalks(_ talks: [Talk]) async {

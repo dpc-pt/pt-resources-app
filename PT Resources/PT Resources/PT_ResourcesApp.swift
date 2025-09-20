@@ -70,6 +70,11 @@ struct PT_ResourcesApp: App {
 
                 // Restore last playback (if any) so mini player is available on launch
                 await PlayerService.shared.restoreLastPlaybackIfAvailable()
+
+                // Enable performance monitoring in debug builds
+                #if DEBUG
+                PerformanceMonitor.shared.enableMonitoring()
+                #endif
             }
         }
     }

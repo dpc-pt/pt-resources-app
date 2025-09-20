@@ -18,6 +18,7 @@ struct MainTabView: View {
                 get: { navigationCoordinator.selectedTab.rawValue },
                 set: { navigationCoordinator.selectedTab = TabSelection(rawValue: $0) ?? .home }
             ))
+                .withServices(serviceContainer)
                 .tabItem {
                     Image(systemName: TabSelection.home.iconName)
                     Text(TabSelection.home.title)
@@ -27,6 +28,7 @@ struct MainTabView: View {
 
             // Resources Tab
             TalksListView()
+                .withServices(serviceContainer)
                 .tabItem {
                     Image(systemName: TabSelection.resources.iconName)
                     Text(TabSelection.resources.title)
@@ -34,8 +36,9 @@ struct MainTabView: View {
                 .tag(TabSelection.resources)
                 .accessibilityIdentifier(TabSelection.resources.accessibilityIdentifier)
 
-            // Conferences Tab  
+            // Conferences Tab
             ConferencesListView()
+                .withServices(serviceContainer)
                 .tabItem {
                     Image(systemName: TabSelection.conferences.iconName)
                     Text(TabSelection.conferences.title)
@@ -45,6 +48,7 @@ struct MainTabView: View {
 
             // Blog Tab
             BlogListView()
+                .withServices(serviceContainer)
                 .tabItem {
                     Image(systemName: TabSelection.blog.iconName)
                     Text(TabSelection.blog.title)
@@ -54,6 +58,7 @@ struct MainTabView: View {
 
             // Downloads Tab
             DownloadsView()
+                .withServices(serviceContainer)
                 .tabItem {
                     Image(systemName: TabSelection.downloads.iconName)
                     Text(TabSelection.downloads.title)

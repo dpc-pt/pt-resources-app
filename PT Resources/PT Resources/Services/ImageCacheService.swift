@@ -155,6 +155,23 @@ final class ImageCacheService: ImageCacheServiceProtocol {
         prefetchImages(urls: imageUrls, maxConcurrent: 2)
     }
 
+    /// Preload images for better performance
+    func preloadImages(for urls: [URL]) async {
+        guard !urls.isEmpty else { return }
+
+        await withTaskGroup(of: Void.self) { group in
+            for url in urls {
+                group.addTask {
+                    do {
+                        _ = try await self.loadImage(from: url, targetSize: CGSize(width: 72, height: 72))
+                    } catch {
+                        PTLogger.general.debug("Failed to preload image \(url.absoluteString): \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
+    }
+
     /// Clear all caches (async version)
     private func clearCacheAsync() async {
         // Clear memory cache

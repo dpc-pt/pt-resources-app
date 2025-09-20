@@ -47,7 +47,7 @@ final class TalksAPIService: TalksAPIServiceProtocol, ObservableObject {
         )
         
         guard let url = URL(string: endpoint.url) else {
-            throw APIError.invalidURL
+            throw TalksAPIError.invalidURL
         }
         
         var request = URLRequest(url: url)
@@ -57,20 +57,20 @@ final class TalksAPIService: TalksAPIServiceProtocol, ObservableObject {
             let (data, response) = try await session.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
-                throw APIError.invalidResponse
+                throw TalksAPIError.invalidResponse
             }
             
             guard httpResponse.statusCode == 200 else {
-                throw APIError.httpError(httpResponse.statusCode)
+                throw TalksAPIError.httpError(httpResponse.statusCode)
             }
             
             return try decoder.decode(TalksResponse.self, from: data)
             
         } catch {
-            if error is APIError {
+            if error is TalksAPIError {
                 throw error
             } else {
-                throw APIError.networkError(error)
+                throw TalksAPIError.networkError(error)
             }
         }
     }
@@ -85,7 +85,7 @@ final class TalksAPIService: TalksAPIServiceProtocol, ObservableObject {
         let endpoint = Config.APIEndpoint.resourceDetail(id: id)
         
         guard let url = URL(string: endpoint.url) else {
-            throw APIError.invalidURL
+            throw TalksAPIError.invalidURL
         }
         
         var request = URLRequest(url: url)
@@ -95,21 +95,21 @@ final class TalksAPIService: TalksAPIServiceProtocol, ObservableObject {
             let (data, response) = try await session.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
-                throw APIError.invalidResponse
+                throw TalksAPIError.invalidResponse
             }
             
             guard httpResponse.statusCode == 200 else {
-                throw APIError.httpError(httpResponse.statusCode)
+                throw TalksAPIError.httpError(httpResponse.statusCode)
             }
             
             let detailResponse = try decoder.decode(TalkDetailResponse.self, from: data)
             return detailResponse.resource
             
         } catch {
-            if error is APIError {
+            if error is TalksAPIError {
                 throw error
             } else {
-                throw APIError.networkError(error)
+                throw TalksAPIError.networkError(error)
             }
         }
     }
@@ -125,7 +125,7 @@ final class TalksAPIService: TalksAPIServiceProtocol, ObservableObject {
         let endpoint = Config.APIEndpoint.resourceDetail(id: id)
         
         guard let url = URL(string: endpoint.url) else {
-            throw APIError.invalidURL
+            throw TalksAPIError.invalidURL
         }
         
         var request = URLRequest(url: url)
@@ -135,21 +135,21 @@ final class TalksAPIService: TalksAPIServiceProtocol, ObservableObject {
             let (data, response) = try await session.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
-                throw APIError.invalidResponse
+                throw TalksAPIError.invalidResponse
             }
             
             guard httpResponse.statusCode == 200 else {
-                throw APIError.httpError(httpResponse.statusCode)
+                throw TalksAPIError.httpError(httpResponse.statusCode)
             }
             
             let chaptersResponse = try decoder.decode(ChaptersResponse.self, from: data)
             return chaptersResponse.chapters
             
         } catch {
-            if error is APIError {
+            if error is TalksAPIError {
                 throw error
             } else {
-                throw APIError.networkError(error)
+                throw TalksAPIError.networkError(error)
             }
         }
     }
@@ -164,7 +164,7 @@ final class TalksAPIService: TalksAPIServiceProtocol, ObservableObject {
         let endpoint = Config.APIEndpoint.resourceDownload(id: talkID)
         
         guard let url = URL(string: endpoint.url) else {
-            throw APIError.invalidURL
+            throw TalksAPIError.invalidURL
         }
         
         var request = URLRequest(url: url)
@@ -175,20 +175,20 @@ final class TalksAPIService: TalksAPIServiceProtocol, ObservableObject {
             let (data, response) = try await session.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
-                throw APIError.invalidResponse
+                throw TalksAPIError.invalidResponse
             }
             
             guard httpResponse.statusCode == 200 else {
-                throw APIError.httpError(httpResponse.statusCode)
+                throw TalksAPIError.httpError(httpResponse.statusCode)
             }
             
             return try decoder.decode(DownloadResponse.self, from: data)
             
         } catch {
-            if error is APIError {
+            if error is TalksAPIError {
                 throw error
             } else {
-                throw APIError.networkError(error)
+                throw TalksAPIError.networkError(error)
             }
         }
     }
@@ -206,7 +206,7 @@ private struct ChaptersResponse: Codable {
     let chapters: [Chapter]
 }
 
-enum APIError: LocalizedError {
+enum TalksAPIError: LocalizedError {
     case invalidURL
     case invalidResponse
     case httpError(Int)
@@ -360,7 +360,7 @@ final class MockTalksAPIService: TalksAPIServiceProtocol {
     
     func fetchTalks(filters: TalkSearchFilters, page: Int, sortOption: TalkSortOption = .dateNewest) async throws -> TalksResponse {
         if shouldFail {
-            throw APIError.serverError
+            throw TalksAPIError.serverError
         }
         
         return TalksResponse(
@@ -374,7 +374,7 @@ final class MockTalksAPIService: TalksAPIServiceProtocol {
     
     func fetchTalkDetail(id: String) async throws -> Talk {
         if shouldFail {
-            throw APIError.notFound
+            throw TalksAPIError.notFound
         }
         
         return mockTalks.first { $0.id == id } ?? mockTalks.first!
@@ -382,7 +382,7 @@ final class MockTalksAPIService: TalksAPIServiceProtocol {
     
     func fetchTalkChapters(id: String) async throws -> [Chapter] {
         if shouldFail {
-            throw APIError.notFound
+            throw TalksAPIError.notFound
         }
         
         return mockChapters
@@ -390,7 +390,7 @@ final class MockTalksAPIService: TalksAPIServiceProtocol {
     
     func getDownloadURL(for talkID: String) async throws -> DownloadResponse {
         if shouldFail {
-            throw APIError.serverError
+            throw TalksAPIError.serverError
         }
         
         // Use a real MP3 file for testing when mock services are explicitly requested

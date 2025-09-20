@@ -54,7 +54,22 @@ final class BlogAPIService: BlogAPIServiceProtocol, ObservableObject {
             }
 
             guard httpResponse.statusCode == 200 else {
-                throw APIError.httpError(httpResponse.statusCode)
+                switch httpResponse.statusCode {
+                case 400:
+                    throw APIError.badRequest(data)
+                case 401:
+                    throw APIError.unauthorized
+                case 403:
+                    throw APIError.forbidden
+                case 404:
+                    throw APIError.notFound
+                case 429:
+                    throw APIError.rateLimited
+                case 500...:
+                    throw APIError.serverError
+                default:
+                    throw APIError.unknown(statusCode: httpResponse.statusCode, data: data)
+                }
             }
 
             let blogResponse = try decoder.decode(BlogPostsResponse.self, from: data)
@@ -93,7 +108,22 @@ final class BlogAPIService: BlogAPIServiceProtocol, ObservableObject {
             }
 
             guard httpResponse.statusCode == 200 else {
-                throw APIError.httpError(httpResponse.statusCode)
+                switch httpResponse.statusCode {
+                case 400:
+                    throw APIError.badRequest(data)
+                case 401:
+                    throw APIError.unauthorized
+                case 403:
+                    throw APIError.forbidden
+                case 404:
+                    throw APIError.notFound
+                case 429:
+                    throw APIError.rateLimited
+                case 500...:
+                    throw APIError.serverError
+                default:
+                    throw APIError.unknown(statusCode: httpResponse.statusCode, data: data)
+                }
             }
 
             let blogPost = try decoder.decode(BlogPost.self, from: data)

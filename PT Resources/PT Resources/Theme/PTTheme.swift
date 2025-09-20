@@ -165,20 +165,20 @@ struct Shadow {
 
 // MARK: - View Modifiers
 
-struct PTCardStyle: ViewModifier {
+struct PTCardStyleModifier: ViewModifier {
     let isPressed: Bool
-    
+
     init(isPressed: Bool = false) {
         self.isPressed = isPressed
     }
-    
+
     func body(content: Content) -> some View {
         content
             .background(Color.ptSurface)
             .cornerRadius(PTDesignTokens.BorderRadius.card)
-            .shadow(color: Color.black.opacity(isPressed ? 0.05 : 0.1), 
-                   radius: isPressed ? 4 : 8, 
-                   x: 0, 
+            .shadow(color: Color.black.opacity(isPressed ? 0.05 : 0.1),
+                   radius: isPressed ? 4 : 8,
+                   x: 0,
                    y: isPressed ? 2 : 4)
             .scaleEffect(isPressed ? 0.98 : 1.0)
             .animation(.easeInOut(duration: 0.2), value: isPressed)
@@ -321,7 +321,7 @@ struct PTOutlineButton: ViewModifier {
 
 extension View {
     func ptCardStyle(isPressed: Bool = false) -> some View {
-        self.modifier(PTCardStyle(isPressed: isPressed))
+        self.modifier(PTCardStyleModifier(isPressed: isPressed))
     }
     
     func ptPrimaryButton(isPressed: Bool = false, isDisabled: Bool = false) -> some View {

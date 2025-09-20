@@ -21,6 +21,7 @@ struct PTLogger {
     static let download = Logger(subsystem: subsystem, category: "Download")
     static let fonts = Logger(subsystem: subsystem, category: "Fonts")
     static let general = Logger(subsystem: subsystem, category: "General")
+    static let security = Logger(subsystem: subsystem, category: "Security")
 
     // MARK: - Convenience Methods
 

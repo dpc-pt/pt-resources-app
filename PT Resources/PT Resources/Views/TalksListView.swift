@@ -16,13 +16,12 @@ struct ResourceNavigationItem: Identifiable {
 }
 
 struct TalksListView: View {
-    
+    @EnvironmentObject private var serviceContainer: ServiceContainer
+
     @StateObject private var viewModel: TalksViewModel
     @ObservedObject private var playerService: PlayerService = PlayerService.shared
     @EnvironmentObject private var downloadService: DownloadService
     @StateObject private var networkMonitor = NetworkMonitor()
-    @StateObject private var filtersAPIService: FiltersAPIService
-    private let apiService: TalksAPIServiceProtocol
     
     @State private var showingFilters = false
     @State private var showingSortOptions = false
@@ -32,10 +31,13 @@ struct TalksListView: View {
     @State private var isLoadingDownloadedTalks = false
 
     
-    init(apiService: TalksAPIServiceProtocol = TalksAPIService(), filtersAPIService: FiltersAPIService = FiltersAPIService(), initialFilters: TalkSearchFilters? = nil) {
-        self.apiService = apiService
-        self._filtersAPIService = StateObject(wrappedValue: filtersAPIService)
-        self._viewModel = StateObject(wrappedValue: TalksViewModel(apiService: apiService, filtersAPIService: filtersAPIService, initialFilters: initialFilters))
+    init(initialFilters: TalkSearchFilters? = nil) {
+        self._viewModel = StateObject(wrappedValue: TalksViewModel(
+            apiService: TalksAPIService(),
+            filtersAPIService: FiltersAPIService(),
+            imageCacheService: ImageCacheService.shared,
+            initialFilters: initialFilters
+        ))
     }
     
     var body: some View {
@@ -154,7 +156,7 @@ struct TalksListView: View {
         .sheet(isPresented: $showingFilters) {
             EnhancedFilterView(
                 filters: viewModel.selectedFilters,
-                filtersAPIService: filtersAPIService,
+                filtersAPIService: serviceContainer.filtersAPIService as! FiltersAPIService,
                 onFiltersChanged: { newFilters in
                     viewModel.applyFilters(newFilters)
                 }
@@ -599,7 +601,7 @@ struct EmptyStateView: View {
 
 struct TalksListView_Previews: PreviewProvider {
     static var previews: some View {
-        TalksListView(apiService: MockTalksAPIService())
+        TalksListView()
     }
 }
 
