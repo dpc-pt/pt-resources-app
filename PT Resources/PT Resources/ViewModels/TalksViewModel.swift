@@ -28,6 +28,7 @@ final class TalksViewModel: ObservableObject {
     @Published var error: APIError?
     @Published var hasMorePages = true
     @Published var currentPage = 1
+    @Published var selectedSortOption: TalkSortOption = .dateNewest
     
     // MARK: - Filter Properties
     
@@ -39,14 +40,16 @@ final class TalksViewModel: ObservableObject {
     private let apiService: TalksAPIServiceProtocol
     private let filtersAPIService: FiltersAPIServiceProtocol
     private let persistenceController: PersistenceController
+    private let filteringService: FilteringService
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Initialization
     
-    init(apiService: TalksAPIServiceProtocol, filtersAPIService: FiltersAPIServiceProtocol = FiltersAPIService(), persistenceController: PersistenceController = .shared, initialFilters: TalkSearchFilters? = nil) {
+    init(apiService: TalksAPIServiceProtocol, filtersAPIService: FiltersAPIServiceProtocol = FiltersAPIService(), persistenceController: PersistenceController = .shared, filteringService: FilteringService? = nil, initialFilters: TalkSearchFilters? = nil) {
         self.apiService = apiService
         self.filtersAPIService = filtersAPIService
         self.persistenceController = persistenceController
+        self.filteringService = filteringService ?? FilteringService()
         
         // Set initial filters if provided
         if let initialFilters = initialFilters {
@@ -83,12 +86,8 @@ final class TalksViewModel: ObservableObject {
     func searchTalks() {
         selectedFilters.query = searchText
         
-        // Apply client-side filtering immediately if we have talks
-        if !talks.isEmpty {
-            applyClientSideFiltering()
-        }
-        
-        // Also fetch fresh data from API
+        // Fetch fresh data from API with search query
+        // Server-side search will be applied automatically
         Task {
             await fetchTalks(page: 1, resetList: true)
         }
@@ -103,12 +102,8 @@ final class TalksViewModel: ObservableObject {
     func applyFilters(_ filters: TalkSearchFilters) {
         selectedFilters = filters
         
-        // Apply client-side filtering immediately if we have talks
-        if !talks.isEmpty {
-            applyClientSideFiltering()
-        }
-        
-        // Also fetch fresh data from API (which may or may not support filtering)
+        // Fetch fresh data from API with new filters
+        // Server-side filtering will be applied automatically
         Task {
             await fetchTalks(page: 1, resetList: true)
         }
@@ -167,6 +162,19 @@ final class TalksViewModel: ObservableObject {
         }
     }
     
+    // MARK: - Sort Management Methods
+    
+    func applySortOption(_ sortOption: TalkSortOption) {
+        print("🔄 [TalksViewModel] applySortOption called: \(sortOption)")
+        selectedSortOption = sortOption
+        
+        // Fetch fresh data from API with new sort order
+        // Server-side sorting will be applied automatically
+        Task {
+            await fetchTalks(page: 1, resetList: true)
+        }
+    }
+    
     // MARK: - Private Methods
     
     private func setupBindings() {
@@ -187,18 +195,24 @@ final class TalksViewModel: ObservableObject {
         do {
             let response = try await apiService.fetchTalks(
                 filters: selectedFilters,
-                page: page
+                page: page,
+                sortOption: selectedSortOption
             )
+            
             
             if resetList {
                 talks = response.talks
                 currentPage = 1
             } else {
+                let previousCount = talks.count
                 talks.append(contentsOf: response.talks)
                 currentPage = page
             }
             
             hasMorePages = response.hasMore
+            
+            // Apply client-side filtering for unsupported filters
+            // Server-side sorting is now handled by the API
             applyClientSideFiltering()
 
             // Cache talks locally
@@ -336,61 +350,23 @@ final class TalksViewModel: ObservableObject {
         isLoadingFilters = false
     }
     
-    /// Apply client-side filtering to the talks array
-    /// Note: Sorting is handled server-side via API; this method only applies filtering
+    /// Apply client-side filtering for filters not supported by the API
+    /// Server-side filtering and sorting are now handled by the API
     private func applyClientSideFiltering() {
-        // Filter the talks (server-side sorting is already applied)
+        // Check if we have any client-side only filters that need to be applied
+        let hasClientSideFilters = (selectedFilters.series != nil && !selectedFilters.series!.isEmpty) ||
+                                   selectedFilters.dateFrom != nil ||
+                                   selectedFilters.dateTo != nil
+        
+        // If no client-side filters are needed, use server results directly (already sorted)
+        guard hasClientSideFilters else {
+            filteredTalks = talks
+            return
+        }
+        
+        // Apply client-side filtering for unsupported filters
         let filtered = talks.filter { talk in
-            // Search text filter
-            if !selectedFilters.query.isEmpty {
-                let searchTerms = selectedFilters.query.lowercased()
-                let matchesTitle = talk.title.lowercased().contains(searchTerms)
-                let matchesSpeaker = talk.speaker.lowercased().contains(searchTerms)
-                let matchesDescription = talk.description?.lowercased().contains(searchTerms) ?? false
-                if !(matchesTitle || matchesSpeaker || matchesDescription) {
-                    return false
-                }
-            }
-            
-            // Conference filter
-            if !selectedFilters.conferenceIds.isEmpty {
-                if let conferenceId = talk.conferenceId {
-                    if !selectedFilters.conferenceIds.contains(conferenceId) {
-                        return false
-                    }
-                } else {
-                    return false
-                }
-            }
-            
-            // Speaker ID filter (multiple speakers)
-            if !selectedFilters.speakerIds.isEmpty {
-                if let speakerIds = talk.speakerIds, !speakerIds.isEmpty {
-                    let hasMatchingSpeaker = selectedFilters.speakerIds.contains { selectedId in
-                        speakerIds.contains(selectedId)
-                    }
-                    if !hasMatchingSpeaker {
-                        return false
-                    }
-                } else {
-                    // Fallback to name-based matching if no IDs available
-                    let speakerMatches = selectedFilters.speakerIds.contains { speakerId in
-                        talk.speaker.lowercased().contains(speakerId.lowercased())
-                    }
-                    if !speakerMatches {
-                        return false
-                    }
-                }
-            }
-            
-            // Speaker filter (legacy single speaker)
-            if let speakerFilter = selectedFilters.speaker, !speakerFilter.isEmpty {
-                if !talk.speaker.lowercased().contains(speakerFilter.lowercased()) {
-                    return false
-                }
-            }
-            
-            // Series filter (legacy)
+            // Series filter (client-side only - not supported by API)
             if let seriesFilter = selectedFilters.series, !seriesFilter.isEmpty {
                 if let series = talk.series {
                     if !series.lowercased().contains(seriesFilter.lowercased()) {
@@ -401,54 +377,7 @@ final class TalksViewModel: ObservableObject {
                 }
             }
             
-            // Bible book filter
-            if !selectedFilters.bibleBookIds.isEmpty {
-                if let bookIds = talk.bookIds, !bookIds.isEmpty {
-                    let hasMatchingBook = selectedFilters.bibleBookIds.contains { selectedBookId in
-                        bookIds.contains(selectedBookId)
-                    }
-                    if !hasMatchingBook {
-                        return false
-                    }
-                } else if let biblePassage = talk.biblePassage {
-                    // Fallback to passage text matching
-                    let passageMatches = selectedFilters.bibleBookIds.contains { bookId in
-                        biblePassage.lowercased().contains(bookId.lowercased())
-                    }
-                    if !passageMatches {
-                        return false
-                    }
-                } else {
-                    return false
-                }
-            }
-            
-            // Collections filter
-            if !selectedFilters.collections.isEmpty {
-                // Map collections to series or category - for now use series
-                if let series = talk.series {
-                    let seriesMatches = selectedFilters.collections.contains { collection in
-                        series.lowercased().contains(collection.lowercased())
-                    }
-                    if !seriesMatches {
-                        return false
-                    }
-                } else {
-                    return false
-                }
-            }
-            
-            // Year filter
-            if !selectedFilters.years.isEmpty {
-                let calendar = Calendar.current
-                let year = calendar.component(.year, from: talk.dateRecorded)
-                let yearString = String(year)
-                if !selectedFilters.years.contains(yearString) {
-                    return false
-                }
-            }
-            
-            // Date range filters
+            // Date range filters (not supported by API)
             if let dateFrom = selectedFilters.dateFrom {
                 if talk.dateRecorded < dateFrom {
                     return false
@@ -464,8 +393,7 @@ final class TalksViewModel: ObservableObject {
             return true
         }
         
-        // For server data, sorting is already applied by the API
-        // Only apply client-side sorting for cached/offline data or when no server data available
+        // Server-side sorting is already applied, so filtered results maintain sort order
         filteredTalks = filtered
     }
     

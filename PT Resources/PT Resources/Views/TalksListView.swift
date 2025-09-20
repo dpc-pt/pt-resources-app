@@ -25,6 +25,7 @@ struct TalksListView: View {
     private let apiService: TalksAPIServiceProtocol
     
     @State private var showingFilters = false
+    @State private var showingSortOptions = false
     @State private var selectedTalk: Talk?
     @State private var selectedResourceId: String?
     @State private var downloadedTalks: [DownloadedTalk] = []
@@ -52,13 +53,33 @@ struct TalksListView: View {
                             viewModel.searchTalks()
                         })
                         
-                        // Filter Bar with PT styling
-                        PTFilterBar(
-                            showingFilters: $showingFilters,
-                            activeFiltersCount: activeFiltersCount,
-                            activeFilters: activeFilterLabels,
-                            onClearFilter: removeFilter
-                        )
+                        // Filter and Sort Bar with PT styling
+                        HStack(alignment: .top, spacing: PTDesignTokens.Spacing.md) {
+                            // Filter section (left side)
+                            VStack(spacing: PTDesignTokens.Spacing.md) {
+                                HStack(spacing: PTDesignTokens.Spacing.md) {
+                                    FilterButton(
+                                        isActive: activeFiltersCount > 0,
+                                        activeCount: activeFiltersCount,
+                                        action: { showingFilters = true }
+                                    )
+                                    
+                                    Spacer()
+                                    
+                                    PTSortButton(
+                                        currentSortOption: viewModel.selectedSortOption,
+                                        action: { showingSortOptions = true }
+                                    )
+                                }
+                                
+                                if !activeFilterLabels.isEmpty {
+                                    ActiveFiltersView(
+                                        filters: activeFilterLabels,
+                                        onClearFilter: removeFilter
+                                    )
+                                }
+                            }
+                        }
                         
 
                     }
@@ -136,6 +157,14 @@ struct TalksListView: View {
                 filtersAPIService: filtersAPIService,
                 onFiltersChanged: { newFilters in
                     viewModel.applyFilters(newFilters)
+                }
+            )
+        }
+        .sheet(isPresented: $showingSortOptions) {
+            PTSortOptionsSheet(
+                selectedOption: viewModel.selectedSortOption,
+                onOptionSelected: { sortOption in
+                    viewModel.applySortOption(sortOption)
                 }
             )
         }

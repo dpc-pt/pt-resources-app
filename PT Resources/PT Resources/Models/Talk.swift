@@ -434,9 +434,6 @@ enum TalkSortOption: String, CaseIterable, Codable {
     case dateOldest = "date_asc"
     case titleAZ = "title_asc"
     case titleZA = "title_desc"
-    case speaker = "speaker_asc"
-    case series = "series_asc"
-    case duration = "duration_desc"
     
     var displayName: String {
         switch self {
@@ -444,9 +441,22 @@ enum TalkSortOption: String, CaseIterable, Codable {
         case .dateOldest: return "Oldest First"
         case .titleAZ: return "Title A-Z"
         case .titleZA: return "Title Z-A"
-        case .speaker: return "Speaker"
-        case .series: return "Series"
-        case .duration: return "Duration"
+        }
+    }
+    
+    var description: String? {
+        switch self {
+        case .dateNewest: return "Most recent talks first"
+        case .dateOldest: return "Oldest talks first"
+        case .titleAZ: return "Alphabetical by title"
+        case .titleZA: return "Reverse alphabetical by title"
+        }
+    }
+    
+    var iconName: String {
+        switch self {
+        case .dateNewest, .dateOldest: return "calendar"
+        case .titleAZ, .titleZA: return "textformat"
         }
     }
 }

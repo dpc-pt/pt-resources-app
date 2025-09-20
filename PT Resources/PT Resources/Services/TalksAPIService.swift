@@ -9,7 +9,7 @@ import Foundation
 import Combine
 
 protocol TalksAPIServiceProtocol {
-    func fetchTalks(filters: TalkSearchFilters, page: Int) async throws -> TalksResponse
+    func fetchTalks(filters: TalkSearchFilters, page: Int, sortOption: TalkSortOption) async throws -> TalksResponse
     func fetchTalkDetail(id: String) async throws -> Talk
     func fetchTalkChapters(id: String) async throws -> [Chapter]
     func getDownloadURL(for talkID: String) async throws -> DownloadResponse
@@ -33,19 +33,18 @@ final class TalksAPIService: TalksAPIServiceProtocol, ObservableObject {
     
     // MARK: - API Methods
     
-    func fetchTalks(filters: TalkSearchFilters = TalkSearchFilters(), page: Int = 1) async throws -> TalksResponse {
-        
+    func fetchTalks(filters: TalkSearchFilters = TalkSearchFilters(), page: Int = 1, sortOption: TalkSortOption = .dateNewest) async throws -> TalksResponse {
         // Use mock data if configured
         if Config.useMockServices {
-            return await mockFetchTalks(filters: filters, page: page)
+            return await mockFetchTalks(filters: filters, page: page, sortOption: sortOption)
         }
         
         let endpoint = Config.APIEndpoint.resources(
             filters: filters,
             page: page,
-            limit: 12
+            limit: 12,
+            sortOption: sortOption
         )
-        
         
         guard let url = URL(string: endpoint.url) else {
             throw APIError.invalidURL
@@ -197,7 +196,7 @@ final class TalksAPIService: TalksAPIServiceProtocol, ObservableObject {
     func searchTalks(query: String, page: Int = 1) async throws -> TalksResponse {
         var filters = TalkSearchFilters()
         filters.query = query
-        return try await fetchTalks(filters: filters, page: page)
+        return try await fetchTalks(filters: filters, page: page, sortOption: .dateNewest)
     }
 }
 
@@ -257,7 +256,7 @@ enum APIError: LocalizedError {
 
 extension TalksAPIService {
     
-    private func mockFetchTalks(filters: TalkSearchFilters, page: Int) async -> TalksResponse {
+    private func mockFetchTalks(filters: TalkSearchFilters, page: Int, sortOption: TalkSortOption) async -> TalksResponse {
         // Simulate network delay
         try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
         
@@ -282,8 +281,17 @@ extension TalksAPIService {
             talks = talks.filter { $0.series == series }
         }
         
-        // Default sorting: newest first (matches API default behavior)
-        talks = talks.sorted { $0.dateRecorded > $1.dateRecorded }
+        // Apply sorting based on the selected sort option (now supported by API)
+        switch sortOption {
+        case .dateNewest:
+            talks = talks.sorted { $0.dateRecorded > $1.dateRecorded }
+        case .dateOldest:
+            talks = talks.sorted { $0.dateRecorded < $1.dateRecorded }
+        case .titleAZ:
+            talks = talks.sorted { $0.title < $1.title }
+        case .titleZA:
+            talks = talks.sorted { $0.title > $1.title }
+        }
         
         // Paginate
         let pageSize = 20
@@ -350,7 +358,7 @@ final class MockTalksAPIService: TalksAPIServiceProtocol {
     var mockTalks = Talk.mockTalks
     var mockChapters = Talk.mockChapters
     
-    func fetchTalks(filters: TalkSearchFilters, page: Int) async throws -> TalksResponse {
+    func fetchTalks(filters: TalkSearchFilters, page: Int, sortOption: TalkSortOption = .dateNewest) async throws -> TalksResponse {
         if shouldFail {
             throw APIError.serverError
         }

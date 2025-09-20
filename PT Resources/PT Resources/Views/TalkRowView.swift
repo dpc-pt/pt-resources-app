@@ -111,13 +111,6 @@ struct TalkRowView: View {
                             .foregroundColor(PTDesignTokens.Colors.medium)
                         
                         Spacer()
-                        
-                        // Download status indicator
-                        if isDownloaded {
-                            Image(systemName: "arrow.down.circle.fill")
-                                .font(PTFont.ptCaptionText)
-                                .foregroundColor(PTDesignTokens.Colors.success)  // Using PT success color
-                        }
                     }
                 }
                 

@@ -297,7 +297,7 @@ extension Config {
 extension Config {
     
     enum APIEndpoint {
-        case resources(filters: TalkSearchFilters = TalkSearchFilters(), page: Int = 1, limit: Int = 12)
+        case resources(filters: TalkSearchFilters = TalkSearchFilters(), page: Int = 1, limit: Int = 12, sortOption: TalkSortOption = .dateNewest)
         case resourceDetail(id: String)
         case resourceDownload(id: String)
         case blogPosts(limit: Int = 100, offset: Int = 0)
@@ -311,11 +311,12 @@ extension Config {
         
         var url: String {
             switch self {
-            case .resources(let filters, let page, let limit):
+            case .resources(let filters, let page, let limit, let sortOption):
                 var components = URLComponents(string: proclamationAPIBaseURL)!
                 var queryItems: [URLQueryItem] = [
                     URLQueryItem(name: "page", value: "\(page)"),
-                    URLQueryItem(name: "limit", value: "\(limit)")
+                    URLQueryItem(name: "limit", value: "\(limit)"),
+                    URLQueryItem(name: "sort", value: sortOption.rawValue)
                 ]
                 
                 // Basic search query

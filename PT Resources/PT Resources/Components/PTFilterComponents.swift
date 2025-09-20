@@ -57,7 +57,7 @@ struct PTFilterBar: View {
 
 // MARK: - Filter Button
 
-private struct FilterButton: View {
+struct FilterButton: View {
     let isActive: Bool
     let activeCount: Int
     let action: () -> Void
@@ -118,7 +118,7 @@ private struct FilterButtonBorder: View {
 
 // MARK: - Active Filters View
 
-private struct ActiveFiltersView: View {
+struct ActiveFiltersView: View {
     let filters: [String]
     let onClearFilter: (String) -> Void
     
@@ -132,7 +132,6 @@ private struct ActiveFiltersView: View {
                     )
                 }
             }
-            .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
         }
     }
 }
@@ -268,7 +267,7 @@ private struct FilterTypeIcon: View {
     }
 }
 
-// MARK: - Sort Options
+// MARK: - Sort Options (Legacy - kept for compatibility)
 
 struct PTSortOptions: View {
     let options: [String]
@@ -322,6 +321,152 @@ private struct SortOptionRow: View {
             .background(
                 RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.sm)
                     .fill(isSelected ? PTDesignTokens.Colors.tang.opacity(0.1) : Color.clear)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Sort Button
+
+struct PTSortButton: View {
+    let currentSortOption: TalkSortOption
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: PTDesignTokens.Spacing.sm) {
+                Image(systemName: "arrow.up.arrow.down")
+                    .font(PTFont.ptButtonText)
+                
+                Text("Sort")
+                    .font(PTFont.ptButtonText)
+                
+                Text("(\(currentSortOption.displayName))")
+                    .font(PTFont.ptCaptionText)
+                    .foregroundColor(PTDesignTokens.Colors.kleinBlue)
+            }
+            .foregroundColor(PTDesignTokens.Colors.ink)
+            .padding(.horizontal, PTDesignTokens.Spacing.md)
+            .padding(.vertical, PTDesignTokens.Spacing.sm)
+            .background(
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                    .fill(PTDesignTokens.Colors.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.button)
+                    .stroke(PTDesignTokens.Colors.light.opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Sort Options Sheet
+
+struct PTSortOptionsSheet: View {
+    let selectedOption: TalkSortOption
+    let onOptionSelected: (TalkSortOption) -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Header
+                HStack {
+                    Text("Sort By")
+                        .font(PTFont.ptSectionTitle)
+                        .foregroundColor(PTDesignTokens.Colors.ink)
+                    
+                    Spacer()
+                    
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .font(PTFont.ptButtonText)
+                    .foregroundColor(PTDesignTokens.Colors.kleinBlue)
+                }
+                .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+                .padding(.vertical, PTDesignTokens.Spacing.md)
+                .background(PTDesignTokens.Colors.surface)
+                .overlay(
+                    Rectangle()
+                        .frame(height: 0.5)
+                        .foregroundColor(PTDesignTokens.Colors.light.opacity(0.3)),
+                    alignment: .bottom
+                )
+                
+                // Sort Options List
+                ScrollView {
+                    LazyVStack(spacing: PTDesignTokens.Spacing.xs) {
+                        ForEach(TalkSortOption.allCases, id: \.self) { option in
+                            PTSortOptionRow(
+                                option: option,
+                                isSelected: option == selectedOption,
+                                onTap: {
+                                    onOptionSelected(option)
+                                    dismiss()
+                                }
+                            )
+                        }
+                    }
+                    .padding(.horizontal, PTDesignTokens.Spacing.screenEdges)
+                    .padding(.top, PTDesignTokens.Spacing.md)
+                }
+                .background(PTDesignTokens.Colors.background)
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+}
+
+// MARK: - PT Sort Option Row
+
+private struct PTSortOptionRow: View {
+    let option: TalkSortOption
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack {
+                VStack(alignment: .leading, spacing: PTDesignTokens.Spacing.xs) {
+                    Text(option.displayName)
+                        .font(PTFont.ptBodyText)
+                        .foregroundColor(isSelected ? PTDesignTokens.Colors.tang : PTDesignTokens.Colors.ink)
+                    
+                    if let description = option.description {
+                        Text(description)
+                            .font(PTFont.ptCaptionText)
+                            .foregroundColor(PTDesignTokens.Colors.medium)
+                    }
+                }
+                
+                Spacer()
+                
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title3)
+                        .foregroundColor(PTDesignTokens.Colors.tang)
+                } else {
+                    Image(systemName: "circle")
+                        .font(.title3)
+                        .foregroundColor(PTDesignTokens.Colors.light)
+                }
+            }
+            .padding(.horizontal, PTDesignTokens.Spacing.md)
+            .padding(.vertical, PTDesignTokens.Spacing.md)
+            .background(
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                    .fill(isSelected ? PTDesignTokens.Colors.tang.opacity(0.05) : PTDesignTokens.Colors.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: PTDesignTokens.BorderRadius.card)
+                    .stroke(
+                        isSelected ? PTDesignTokens.Colors.tang.opacity(0.2) : PTDesignTokens.Colors.light.opacity(0.2),
+                        lineWidth: 1
+                    )
             )
         }
         .buttonStyle(PlainButtonStyle())

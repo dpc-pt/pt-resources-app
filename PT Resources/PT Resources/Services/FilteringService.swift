@@ -265,20 +265,14 @@ final class FilteringService: ObservableObject, FilteringServiceProtocol {
     
     func sortTalks(_ talks: [Talk], by option: TalkSortOption) -> [Talk] {
         switch option {
+        case .dateNewest:
+            return talks.sorted { $0.dateRecorded > $1.dateRecorded }
+        case .dateOldest:
+            return talks.sorted { $0.dateRecorded < $1.dateRecorded }
         case .titleAZ:
             return talks.sorted { $0.title < $1.title }
         case .titleZA:
             return talks.sorted { $0.title > $1.title }
-        case .dateOldest:
-            return talks.sorted { $0.dateRecorded < $1.dateRecorded }
-        case .dateNewest:
-            return talks.sorted { $0.dateRecorded > $1.dateRecorded }
-        case .speaker:
-            return talks.sorted { $0.speaker < $1.speaker }
-        case .series:
-            return talks.sorted { ($0.series ?? "") < ($1.series ?? "") }
-        case .duration:
-            return talks.sorted { $0.duration > $1.duration }
         }
     }
 }
