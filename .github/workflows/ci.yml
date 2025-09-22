@@ -13,6 +13,7 @@ jobs:
     env:
       DERIVED_DATA: ${{ github.workspace }}/DerivedData
       TEST_RESULTS_DIR: ${{ github.workspace }}/TestResults
+      LOG_DIR: ${{ github.workspace }}/Logs
     
     steps:
     - name: Checkout Repository
@@ -41,10 +42,13 @@ jobs:
         PUSH_SERVER_ENDPOINT = https://api.example.com/v1/push
         EOF
     
-    - name: Clean Build Folder
+    - name: Prepare Folders
       run: |
+        mkdir -p "$DERIVED_DATA"
+        mkdir -p "$TEST_RESULTS_DIR"
+        mkdir -p "$LOG_DIR"
         cd "PT Resources"
-        xcodebuild clean -project "PT Resources.xcodeproj" -scheme "PT Resources"
+        xcodebuild clean -project "PT Resources.xcodeproj" -scheme "PT Resources" | tee "$LOG_DIR/clean.log"
     
     - name: Build App
       run: |
@@ -52,25 +56,26 @@ jobs:
         xcodebuild build \
           -project "PT Resources.xcodeproj" \
           -scheme "PT Resources" \
-          -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+          -sdk iphonesimulator \
+          -destination 'platform=iOS Simulator,name=iPhone 15' \
           -configuration Debug \
           -derivedDataPath "$DERIVED_DATA" \
           ONLY_ACTIVE_ARCH=YES \
           CODE_SIGNING_REQUIRED=NO \
-          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_ALLOWED=NO | tee "$LOG_DIR/build.log"
     
     - name: Run Unit Tests
       run: |
-        mkdir -p "$TEST_RESULTS_DIR"
         cd "PT Resources"
         xcodebuild test \
           -project "PT Resources.xcodeproj" \
           -scheme "PT Resources" \
-          -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+          -sdk iphonesimulator \
+          -destination 'platform=iOS Simulator,name=iPhone 15' \
           -derivedDataPath "$DERIVED_DATA" \
           -resultBundlePath "$TEST_RESULTS_DIR/unit.xcresult" \
           CODE_SIGNING_REQUIRED=NO \
-          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_ALLOWED=NO | tee "$LOG_DIR/unit-tests.log"
     
     - name: Run UI Tests
       run: |
@@ -78,11 +83,12 @@ jobs:
         xcodebuild test \
           -project "PT Resources.xcodeproj" \
           -scheme "PT Resources" \
-          -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+          -sdk iphonesimulator \
+          -destination 'platform=iOS Simulator,name=iPhone 15' \
           -derivedDataPath "$DERIVED_DATA" \
           -resultBundlePath "$TEST_RESULTS_DIR/ui.xcresult" \
           CODE_SIGNING_REQUIRED=NO \
-          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_ALLOWED=NO | tee "$LOG_DIR/ui-tests.log"
     
     - name: Archive Build Logs
       if: failure()
@@ -91,7 +97,8 @@ jobs:
         name: build-logs
         path: |
           ${{ env.DERIVED_DATA }}/Logs/**
-          ${{ env.TEST_RESULTS_DIR }}/*.xcresult
+          ${{ env.TEST_RESULTS_DIR }}/**/*.xcresult
+          ${{ env.LOG_DIR }}/*.log
         retention-days: 5
 
   validate-project:
