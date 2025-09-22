@@ -10,6 +10,9 @@ jobs:
   build-and-test:
     name: Build and Test
     runs-on: macos-14
+    env:
+      DERIVED_DATA: ${{ github.workspace }}/DerivedData
+      TEST_RESULTS_DIR: ${{ github.workspace }}/TestResults
     
     steps:
     - name: Checkout Repository
@@ -51,18 +54,21 @@ jobs:
           -scheme "PT Resources" \
           -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
           -configuration Debug \
+          -derivedDataPath "$DERIVED_DATA" \
           ONLY_ACTIVE_ARCH=YES \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO
     
     - name: Run Unit Tests
       run: |
+        mkdir -p "$TEST_RESULTS_DIR"
         cd "PT Resources"
         xcodebuild test \
           -project "PT Resources.xcodeproj" \
           -scheme "PT Resources" \
           -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
-          -only-testing:PT_ResourcesTests \
+          -derivedDataPath "$DERIVED_DATA" \
+          -resultBundlePath "$TEST_RESULTS_DIR/unit.xcresult" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO
     
@@ -73,7 +79,8 @@ jobs:
           -project "PT Resources.xcodeproj" \
           -scheme "PT Resources" \
           -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
-          -only-testing:PT_ResourcesUITests \
+          -derivedDataPath "$DERIVED_DATA" \
+          -resultBundlePath "$TEST_RESULTS_DIR/ui.xcresult" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO
     
@@ -83,8 +90,8 @@ jobs:
       with:
         name: build-logs
         path: |
-          ~/Library/Logs/DiagnosticReports/
-          ~/Library/Developer/Xcode/DerivedData/*/Logs/
+          ${{ env.DERIVED_DATA }}/Logs/**
+          ${{ env.TEST_RESULTS_DIR }}/*.xcresult
         retention-days: 5
 
   validate-project:

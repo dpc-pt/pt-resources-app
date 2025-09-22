@@ -21,6 +21,7 @@ import Foundation
 /// 3. Add Secrets.xcconfig to your .gitignore
 /// 4. Configure your Xcode project to use the config file in Build Settings
 struct Config {
+    // TODO: Replace placeholder values with production secrets and URLs before release
     
     // MARK: - API Configuration
     
