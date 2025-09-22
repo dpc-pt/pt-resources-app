@@ -13,6 +13,7 @@ import OSLog
 
 // MARK: - Security Protocols
 
+@MainActor
 protocol SecurityServiceProtocol {
     func validateInput(_ input: String, type: InputValidationType) -> ValidationResult
     func encryptData(_ data: Data, key: String) throws -> Data

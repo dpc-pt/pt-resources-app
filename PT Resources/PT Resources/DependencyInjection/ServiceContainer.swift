@@ -109,7 +109,8 @@ final class ServiceContainer: ObservableObject, ServiceContainerProtocol {
     lazy var imageCacheService: ImageCacheServiceProtocol = {
         ImageCacheService.shared
     }()
-    
+
+
     // MARK: - Persistence
     
     lazy var persistenceController: PersistenceController = {
@@ -199,6 +200,7 @@ final class ServiceContainer: ObservableObject, ServiceContainerProtocol {
 
 // MARK: - Environment Integration
 
+@MainActor
 struct ServiceContainerKey: EnvironmentKey {
     @MainActor
     static let defaultValue: ServiceContainer = ServiceContainer()

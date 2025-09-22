@@ -372,7 +372,7 @@ struct EnhancedMediaPlayerView: View {
                     in: 0...playerService.duration,
                     onEditingChanged: { editing in
                         if editing {
-                            SimpleHapticService.shared.seekingFeedback()
+                            PTHapticFeedbackService.shared.seekingFeedback()
                         }
                     }
                 )

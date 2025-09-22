@@ -35,7 +35,7 @@ struct AnimatedMediaButton: View {
     
     var body: some View {
         Button(action: {
-            SimpleHapticService.shared.lightImpact()
+            PTHapticFeedbackService.shared.lightImpact()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 action()
             }
@@ -306,7 +306,7 @@ struct FloatingMediaWidget: View {
                 }
         )
         .onTapGesture {
-            SimpleHapticService.shared.mediumImpact()
+            PTHapticFeedbackService.shared.mediumImpact()
             onTap()
         }
         .onAppear {

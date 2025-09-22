@@ -47,7 +47,7 @@ final class MediaTransitionService: ObservableObject {
         savedPlaybackTime = currentTime
         
         // Generate transition haptic feedback
-        SimpleHapticService.shared.videoTransition()
+        PTHapticFeedbackService.shared.videoTransition()
         
         // Configure audio session for media playback
         PTEnhancedAudioSessionService.shared.configureForMediaPlayback()
@@ -87,7 +87,7 @@ final class MediaTransitionService: ObservableObject {
         PlayerService.shared.pause()
         
         // Generate transition haptic feedback
-        SimpleHapticService.shared.videoTransition()
+        PTHapticFeedbackService.shared.videoTransition()
         
         // Configure audio session for video playback
         PTEnhancedAudioSessionService.shared.configureForVideoPlayback()
